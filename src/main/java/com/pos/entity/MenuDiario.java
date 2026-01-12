@@ -21,9 +21,16 @@ public class MenuDiario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 📅 Fecha del menú
     @Column(nullable = false)
     private LocalDate fecha;
 
+    // 🧑 CAJA que creó el menú
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
+    // 🔓 Activo (solo uno activo por día)
     @Builder.Default
     @Column(nullable = false)
     private Boolean activo = true;

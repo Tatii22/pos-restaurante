@@ -1,27 +1,28 @@
 package com.pos.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-
 import com.pos.entity.InventarioDiario;
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.pos.entity.Producto;
 
 import java.util.List;
+import com.pos.entity.MenuDiario;
 
-public interface InventarioDiarioRepository extends JpaRepository<InventarioDiario, Long> {
 
-    @Query("""
-        SELECT i
-        FROM InventarioDiario i
-        WHERE i.menuDiario.id = :menuId
-          AND i.agotado = false
-    """)
-    List<InventarioDiario> findDisponiblesByMenuId(Long menuId);
+import java.util.Optional;
 
-    @Query("""
-        SELECT i
-        FROM InventarioDiario i
-        WHERE i.stockActual <= i.stockMinimo
-          AND i.agotado = false
-    """)
-    List<InventarioDiario> findConStockBajo();
+public interface InventarioDiarioRepository
+        extends JpaRepository<InventarioDiario, Long> {
+
+    Optional<InventarioDiario> findByProductoAndMenuDiario(
+            Producto producto,
+            MenuDiario menuDiario
+    );
+
+    boolean existsByProductoAndMenuDiario(
+            Producto producto,
+            MenuDiario menuDiario
+    );
+
+    List<InventarioDiario> findByMenuDiario(MenuDiario menuDiario);
 }
+

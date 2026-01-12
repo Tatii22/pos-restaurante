@@ -43,10 +43,21 @@ public class GlobalExceptionHandler {
     }
 
     // Error genérico
-    @ExceptionHandler(Exception.class)
+ /*    @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneral(Exception ex) {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("mensaje", "Error interno del servidor"));
     }
+                */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGeneral(Exception ex) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "mensaje", ex.getMessage(),
+                        "tipo", ex.getClass().getSimpleName()
+                ));
+    }
+
 }

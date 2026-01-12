@@ -1,10 +1,14 @@
 package com.pos.controller;
 
+import com.pos.dto.auth.LoginRequestDTO;
 import com.pos.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -15,13 +19,17 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public String login(@RequestParam String username,
-                        @RequestParam String password) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
 
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password)
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
         );
 
-        return jwtUtil.generateToken(auth.getName());
+        String token = jwtUtil.generateToken(authentication.getName());
+
+        return ResponseEntity.ok(Map.of("token", token));
     }
 }

@@ -3,10 +3,14 @@ package com.pos.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(
     name = "inventarios_diarios",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"menu_diario_id", "producto_id"})
+    uniqueConstraints = @UniqueConstraint(
+        columnNames = {"producto_id", "fecha"}
+    )
 )
 @Getter
 @Setter
@@ -19,24 +23,33 @@ public class InventarioDiario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "menu_diario_id", nullable = false)
-    private MenuDiario menuDiario;
+    // 📅 FECHA DEL INVENTARIO
+    @Column(nullable = false)
+    private LocalDate fecha;
 
+    // 🍔 PRODUCTO
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
 
+    // 📦 STOCK
     @Column(nullable = false)
     private Integer stockInicial;
 
     @Column(nullable = false)
     private Integer stockActual;
 
+    @Builder.Default
     @Column(nullable = false)
-    private Integer stockMinimo;
+    private Integer stockMinimo = 5;
 
+    // 🚨 ALERTA
     @Builder.Default
     @Column(nullable = false)
     private Boolean agotado = false;
+
+    @ManyToOne
+    @JoinColumn(name = "menu_diario_id", nullable = false)
+    private MenuDiario menuDiario;
 }
+

@@ -28,6 +28,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/api/turnos/**").hasRole("CAJA")
+                        .requestMatchers("/turnos/**").hasRole("CAJA")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
