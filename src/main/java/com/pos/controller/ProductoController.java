@@ -34,6 +34,7 @@ public class ProductoController {
         producto.setPrecio(dto.getPrecio());
         producto.setActivo(dto.getActivo());
         producto.setCategoria(categoria);
+        producto.setTipoVenta(dto.getTipoVenta());
 
         Producto guardado = productoService.crear(producto);
 
@@ -80,6 +81,7 @@ public class ProductoController {
         producto.setPrecio(dto.getPrecio());
         producto.setActivo(dto.getActivo());
         producto.setCategoria(categoria);
+        producto.setTipoVenta(dto.getTipoVenta());
 
         Producto actualizado = productoService.actualizar(id, producto);
 

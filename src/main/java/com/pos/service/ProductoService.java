@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.pos.exception.ResourceNotFoundException;
 import com.pos.exception.BadRequestException;
+
 import java.util.List;
 
 @Service
@@ -40,6 +41,7 @@ public class ProductoService {
         existente.setPrecio(producto.getPrecio());
         existente.setActivo(producto.getActivo());
         existente.setCategoria(producto.getCategoria());
+        existente.setTipoVenta(producto.getTipoVenta());
         return productoRepository.save(existente);
     }
 

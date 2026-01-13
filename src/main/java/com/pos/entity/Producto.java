@@ -34,4 +34,8 @@ public class Producto {
     @Column(nullable = false)
     @Builder.Default
     private Boolean activo = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoVentaProducto tipoVenta;
 }

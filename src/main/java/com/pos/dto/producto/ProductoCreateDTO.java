@@ -2,6 +2,7 @@ package com.pos.dto.producto;
 
 import java.math.BigDecimal;
 
+import com.pos.entity.TipoVentaProducto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -22,4 +23,7 @@ public class ProductoCreateDTO {
 
     @NotNull(message = "La categoría es obligatoria")
     private Long categoriaId;
+
+    @NotNull(message = "El tipo de venta es obligatorio")
+    private TipoVentaProducto tipoVenta;
 }

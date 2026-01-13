@@ -1,23 +1,19 @@
 package com.pos.service;
+
 import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
-import com.pos.repository.ProductoRepository;
-import com.pos.repository.TurnoCajaRepository;
-import com.pos.repository.VentaRepository;
-import com.pos.repository.InventarioDiarioRepository;
+import com.pos.repository.*;
 import jakarta.transaction.Transactional;
-import com.pos.repository.MenuDiarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-
-
 
 @Service
 @RequiredArgsConstructor
@@ -29,22 +25,18 @@ public class VentaService {
     private final InventarioDiarioRepository inventarioDiarioRepository;
     private final MenuDiarioRepository menuDiarioRepository;
 
-    
     @Transactional
     public Venta registrarVenta(VentaCreateDTO dto, Usuario usuario) {
 
-        MenuDiario menuActivo = menuDiarioRepository
-                .findByFechaAndActivoTrue(LocalDate.now())
-                .orElseThrow(() -> new RuntimeException("No hay menú activo hoy"));
-
+        // 🔐 Validación de rol
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede registrar ventas");
         }
 
+        // 🔐 Turno activo
         TurnoCaja turno = turnoCajaRepository
-        .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
-        .orElseThrow(() -> new BadRequestException("No hay turno activo"));
-
+                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         Venta venta = new Venta();
         venta.setFecha(LocalDateTime.now());
@@ -56,10 +48,20 @@ public class VentaService {
         BigDecimal total = BigDecimal.ZERO;
         List<VentaDetalle> detalles = new ArrayList<>();
 
+        // 🟢 Solo se carga si hay productos de menú diario
+        MenuDiario menuActivo = null;
+
         for (VentaDetalleCreateDTO d : dto.detalles()) {
 
             Producto producto = productoRepository.findById(d.productoId())
                     .orElseThrow(() -> new BadRequestException("Producto no existe"));
+
+            // 🧠 Cargar menú diario solo si es necesario
+            if (producto.getTipoVenta() == TipoVentaProducto.MENU_DIARIO && menuActivo == null) {
+                menuActivo = menuDiarioRepository
+                        .findByFechaAndActivoTrue(LocalDate.now())
+                        .orElseThrow(() -> new BadRequestException("No hay menú activo hoy"));
+            }
 
             BigDecimal subtotal = producto.getPrecio()
                     .multiply(BigDecimal.valueOf(d.cantidad()));
@@ -77,27 +79,35 @@ public class VentaService {
 
             detalles.add(detalle);
 
-            InventarioDiario inv = inventarioDiarioRepository
-                    .findByProductoAndMenuDiario(producto, menuActivo)
-                    .orElseThrow(() -> new RuntimeException("Producto no está en inventario"));
+            // ⚠️ Inventario SOLO para productos de menú diario
+            if (producto.getTipoVenta() == TipoVentaProducto.MENU_DIARIO) {
 
-            if (inv.getStockActual() < d.cantidad()) {
-                throw new RuntimeException("Stock insuficiente para " + producto.getNombre());
+                InventarioDiario inv = inventarioDiarioRepository
+                        .findByProductoAndMenuDiario(producto, menuActivo)
+                        .orElseThrow(() -> new BadRequestException(
+                                "Producto " + producto.getNombre() + " no está en el menú diario"
+                        ));
+
+                if (inv.getStockActual() < d.cantidad()) {
+                    throw new BadRequestException(
+                            "Stock insuficiente para " + producto.getNombre()
+                    );
+                }
+
+                inv.setStockActual(inv.getStockActual() - d.cantidad());
+
+                if (inv.getStockActual() <= inv.getStockMinimo()) {
+                    inv.setAgotado(true);
+                }
+
+                inventarioDiarioRepository.save(inv);
             }
-
-            inv.setStockActual(inv.getStockActual() - d.cantidad());
-
-            if (inv.getStockActual() < inv.getStockMinimo()) {
-                inv.setAgotado(true);
-            }
-
-            inventarioDiarioRepository.save(inv);
         }
 
         venta.setTotal(total);
         venta.setDetalles(detalles);
 
-        // 🔥 AQUÍ ESTÁ LA CLAVE
+        // 💰 Impacto en turno
         turno.setTotalVentas(
                 turno.getTotalVentas().add(total)
         );
@@ -106,6 +116,4 @@ public class VentaService {
 
         return ventaRepository.save(venta);
     }
-
 }
-
