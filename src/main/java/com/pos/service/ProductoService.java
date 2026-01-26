@@ -1,12 +1,20 @@
 package com.pos.service;
 
+import com.pos.dto.producto.ProductoVentaDTO;
+import com.pos.dto.producto.ProductosVentaHoyDTO;
+import com.pos.entity.InventarioDiario;
+import com.pos.entity.MenuDiario;
 import com.pos.entity.Producto;
+import com.pos.entity.TipoVentaProducto;
+import com.pos.repository.InventarioDiarioRepository;
 import com.pos.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.pos.exception.ResourceNotFoundException;
 import com.pos.exception.BadRequestException;
+import com.pos.repository.MenuDiarioRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -14,6 +22,8 @@ import java.util.List;
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final InventarioDiarioRepository inventarioDiarioRepository;
+    private final MenuDiarioRepository menuDiarioRepository;
 
     public Producto crear(Producto producto) {
         if (producto == null) {
@@ -51,5 +61,50 @@ public class ProductoService {
         }
         productoRepository.deleteById(id);
     }
+
+   public ProductosVentaHoyDTO productosVentaHoy() {
+
+        // 1️⃣ Menú activo hoy
+        MenuDiario menuActivo = menuDiarioRepository
+                .findByFechaAndActivoTrue(LocalDate.now())
+                .orElse(null);
+
+        // 2️⃣ Inventario del menú (si existe)
+        List<ProductoVentaDTO> menuDiario = List.of();
+
+        if (menuActivo != null) {
+            menuDiario = inventarioDiarioRepository
+                    .findByMenuDiario(menuActivo)
+                    .stream()
+                    .map(inv -> new ProductoVentaDTO(
+                            inv.getProducto().getId(),
+                            inv.getProducto().getNombre(),
+                            inv.getProducto().getPrecio(),
+                            inv.getAgotado()
+                    ))
+                    .toList();
+        }
+
+        // 3️⃣ Siempre disponibles
+        List<ProductoVentaDTO> siempreDisponibles =
+                productoRepository
+                        .findByTipoVentaAndActivoTrue(
+                                TipoVentaProducto.SIEMPRE_DISPONIBLE
+                        )
+                        .stream()
+                        .map(p -> new ProductoVentaDTO(
+                                p.getId(),
+                                p.getNombre(),
+                                p.getPrecio(),
+                                false
+                        ))
+                        .toList();
+
+        return ProductosVentaHoyDTO.builder()
+                .menuDiario(menuDiario)
+                .siempreDisponibles(siempreDisponibles)
+                .build();
+    }
+
     
 }

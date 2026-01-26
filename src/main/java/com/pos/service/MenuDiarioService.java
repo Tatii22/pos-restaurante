@@ -8,6 +8,7 @@ import com.pos.entity.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import com.pos.exception.BadRequestException;
 
 
 @Service
@@ -33,5 +34,10 @@ public class MenuDiarioService {
 
         return menuDiarioRepository.save(menu);
     }
-}
+    public MenuDiario obtenerMenuActivo() {
+        return menuDiarioRepository
+                .findByFechaAndActivoTrue(LocalDate.now())
+                .orElseThrow(() -> new BadRequestException("No hay menú activo hoy"));
+    }
 
+}

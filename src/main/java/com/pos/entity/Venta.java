@@ -21,22 +21,48 @@ public class Venta {
 
     private LocalDateTime fecha;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoVenta tipoVenta;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoVenta estado;
+
     @Column(length = 100)
     private String clienteNombre;
+
+    @Column(length = 20)
+    private String telefono;
+
+    @Column(length = 255)
+    private String direccion;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal valorDomicilio;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
 
-    @Column(nullable = false, length = 20)
-    private String formaPago;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal descuentoPorcentaje;
 
-    @ManyToOne(optional = false)
+    @Column(precision = 10, scale = 2)
+    private BigDecimal descuentoValor;
+
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FormaPago formaPago;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Usuario usuario;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private TurnoCaja turno;
 
-    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<VentaDetalle> detalles;
+
 }
 
