@@ -1,15 +1,12 @@
 package com.pos.controller;
+
 import com.pos.dto.report.ReporteCierreTurnoDTO;
-import com.pos.service.ReporteTurnoService;
+import com.pos.service.report.ReporteTurnoService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/reportes/turno")
+@RequestMapping("/api/reportes/turnos")
 public class ReporteTurnoController {
 
     private final ReporteTurnoService reporteTurnoService;
@@ -18,11 +15,16 @@ public class ReporteTurnoController {
         this.reporteTurnoService = reporteTurnoService;
     }
 
+    /**
+     * Genera el reporte de cierre de un turno
+     */
     @GetMapping("/{turnoId}")
-    @PreAuthorize("hasRole('ADMIN')") 
-    public ResponseEntity<ReporteCierreTurnoDTO> obtenerReporteTurno(@PathVariable Long turnoId) {
-        ReporteCierreTurnoDTO reporte = reporteTurnoService.generarReporteTurno(turnoId);
+    public ResponseEntity<ReporteCierreTurnoDTO> obtenerReporteTurno(
+            @PathVariable Long turnoId
+    ) {
+        ReporteCierreTurnoDTO reporte =
+                reporteTurnoService.generarReporteTurno(turnoId);
+
         return ResponseEntity.ok(reporte);
     }
 }
-
