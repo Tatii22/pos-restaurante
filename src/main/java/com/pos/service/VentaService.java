@@ -193,15 +193,30 @@ public class VentaService {
         Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
-        if (venta.getEstado() == EstadoVenta.DESPACHADA) {
-            throw new BadRequestException("Use ANULAR para ventas despachadas");
+        // 🔒 Estado válido
+        if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
+            throw new BadRequestException("Solo se pueden cancelar ventas en proceso");
         }
 
+        // 🔐 Permisos por tipo de venta
+        if (venta.getTipoVenta() == TipoVenta.LOCAL &&
+                !usuario.getRol().getNombre().equals("CAJA")) {
+            throw new BadRequestException("Solo CAJA puede cancelar ventas locales");
+        }
+
+        if (venta.getTipoVenta() == TipoVenta.DOMICILIO &&
+                !usuario.getRol().getNombre().equals("CAJA") &&
+                !usuario.getRol().getNombre().equals("DOMI")) {
+            throw new BadRequestException("No autorizado para cancelar este pedido");
+        }
+
+        // 🔄 Devolver inventario
         devolverInventario(venta);
 
         venta.setEstado(EstadoVenta.CANCELADA);
         return ventaRepository.save(venta);
     }
+
 
     /* ===================== ANULAR (CON DEVOLUCIÓN) ===================== */
 
