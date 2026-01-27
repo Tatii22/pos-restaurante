@@ -32,6 +32,8 @@ public class ReporteRentabilidadService {
             LocalDate fechaFin
     ) {
 
+        validarFechas(fechaInicio, fechaFin);
+
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
@@ -43,17 +45,8 @@ public class ReporteRentabilidadService {
 
         List<GastoCaja> gastos = gastoCajaRepository.findByFechaBetween(inicio, fin);
 
-        BigDecimal totalVentas = BigDecimal.ZERO;
-        BigDecimal totalGastos = BigDecimal.ZERO;
-
-        for (Venta venta : ventas) {
-            BigDecimal totalFinal = venta.getTotal().subtract(obtenerDescuento(venta));
-            totalVentas = totalVentas.add(totalFinal);
-        }
-
-        for (GastoCaja gasto : gastos) {
-            totalGastos = totalGastos.add(gasto.getMonto());
-        }
+        BigDecimal totalVentas = calcularTotalVentas(ventas);
+        BigDecimal totalGastos = calcularTotalGastos(gastos);
 
         ReporteRentabilidadDTO reporte = new ReporteRentabilidadDTO();
         reporte.setFechaInicio(fechaInicio);
@@ -65,6 +58,29 @@ public class ReporteRentabilidadService {
         reporte.setGastos(mapGastos(gastos));
 
         return reporte;
+    }
+
+    /* ----------------- helpers privados ----------------- */
+
+    private void validarFechas(LocalDate inicio, LocalDate fin) {
+        if (inicio == null || fin == null) {
+            throw new IllegalArgumentException("Las fechas no pueden ser nulas");
+        }
+        if (inicio.isAfter(fin)) {
+            throw new IllegalArgumentException("La fecha inicio no puede ser mayor a la fecha fin");
+        }
+    }
+
+    private BigDecimal calcularTotalVentas(List<Venta> ventas) {
+        return ventas.stream()
+                .map(v -> v.getTotal().subtract(obtenerDescuento(v)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calcularTotalGastos(List<GastoCaja> gastos) {
+        return gastos.stream()
+                .map(GastoCaja::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal obtenerDescuento(Venta venta) {

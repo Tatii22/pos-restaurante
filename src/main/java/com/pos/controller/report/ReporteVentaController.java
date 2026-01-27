@@ -1,13 +1,13 @@
-package com.pos.controller;
-
+package com.pos.controller.report;
 import com.pos.dto.report.ReporteVentaDTO;
 import com.pos.service.report.ReporteVentaService;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-
 @RestController
 @RequestMapping("/api/reportes/ventas")
 public class ReporteVentaController {
@@ -18,16 +18,10 @@ public class ReporteVentaController {
         this.reporteVentaService = reporteVentaService;
     }
 
-    /**
-     * Reporte de ventas por rango de fechas
-     */
     @GetMapping
-    public ResponseEntity<ReporteVentaDTO> generarReporteVentas(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate fechaInicio,
-
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate fechaFin
+    public ResponseEntity<ReporteVentaDTO> obtenerReporteVentas(
+            @RequestParam LocalDate fechaInicio,
+            @RequestParam LocalDate fechaFin
     ) {
         ReporteVentaDTO reporte =
                 reporteVentaService.generarReporteVentas(fechaInicio, fechaFin);

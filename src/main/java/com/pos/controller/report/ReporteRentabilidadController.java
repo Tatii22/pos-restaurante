@@ -1,11 +1,11 @@
-package com.pos.controller;
-
+package com.pos.controller.report;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.service.report.ReporteRentabilidadService;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 @RestController
@@ -14,20 +14,16 @@ public class ReporteRentabilidadController {
 
     private final ReporteRentabilidadService reporteRentabilidadService;
 
-    public ReporteRentabilidadController(ReporteRentabilidadService reporteRentabilidadService) {
+    public ReporteRentabilidadController(
+            ReporteRentabilidadService reporteRentabilidadService
+    ) {
         this.reporteRentabilidadService = reporteRentabilidadService;
     }
 
-    /**
-     * Reporte de rentabilidad (Ventas vs Gastos)
-     */
     @GetMapping
-    public ResponseEntity<ReporteRentabilidadDTO> generarReporteRentabilidad(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate fechaInicio,
-
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate fechaFin
+    public ResponseEntity<ReporteRentabilidadDTO> obtenerReporteRentabilidad(
+            @RequestParam LocalDate fechaInicio,
+            @RequestParam LocalDate fechaFin
     ) {
         ReporteRentabilidadDTO reporte =
                 reporteRentabilidadService.generarReporte(fechaInicio, fechaFin);
