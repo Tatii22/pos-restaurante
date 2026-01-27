@@ -11,7 +11,7 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.pos.dto.report.ReporteRentabilidadDTO;
-import com.pos.dto.turno.GastoCajaResponseDTO;
+import com.pos.dto.gasto.GastoResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
@@ -92,11 +92,11 @@ public class PdfRentabilidadExporter {
                     .setBackgroundColor(ColorConstants.LIGHT_GRAY)
                     .setTextAlignment(TextAlignment.CENTER));
         }
-
+        int index = 1;
         boolean par = true;
         for (VentaResponseDTO v : ventas) {
             Color bg = par ? ColorConstants.WHITE : ColorConstants.LIGHT_GRAY;
-            tabla.addCell(new Cell().add(new Paragraph(String.valueOf(v.id()))).setBackgroundColor(bg));
+            tabla.addCell(new Cell().add(new Paragraph(String.valueOf(index++))).setBackgroundColor(bg));
             tabla.addCell(new Cell().add(new Paragraph(v.fecha().format(FECHA_FORMATO))).setBackgroundColor(bg));
             tabla.addCell(new Cell().add(new Paragraph(v.tipoVenta().name())).setBackgroundColor(bg));
             tabla.addCell(new Cell().add(new Paragraph(v.estado().name())).setBackgroundColor(bg));
@@ -111,7 +111,7 @@ public class PdfRentabilidadExporter {
         document.add(new Paragraph("\n"));
     }
 
-    private void crearTablaGastos(Document document, List<GastoCajaResponseDTO> gastos) {
+    private void crearTablaGastos(Document document, List<GastoResponseDTO> gastos) {
         Table tabla = new Table(UnitValue.createPercentArray(
                 new float[]{40, 80, 200, 60}))
                 .useAllAvailableWidth();
@@ -123,14 +123,14 @@ public class PdfRentabilidadExporter {
                     .setBackgroundColor(ColorConstants.LIGHT_GRAY)
                     .setTextAlignment(TextAlignment.CENTER));
         }
-
+        int index = 1;
         boolean par = true;
-        for (GastoCajaResponseDTO g : gastos) {
+        for (GastoResponseDTO g : gastos) {
             Color bg = par ? ColorConstants.WHITE : ColorConstants.LIGHT_GRAY;
-            tabla.addCell(new Cell().add(new Paragraph(String.valueOf(g.getId()))).setBackgroundColor(bg));
+            tabla.addCell(new Cell().add(new Paragraph(String.valueOf(index++))).setBackgroundColor(bg));
             tabla.addCell(new Cell().add(new Paragraph(g.getFecha().format(FECHA_FORMATO))).setBackgroundColor(bg));
             tabla.addCell(new Cell().add(new Paragraph(g.getDescripcion())).setBackgroundColor(bg));
-            tabla.addCell(new Cell().add(new Paragraph(String.format("$%,.2f", g.getValor()))).setBackgroundColor(bg));
+            tabla.addCell(new Cell().add(new Paragraph(String.format("$%,.2f", g.getMonto()))).setBackgroundColor(bg));
             par = !par;
         }
 

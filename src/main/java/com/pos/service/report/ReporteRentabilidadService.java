@@ -2,14 +2,18 @@ package com.pos.service.report;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.turno.GastoCajaResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.dto.gasto.GastoResponseDTO;
 import com.pos.entity.EstadoVenta;
+import com.pos.entity.GastoAdmin;
 import com.pos.entity.GastoCaja;
 import com.pos.entity.Venta;
+import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.GastoCajaRepository;
 import com.pos.repository.VentaRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -18,13 +22,16 @@ public class ReporteRentabilidadService {
 
     private final VentaRepository ventaRepository;
     private final GastoCajaRepository gastoCajaRepository;
+    private final GastoAdminRepository gastoAdminRepository;
 
     public ReporteRentabilidadService(
             VentaRepository ventaRepository,
-            GastoCajaRepository gastoCajaRepository
+            GastoCajaRepository gastoCajaRepository,
+            GastoAdminRepository gastoAdminRepository
     ) {
         this.ventaRepository = ventaRepository;
         this.gastoCajaRepository = gastoCajaRepository;
+        this.gastoAdminRepository = gastoAdminRepository;
     }
 
     public ReporteRentabilidadDTO generarReporte(
@@ -37,17 +44,27 @@ public class ReporteRentabilidadService {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
+        // ================== VENTAS ==================
         List<Venta> ventas = ventaRepository.findByFechaBetweenAndEstadoIn(
                 inicio,
                 fin,
                 List.of(EstadoVenta.DESPACHADA)
         );
 
-        List<GastoCaja> gastos = gastoCajaRepository.findByFechaBetween(inicio, fin);
+        // ================== GASTOS ==================
+        List<GastoCaja> gastosCaja =
+                gastoCajaRepository.findByFechaBetween(inicio, fin);
+
+        List<GastoAdmin> gastosAdmin =
+                gastoAdminRepository.findByFechaBetween(fechaInicio, fechaFin);
 
         BigDecimal totalVentas = calcularTotalVentas(ventas);
-        BigDecimal totalGastos = calcularTotalGastos(gastos);
+        BigDecimal totalGastosCaja = sumarGastosCaja(gastosCaja);
+        BigDecimal totalGastosAdmin = sumarGastosAdmin(gastosAdmin);
 
+        BigDecimal totalGastos = totalGastosCaja.add(totalGastosAdmin);
+
+        // ================== DTO ==================
         ReporteRentabilidadDTO reporte = new ReporteRentabilidadDTO();
         reporte.setFechaInicio(fechaInicio);
         reporte.setFechaFin(fechaFin);
@@ -55,12 +72,12 @@ public class ReporteRentabilidadService {
         reporte.setTotalGastos(totalGastos);
         reporte.setGananciaNeta(totalVentas.subtract(totalGastos));
         reporte.setVentas(mapVentas(ventas));
-        reporte.setGastos(mapGastos(gastos));
+        reporte.setGastos(mapGastos(gastosCaja, gastosAdmin));
 
         return reporte;
     }
 
-    /* ----------------- helpers privados ----------------- */
+    // ================== HELPERS ==================
 
     private void validarFechas(LocalDate inicio, LocalDate fin) {
         if (inicio == null || fin == null) {
@@ -73,20 +90,22 @@ public class ReporteRentabilidadService {
 
     private BigDecimal calcularTotalVentas(List<Venta> ventas) {
         return ventas.stream()
-                .map(v -> v.getTotal().subtract(obtenerDescuento(v)))
+                .map(v -> v.getTotal().subtract(
+                        v.getDescuentoValor() != null ? v.getDescuentoValor() : BigDecimal.ZERO
+                ))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal calcularTotalGastos(List<GastoCaja> gastos) {
+    private BigDecimal sumarGastosCaja(List<GastoCaja> gastos) {
         return gastos.stream()
                 .map(GastoCaja::getMonto)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal obtenerDescuento(Venta venta) {
-        return venta.getDescuentoValor() != null
-                ? venta.getDescuentoValor()
-                : BigDecimal.ZERO;
+    private BigDecimal sumarGastosAdmin(List<GastoAdmin> gastos) {
+        return gastos.stream()
+                .map(GastoAdmin::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private List<VentaResponseDTO> mapVentas(List<Venta> ventas) {
@@ -103,15 +122,32 @@ public class ReporteRentabilidadService {
                 .toList();
     }
 
-    private List<GastoCajaResponseDTO> mapGastos(List<GastoCaja> gastos) {
-        return gastos.stream()
-                .map(g -> new GastoCajaResponseDTO(
+    private List<GastoResponseDTO> mapGastos(
+            List<GastoCaja> caja,
+            List<GastoAdmin> admin
+    ) {
+        List<GastoResponseDTO> lista = new ArrayList<>();
+
+        caja.forEach(g ->
+                lista.add(new GastoResponseDTO(
                         g.getId(),
                         g.getFecha(),
                         g.getDescripcion(),
-                        g.getMonto()
+                        g.getMonto(),
+                        "CAJA"
                 ))
-                .toList();
+        );
+
+        admin.forEach(g ->
+                lista.add(new GastoResponseDTO(
+                        g.getId(),
+                        g.getFecha().atStartOfDay(),
+                        g.getDescripcion(),
+                        g.getMonto(),
+                        "ADMIN"
+                ))
+        );
+
+        return lista;
     }
 }
-

@@ -65,9 +65,9 @@ public class PdfVentasExporter {
                                 .setTextAlignment(TextAlignment.CENTER)
                 );
             }
-
+            int index = 1;
             for (VentaResponseDTO v : reporte.getVentas()) {
-                tabla.addCell(String.valueOf(v.id()));
+                tabla.addCell(String.valueOf(index++));
                 tabla.addCell(v.fecha().format(FECHA_FORMATO));
                 tabla.addCell(v.tipoVenta().name());
                 tabla.addCell(v.estado().name());

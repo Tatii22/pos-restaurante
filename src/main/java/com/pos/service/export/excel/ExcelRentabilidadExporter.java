@@ -2,7 +2,7 @@ package com.pos.service.export.excel;
 
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.venta.VentaResponseDTO;
-import com.pos.dto.turno.GastoCajaResponseDTO;
+import com.pos.dto.gasto.GastoResponseDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -90,10 +90,10 @@ public class ExcelRentabilidadExporter {
         for (int i = 0; i < columnas.length; i++) {
             header.createCell(i).setCellValue(columnas[i]);
         }
-
+        int index = 1;
         for (VentaResponseDTO v : ventas) {
             Row row = sheet.createRow(fila++);
-            row.createCell(0).setCellValue(v.id());
+            row.createCell(0).setCellValue(index++);
             row.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
             row.createCell(2).setCellValue(v.tipoVenta().name());
             row.createCell(3).setCellValue(v.estado().name());
@@ -114,7 +114,7 @@ public class ExcelRentabilidadExporter {
     private int crearTablaGastos(
             Sheet sheet,
             int fila,
-            List<GastoCajaResponseDTO> gastos,
+            List<GastoResponseDTO> gastos,
             CellStyle estiloMoneda
     ) {
         String[] columnas = {"ID", "Fecha", "Descripción", "Valor"};
@@ -123,15 +123,15 @@ public class ExcelRentabilidadExporter {
         for (int i = 0; i < columnas.length; i++) {
             header.createCell(i).setCellValue(columnas[i]);
         }
-
-        for (GastoCajaResponseDTO g : gastos) {
+        int index = 1;
+        for (GastoResponseDTO g : gastos) {
             Row row = sheet.createRow(fila++);
-            row.createCell(0).setCellValue(g.getId());
+            row.createCell(0).setCellValue(index++);
             row.createCell(1).setCellValue(g.getFecha().format(FECHA_FORMATO));
             row.createCell(2).setCellValue(g.getDescripcion());
 
             Cell valor = row.createCell(3);
-            valor.setCellValue(g.getValor().doubleValue());
+            valor.setCellValue(g.getMonto().doubleValue());
             valor.setCellStyle(estiloMoneda);
         }
 

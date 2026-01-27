@@ -10,7 +10,10 @@ public interface GastoAdminRepository extends JpaRepository<GastoAdmin, Long> {
 
     List<GastoAdmin> findByFecha(LocalDate fecha);
 
-    List<GastoAdmin> findByFechaBetween(LocalDate inicio, LocalDate fin);
-
     List<GastoAdmin> findByTipoId(Long tipoId);
+
+    List<GastoAdmin> findByFechaBetween(
+            LocalDate fechaInicio,
+            LocalDate fechaFin
+    );
 }

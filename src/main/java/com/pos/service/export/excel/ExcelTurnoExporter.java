@@ -96,10 +96,10 @@ public class ExcelTurnoExporter {
         for (int i = 0; i < headers.length; i++) {
             header.createCell(i).setCellValue(headers[i]);
         }
-
+        int index = 1;
         for (VentaResponseDTO v : ventas) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(v.id());
+            row.createCell(0).setCellValue(index++);
             row.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
             row.createCell(2).setCellValue(v.tipoVenta().name());
             row.createCell(3).setCellValue(v.estado().name());
@@ -126,9 +126,10 @@ public class ExcelTurnoExporter {
             header.createCell(i).setCellValue(headers[i]);
         }
 
+        int index = 1;
         for (GastoCajaResponseDTO g : gastos) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(g.getId());
+            row.createCell(0).setCellValue(index++);
             row.createCell(1).setCellValue(g.getFecha().format(FECHA_FORMATO));
             row.createCell(2).setCellValue(g.getDescripcion());
 

@@ -94,9 +94,9 @@ public class PdfTurnoExporter {
                     .setBold()
                     .setBackgroundColor(ColorConstants.LIGHT_GRAY));
         }
-
+        int index = 1;
         for (VentaResponseDTO v : ventas) {
-            table.addCell(String.valueOf(v.id()));
+            table.addCell(String.valueOf(index++));
             table.addCell(v.fecha().format(FECHA_FORMATO));
             table.addCell(v.tipoVenta().name());
             table.addCell(v.estado().name());
@@ -120,9 +120,9 @@ public class PdfTurnoExporter {
                     .setBold()
                     .setBackgroundColor(ColorConstants.LIGHT_GRAY));
         }
-
+        int index = 1;
         for (GastoCajaResponseDTO g : gastos) {
-            table.addCell(String.valueOf(g.getId()));
+            table.addCell(String.valueOf(index++));
             table.addCell(g.getFecha().format(FECHA_FORMATO));
             table.addCell(g.getDescripcion());
             table.addCell(String.format("$%,.2f", g.getValor()));

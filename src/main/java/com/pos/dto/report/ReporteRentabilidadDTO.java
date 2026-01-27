@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.pos.dto.turno.GastoCajaResponseDTO;
+import com.pos.dto.gasto.GastoResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 
 @Getter
@@ -22,7 +22,7 @@ public class ReporteRentabilidadDTO {
     private BigDecimal gananciaNeta = BigDecimal.ZERO;
 
     private List<VentaResponseDTO> ventas;
-    private List<GastoCajaResponseDTO> gastos;
+    private List<GastoResponseDTO> gastos; 
 
     
 }

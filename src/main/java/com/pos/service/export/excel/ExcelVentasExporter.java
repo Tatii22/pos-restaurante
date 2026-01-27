@@ -64,10 +64,10 @@ public class ExcelVentasExporter {
             for (int i = 0; i < columnas.length; i++) {
                 header.createCell(i).setCellValue(columnas[i]);
             }
-
+            int index = 1;
             for (VentaResponseDTO v : reporte.getVentas()) {
                 Row row = sheet.createRow(fila++);
-                row.createCell(0).setCellValue(v.id());
+                row.createCell(0).setCellValue(index++);
                 row.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
                 row.createCell(2).setCellValue(v.tipoVenta().name());
                 row.createCell(3).setCellValue(v.estado().name());

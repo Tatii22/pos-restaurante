@@ -34,6 +34,9 @@ public class ReporteVentaService {
                 fin,
                 List.of(EstadoVenta.DESPACHADA, EstadoVenta.ANULADA)
         );
+        ventas = ventas.stream()
+                .filter(v -> v.getEstado() == EstadoVenta.DESPACHADA)
+                .toList();
 
         BigDecimal totalBruto = BigDecimal.ZERO;
         BigDecimal totalDescuentos = BigDecimal.ZERO;
