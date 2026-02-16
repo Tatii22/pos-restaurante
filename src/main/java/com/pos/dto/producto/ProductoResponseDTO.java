@@ -1,5 +1,6 @@
 package com.pos.dto.producto;
 
+import com.pos.entity.TipoVentaProducto;
 import java.math.BigDecimal;
 
 import lombok.AllArgsConstructor;
@@ -15,4 +16,5 @@ public class ProductoResponseDTO {
     private Boolean activo;
     private Long categoriaId;
     private String categoriaNombre;
+    private TipoVentaProducto tipoVenta;
 }

@@ -1,16 +1,21 @@
 package com.pos.controller.export;
 
 import com.pos.dto.report.ReporteCierreTurnoDTO;
-import com.pos.service.report.ReporteTurnoService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.pos.service.export.excel.ExcelExportService;
 import com.pos.service.export.pdf.PdfExportService;
+import com.pos.service.report.ReporteTurnoService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/export/turnos")
+@RequestMapping("/export/turnos")
+@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
 public class ExportTurnoController {
 
     private final ReporteTurnoService reporteTurnoService;
@@ -27,7 +32,6 @@ public class ExportTurnoController {
         this.excelExportService = excelExportService;
     }
 
-    // ================== PDF ==================
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportarTurnoPDF(@RequestParam Long turnoId) {
 
@@ -42,7 +46,6 @@ public class ExportTurnoController {
                 .body(pdf);
     }
 
-    // ================== EXCEL ==================
     @GetMapping("/excel")
     public ResponseEntity<byte[]> exportarTurnoExcel(@RequestParam Long turnoId) {
 
@@ -61,4 +64,3 @@ public class ExportTurnoController {
                 .body(excel);
     }
 }
-

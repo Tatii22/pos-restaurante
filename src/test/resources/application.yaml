@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:posdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        '[format_sql]': true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+app:
+  jwt:
+    secret: MzU2NDM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkw
+    expiration-ms: 36000000
+  cors:
+    allowed-origins: http://localhost:5173

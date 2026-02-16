@@ -10,6 +10,7 @@ import com.pos.entity.TurnoCaja;
 public interface GastoCajaRepository extends JpaRepository<GastoCaja, Long> {
 
     List<GastoCaja> findByTurno(TurnoCaja turno);
+    List<GastoCaja> findByTurnoOrderByFechaDesc(TurnoCaja turno);
 
     List<GastoCaja> findByTurnoAndFechaBetween(TurnoCaja turno, LocalDateTime inicio, LocalDateTime fin);
 

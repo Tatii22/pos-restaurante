@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.pos.dto.gastoAdmin.TipoGastoCreateDTO;
+import java.util.List;
 
 
 
@@ -24,6 +25,12 @@ public class TipoGastoController {
         return ResponseEntity.ok(
                 tipoGastoService.crear(dto.nombre())
         );
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','CAJA')")
+    public ResponseEntity<List<TipoGasto>> listar() {
+        return ResponseEntity.ok(tipoGastoService.listar());
     }
 }
 

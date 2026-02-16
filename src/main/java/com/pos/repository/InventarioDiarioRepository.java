@@ -9,6 +9,7 @@ import com.pos.entity.MenuDiario;
 
 
 import java.util.Optional;
+import java.time.LocalDate;
 
 public interface InventarioDiarioRepository
         extends JpaRepository<InventarioDiario, Long> {
@@ -24,5 +25,9 @@ public interface InventarioDiarioRepository
     );
 
     List<InventarioDiario> findByMenuDiario(MenuDiario menuDiario);
+
+    void deleteByMenuDiario(MenuDiario menuDiario);
+
+    void deleteByFecha(LocalDate fecha);
 }
 

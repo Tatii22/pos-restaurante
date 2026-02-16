@@ -59,5 +59,15 @@ public class TurnoCajaController {
         return ResponseEntity.ok(TurnoCajaMapper.toDTO(turno));
     }
 
+    @GetMapping("/activo")
+    @PreAuthorize("hasRole('CAJA')")
+    public ResponseEntity<TurnoCajaResponseDTO> obtenerTurnoActivo() {
+        TurnoCaja turno = turnoCajaService.obtenerTurnoActivo();
+        if (turno == null) {
+            return ResponseEntity.ok(null);
+        }
+        return ResponseEntity.ok(TurnoCajaMapper.toDTO(turno));
+    }
+
 
 }

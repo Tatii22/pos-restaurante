@@ -12,6 +12,11 @@ public record VentaResponseDTO(
         TipoVenta tipoVenta,
         EstadoVenta estado,
         String clienteNombre,
+        String telefono,
+        String direccion,
+        BigDecimal valorDomicilio,
+        BigDecimal descuentoPorcentaje,
+        BigDecimal descuentoValor,
         BigDecimal total,
         FormaPago formaPago
 ) {}

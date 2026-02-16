@@ -27,9 +27,13 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/turnos/**").hasRole("CAJA")
-                        .requestMatchers("/turnos/**").hasRole("CAJA")
+                        .requestMatchers("/api/v1/auth/login").permitAll()
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/turnos/**").hasRole("CAJA")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

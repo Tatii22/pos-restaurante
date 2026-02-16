@@ -1,19 +1,23 @@
 package com.pos.controller.export;
 
 import com.pos.dto.report.ReporteRentabilidadDTO;
-import com.pos.service.report.ReporteRentabilidadService;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.pos.service.export.excel.ExcelExportService;
 import com.pos.service.export.pdf.PdfExportService;
+import com.pos.service.report.ReporteRentabilidadService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/export/rentabilidad")
+@RequestMapping("/export/rentabilidad")
+@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
 public class ExportRentabilidadController {
 
     private final ReporteRentabilidadService reporteRentabilidadService;
@@ -30,7 +34,6 @@ public class ExportRentabilidadController {
         this.excelExportService = excelExportService;
     }
 
-    // ================== PDF ==================
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportarRentabilidadPDF(
             @RequestParam LocalDate fechaInicio,
@@ -47,7 +50,6 @@ public class ExportRentabilidadController {
                 .body(pdf);
     }
 
-    // ================== EXCEL ==================
     @GetMapping("/excel")
     public ResponseEntity<byte[]> exportarRentabilidadExcel(
             @RequestParam LocalDate fechaInicio,
@@ -68,4 +70,3 @@ public class ExportRentabilidadController {
                 .body(excel);
     }
 }
-

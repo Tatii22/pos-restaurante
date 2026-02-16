@@ -1,19 +1,23 @@
 package com.pos.controller.export;
 
 import com.pos.dto.report.ReporteVentaDTO;
-import com.pos.service.report.ReporteVentaService;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.pos.service.export.excel.ExcelExportService;
 import com.pos.service.export.pdf.PdfExportService;
+import com.pos.service.report.ReporteVentaService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/export/ventas")
+@RequestMapping("/export/ventas")
+@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
 public class ExportVentaController {
 
     private final ReporteVentaService reporteVentaService;
@@ -30,7 +34,6 @@ public class ExportVentaController {
         this.excelExportService = excelExportService;
     }
 
-    // ================== PDF ==================
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportarVentasPDF(
             @RequestParam LocalDate fechaInicio,
@@ -47,7 +50,6 @@ public class ExportVentaController {
                 .body(pdf);
     }
 
-    // ================== EXCEL ==================
     @GetMapping("/excel")
     public ResponseEntity<byte[]> exportarVentasExcel(
             @RequestParam LocalDate fechaInicio,

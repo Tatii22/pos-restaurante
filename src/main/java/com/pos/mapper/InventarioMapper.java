@@ -9,6 +9,7 @@ public class InventarioMapper {
         return new InventarioResponseDTO(
                 inventario.getId(),
                 inventario.getFecha(),
+                inventario.getProducto().getId(),
                 inventario.getProducto().getNombre(),
                 inventario.getStockInicial(),
                 inventario.getStockActual(),

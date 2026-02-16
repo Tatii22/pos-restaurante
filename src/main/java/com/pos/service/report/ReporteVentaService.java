@@ -99,6 +99,11 @@ public class ReporteVentaService {
                 venta.getTipoVenta(),
                 venta.getEstado(),
                 venta.getClienteNombre(),
+                venta.getTelefono(),
+                venta.getDireccion(),
+                venta.getValorDomicilio(),
+                venta.getDescuentoPorcentaje(),
+                venta.getDescuentoValor(),
                 venta.getTotal(),
                 venta.getFormaPago()
         );

@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/productos")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 public class ProductoController {
 
 
@@ -24,6 +23,7 @@ public class ProductoController {
     private final CategoriaService categoriaService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponseDTO> crear(
             @Valid @RequestBody ProductoCreateDTO dto) {
 
@@ -45,12 +45,14 @@ public class ProductoController {
                         guardado.getPrecio(),
                         guardado.getActivo(),
                         categoria.getId(),
-                        categoria.getNombre()
+                        categoria.getNombre(),
+                        guardado.getTipoVenta()
                 )
         );
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','CAJA')")
     public ResponseEntity<List<ProductoResponseDTO>> listar() {
 
         List<ProductoResponseDTO> lista =
@@ -62,7 +64,8 @@ public class ProductoController {
                                 p.getPrecio(),
                                 p.getActivo(),
                                 p.getCategoria().getId(),
-                                p.getCategoria().getNombre()
+                                p.getCategoria().getNombre(),
+                                p.getTipoVenta()
                         ))
                         .toList();
 
@@ -70,6 +73,7 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductoResponseDTO> actualizar(
             @PathVariable Long id,
             @Valid @RequestBody ProductoUpdateDTO dto) {
@@ -92,12 +96,14 @@ public class ProductoController {
                         actualizado.getPrecio(),
                         actualizado.getActivo(),
                         categoria.getId(),
-                        categoria.getNombre()
+                        categoria.getNombre(),
+                        actualizado.getTipoVenta()
                 )
         );
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         productoService.eliminar(id);
         return ResponseEntity.noContent().build();

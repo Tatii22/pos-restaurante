@@ -1,24 +1,29 @@
 package com.pos.repository;
 
 import com.pos.entity.EstadoVenta;
-import com.pos.entity.GastoCaja;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface VentaRepository extends JpaRepository<Venta, Long> {
+public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
     @Query("""
         SELECT COALESCE(SUM(v.total), 0)
         FROM Venta v
         WHERE v.turno.id = :turnoId
+          AND v.estado = :estado
     """)
-    BigDecimal sumarTotalPorTurno(@Param("turnoId") Long turnoId);
+    BigDecimal sumarTotalPorTurnoPorEstado(
+            @Param("turnoId") Long turnoId,
+            @Param("estado") EstadoVenta estado
+    );
 
     List<Venta> findByFechaBetweenAndEstadoIn(
             LocalDateTime inicio,
@@ -26,7 +31,6 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             List<EstadoVenta> estados
     );
 
-    // Filtrar ventas despachadas por turno y rango de fechas
     List<Venta> findByTurnoAndEstadoAndFechaBetween(
             TurnoCaja turno,
             EstadoVenta estado,

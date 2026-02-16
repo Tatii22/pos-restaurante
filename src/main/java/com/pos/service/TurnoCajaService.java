@@ -1,18 +1,22 @@
 package com.pos.service;
 
+import com.pos.entity.EstadoTurno;
+import com.pos.entity.EstadoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
-import com.pos.entity.EstadoTurno;
 import com.pos.exception.BadRequestException;
+import com.pos.repository.InventarioDiarioRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.UsuarioRepository;
+import com.pos.repository.VentaRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import com.pos.repository.VentaRepository;
 
-import java.util.List;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,9 +24,10 @@ public class TurnoCajaService {
 
     private final TurnoCajaRepository turnoCajaRepository;
     private final UsuarioRepository usuarioRepository;
-    private final VentaRepository ventaRepository; // 🔥 NUEVO
+    private final VentaRepository ventaRepository;
+    private final InventarioDiarioRepository inventarioDiarioRepository;
 
-    // 🔓 APERTURA DE TURNO
+    @Transactional
     public TurnoCaja abrirTurno(BigDecimal montoInicial, String username) {
 
         Usuario usuario = usuarioRepository.findByUsername(username)
@@ -37,10 +42,13 @@ public class TurnoCajaService {
             throw new BadRequestException("Ya existe un turno activo");
         }
 
+        // Reinicia TODO el inventario del día al iniciar cada turno.
+        inventarioDiarioRepository.deleteByFecha(LocalDate.now());
+
         TurnoCaja turno = TurnoCaja.builder()
                 .fechaApertura(LocalDateTime.now())
                 .montoInicial(montoInicial)
-                .totalVentas(BigDecimal.ZERO)   // solo inicial
+                .totalVentas(BigDecimal.ZERO)
                 .totalGastos(BigDecimal.ZERO)
                 .estado(EstadoTurno.ABIERTO)
                 .usuario(usuario)
@@ -49,7 +57,6 @@ public class TurnoCajaService {
         return turnoCajaRepository.save(turno);
     }
 
-    // 🧪 SIMULACIÓN DE CIERRE
     public TurnoCaja simularCierre(BigDecimal efectivoContado, Usuario usuario) {
 
         if (!usuario.getRol().getNombre().equals("CAJA")) {
@@ -60,9 +67,8 @@ public class TurnoCajaService {
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
 
-        // 🔥 RECALCULAR DESDE VENTAS
         BigDecimal totalVentas = ventaRepository
-                .sumarTotalPorTurno(turno.getId());
+                .sumarTotalPorTurnoPorEstado(turno.getId(), EstadoVenta.DESPACHADA);
 
         turno.setTotalVentas(totalVentas);
 
@@ -79,7 +85,6 @@ public class TurnoCajaService {
         return turnoCajaRepository.save(turno);
     }
 
-    // 🔒 CIERRE DEFINITIVO
     public TurnoCaja cerrarTurno(BigDecimal montoFinal, Usuario usuario) {
 
         if (!usuario.getRol().getNombre().equals("CAJA")) {
@@ -90,9 +95,8 @@ public class TurnoCajaService {
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno para cerrar"));
 
-        // 🔥 RECALCULAR OTRA VEZ (OBLIGATORIO)
         BigDecimal totalVentas = ventaRepository
-                .sumarTotalPorTurno(turno.getId());
+                .sumarTotalPorTurnoPorEstado(turno.getId(), EstadoVenta.DESPACHADA);
 
         turno.setTotalVentas(totalVentas);
 
@@ -109,5 +113,11 @@ public class TurnoCajaService {
         turno.setEstado(EstadoTurno.CERRADO);
 
         return turnoCajaRepository.save(turno);
+    }
+
+    public TurnoCaja obtenerTurnoActivo() {
+        return turnoCajaRepository
+                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .orElse(null);
     }
 }

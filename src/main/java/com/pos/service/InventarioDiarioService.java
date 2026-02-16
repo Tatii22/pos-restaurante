@@ -45,7 +45,7 @@ public class InventarioDiarioService {
                 .stockInicial(stockInicial)
                 .stockActual(stockInicial)
                 // stockMinimo = 5 por default
-                .agotado(false)
+                .agotado(stockInicial <= 0)
                 .build();
 
         return inventarioRepository.save(inv);
@@ -72,11 +72,7 @@ public class InventarioDiarioService {
 
         inv.setStockActual(inv.getStockActual() + cantidad);
 
-        if (inv.getStockActual() < inv.getStockMinimo()) {
-            inv.setAgotado(true);
-        } else {
-            inv.setAgotado(false);
-        }
+        inv.setAgotado(inv.getStockActual() <= 0);
 
 
         return inventarioRepository.save(inv);

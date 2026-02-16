@@ -6,6 +6,7 @@ import com.pos.repository.TipoGastoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 
 
 @Service
@@ -27,6 +28,10 @@ public class TipoGastoService {
                 .build();
 
         return tipoGastoRepository.save(tipo);
+    }
+
+    public List<TipoGasto> listar() {
+        return tipoGastoRepository.findAll();
     }
 }
 

@@ -106,6 +106,11 @@ public class ReporteTurnoService {
                         v.getTipoVenta(),
                         v.getEstado(),
                         v.getClienteNombre(),
+                        v.getTelefono(),
+                        v.getDireccion(),
+                        v.getValorDomicilio(),
+                        v.getDescuentoPorcentaje(),
+                        v.getDescuentoValor(),
                         v.getTotal(),
                         v.getFormaPago()
                 ))

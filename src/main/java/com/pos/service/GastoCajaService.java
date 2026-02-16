@@ -1,6 +1,7 @@
 package com.pos.service;
 
 import com.pos.dto.turno.GastoCajaCreateDTO;
+import com.pos.dto.turno.GastoCajaResponseDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.GastoCajaRepository;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -58,5 +60,25 @@ public class GastoCajaService {
         turnoCajaRepository.save(turno);
 
         return gastoCajaRepository.save(gasto);
+    }
+
+    public List<GastoCajaResponseDTO> listarTurnoActivo(Usuario usuario) {
+        if (!usuario.getRol().getNombre().equals("CAJA")) {
+            throw new BadRequestException("Solo CAJA puede ver gastos de caja");
+        }
+
+        TurnoCaja turno = turnoCajaRepository
+                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .orElseThrow(() -> new BadRequestException("No hay turno activo"));
+
+        return gastoCajaRepository.findByTurnoOrderByFechaDesc(turno)
+                .stream()
+                .map(g -> new GastoCajaResponseDTO(
+                        g.getId(),
+                        g.getFecha(),
+                        g.getDescripcion(),
+                        g.getMonto()
+                ))
+                .toList();
     }
 }
