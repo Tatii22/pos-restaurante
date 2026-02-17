@@ -2,6 +2,7 @@ package com.pos.service;
 
 
 import com.pos.entity.*;
+import com.pos.exception.BadRequestException;
 import com.pos.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,13 +30,13 @@ public class InventarioDiarioService {
         MenuDiario menu = menuDiarioRepository
                 .findByFechaAndActivoTrue(hoy)
                 .orElseThrow(() ->
-                        new RuntimeException("No hay menú activo hoy")
+                        new BadRequestException("No hay menu activo hoy")
                 );
 
         Producto producto = productoService.obtenerPorId(productoId);
 
         if (inventarioRepository.existsByProductoAndMenuDiario(producto, menu)) {
-            throw new RuntimeException("Producto ya existe en el menú de hoy");
+            throw new BadRequestException("Producto ya existe en el menu de hoy");
         }
 
         InventarioDiario inv = InventarioDiario.builder()
@@ -55,9 +56,11 @@ public class InventarioDiarioService {
 
         MenuDiario menu = menuDiarioRepository
                 .findByFechaAndActivoTrue(LocalDate.now())
-                .orElseThrow(() ->
-                        new RuntimeException("No hay menú activo hoy")
-                );
+                .orElse(null);
+
+        if (menu == null) {
+            return List.of();
+        }
 
         return inventarioRepository.findByMenuDiario(menu);
     }
@@ -67,7 +70,7 @@ public class InventarioDiarioService {
 
         InventarioDiario inv = inventarioRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Inventario no encontrado")
+                        new BadRequestException("Inventario no encontrado")
                 );
 
         inv.setStockActual(inv.getStockActual() + cantidad);
@@ -78,4 +81,6 @@ public class InventarioDiarioService {
         return inventarioRepository.save(inv);
     }
 }
+
+
 

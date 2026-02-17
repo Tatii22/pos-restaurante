@@ -60,7 +60,7 @@ public class TurnoCajaController {
     }
 
     @GetMapping("/activo")
-    @PreAuthorize("hasRole('CAJA')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
     public ResponseEntity<TurnoCajaResponseDTO> obtenerTurnoActivo() {
         TurnoCaja turno = turnoCajaService.obtenerTurnoActivo();
         if (turno == null) {

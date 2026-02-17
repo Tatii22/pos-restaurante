@@ -33,6 +33,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        .requestMatchers("/api/v1/turnos/activo").hasAnyRole("CAJA","DOMI")
                         .requestMatchers("/api/v1/turnos/**").hasRole("CAJA")
                         .anyRequest().authenticated()
                 )
