@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage, money } from "../shared/utils";
+import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 
 type CartItem = { id: number; nombre: string; precio: number; cantidad: number; observacion: string };
@@ -69,9 +70,17 @@ function categoryCardIcon(name: string): JSX.Element {
 }
 
 export function VentasPage() {
+  const { role } = useAuthStore();
   const { isAbierto, setTurno } = useTurnoStore();
+  const esDomi = role === "DOMI";
   const qc = useQueryClient();
-  const bloqueado = !isAbierto();
+  const turnoActivoDomiQ = useQuery({
+    queryKey: ["turno-activo-domi-ventas", role],
+    queryFn: () => posApi.getTurnoActivo(),
+    enabled: esDomi,
+    retry: false
+  });
+  const bloqueado = role === "CAJA" ? !isAbierto() : !turnoActivoDomiQ.data;
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -80,6 +89,9 @@ export function VentasPage() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [descuentoInput, setDescuentoInput] = useState("0");
   const [clienteNombre, setClienteNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [valorDomicilio, setValorDomicilio] = useState("0");
   const [orderCode, setOrderCode] = useState(() => String(Math.floor(Math.random() * 9000) + 1000));
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [stockWarn, setStockWarn] = useState<string | null>(null);
@@ -88,8 +100,14 @@ export function VentasPage() {
   const [cashAmount, setCashAmount] = useState("0");
   const [activeCalcField, setActiveCalcField] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
 
+  const productsMetaEnabled = role === "CAJA";
   const catalogQ = useQuery({ queryKey: ["catalogo-hoy"], queryFn: () => posApi.catalogoHoy() });
-  const productsQ = useQuery({ queryKey: ["productos-for-pos"], queryFn: () => posApi.getProductos() });
+  const productsQ = useQuery({
+    queryKey: ["productos-for-pos", role],
+    queryFn: () => posApi.getProductos(),
+    enabled: productsMetaEnabled,
+    retry: false
+  });
   const inventarioQ = useQuery({
     queryKey: ["inventario-ventas"],
     queryFn: () => posApi.getInventarioDiario(),
@@ -103,6 +121,9 @@ export function VentasPage() {
       setDescuento(0);
       setDescuentoInput("0");
       setClienteNombre("");
+      setTelefono("");
+      setDireccion("");
+      setValorDomicilio("0");
       setOrderCode(String(Math.floor(Math.random() * 9000) + 1000));
       setShowPayModal(false);
       setTransferAmount("0");
@@ -115,7 +136,11 @@ export function VentasPage() {
       qc.invalidateQueries({ queryKey: ["catalogo-alertas-caja"] });
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
-      posApi.getTurnoActivo().then((t) => setTurno(t)).catch(() => {});
+      qc.refetchQueries({ queryKey: ["catalogo-hoy"], type: "active" });
+      qc.refetchQueries({ queryKey: ["inventario-ventas"], type: "active" });
+      if (role === "CAJA") {
+        posApi.getTurnoActivo().then((t) => setTurno(t)).catch(() => {});
+      }
     }
   });
 
@@ -151,7 +176,8 @@ export function VentasPage() {
   }, [catalogQ.data, productsQ.data, inventarioQ.data]);
 
   const categories = useMemo(() => {
-    const uniques = Array.from(new Set(products.map((p) => p.categoria))).sort();
+    const fromProductos = products.map((p) => p.categoria);
+    const uniques = Array.from(new Set([...fromProductos])).sort();
     return ["ALL", ...uniques];
   }, [products]);
 
@@ -165,6 +191,14 @@ export function VentasPage() {
   const total = subtotal - subtotal * (descuento / 100);
   const totalItems = cart.length;
   const totalPieces = cart.reduce((sum, item) => sum + item.cantidad, 0);
+
+  function cleanText(value: string, maxLen: number): string {
+    return value.slice(0, maxLen);
+  }
+
+  function cleanDigits(value: string, maxLen = 10): string {
+    return value.replace(/[^\d]/g, "").slice(0, maxLen);
+  }
 
   function addProduct(product: ViewProduct) {
     if (bloqueado || product.agotado) return;
@@ -193,6 +227,16 @@ export function VentasPage() {
     return Number(normalized || "0");
   }
 
+  const telefonoLimpio = telefono.trim();
+  const direccionLimpia = direccion.trim();
+  const valorDomicilioNumero = parseAmount(valorDomicilio);
+  const telefonoValido = !esDomi || /^\d{7,15}$/.test(telefonoLimpio);
+  const direccionValida = !esDomi || direccionLimpia.length >= 5;
+  const valorDomicilioValido = !esDomi || (valorDomicilio.trim().length > 0 && valorDomicilioNumero >= 0);
+  const datosDomicilioValidos = telefonoValido && direccionValida && valorDomicilioValido;
+  const showTelefonoError = esDomi && telefonoLimpio.length > 0 && !telefonoValido;
+  const showDireccionError = esDomi && direccionLimpia.length > 0 && !direccionValida;
+
   const transfer = parseAmount(transferAmount);
   const cash = parseAmount(cashAmount);
   const paid = transfer + cash;
@@ -207,10 +251,13 @@ export function VentasPage() {
 
   function buildSalePayload(transferValue: number, cashValue: number) {
     return {
-      tipoVenta: "LOCAL" as const,
+      tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
       formaPago: resolveFormaPagoFrom(transferValue, cashValue),
       clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
-      descuentoPorcentaje: descuento,
+      telefono: esDomi ? telefono.trim() : undefined,
+      direccion: esDomi ? direccion.trim() : undefined,
+      valorDomicilio: esDomi ? valorDomicilioNumero : undefined,
+      descuentoPorcentaje: esDomi ? 0 : descuento,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
     };
   }
@@ -258,14 +305,28 @@ export function VentasPage() {
     await createSale.mutateAsync(buildSalePayload(transfer, cash));
   }
 
+  const showInventarioError = inventarioQ.isError && role === "CAJA";
+  const showMetaError = productsMetaEnabled && productsQ.isError;
   const hasError =
-    catalogQ.isError || productsQ.isError || inventarioQ.isError || createSale.isError || printKitchenPreviewM.isError;
+    catalogQ.isError || showMetaError || createSale.isError || printKitchenPreviewM.isError || turnoActivoDomiQ.isError || showInventarioError;
+  const pageErrorMessage = hasError
+    ? getErrorMessage(
+        catalogQ.error ||
+          (showMetaError ? productsQ.error : undefined) ||
+          createSale.error ||
+          printKitchenPreviewM.error ||
+          turnoActivoDomiQ.error ||
+          (showInventarioError ? inventarioQ.error : undefined)
+      )
+    : "";
+  const hasUsableData = products.length > 0 || !!catalogQ.data;
+  const showInlineError = hasError && !(pageErrorMessage === "Acceso denegado" && hasUsableData);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[130px_1fr_390px]">
       {bloqueado && (
         <div className="xl:col-span-3 rounded-xl border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-          Ventas bloqueadas: abre un turno en estado ABIERTO para operar.
+          Ventas bloqueadas: no hay turno ABIERTO de caja para operar.
         </div>
       )}
 
@@ -297,7 +358,8 @@ export function VentasPage() {
             className="input max-w-sm"
             placeholder="Buscar producto..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setSearch(cleanText(e.target.value, 80))}
+            maxLength={80}
           />
         </div>
 
@@ -360,10 +422,49 @@ export function VentasPage() {
             <input
               className="input mt-1"
               value={clienteNombre}
-              onChange={(e) => setClienteNombre(e.target.value)}
+              onChange={(e) => setClienteNombre(cleanText(e.target.value, 60))}
               placeholder="Ej: Juan Perez"
+              maxLength={60}
             />
           </label>
+          {esDomi && (
+            <>
+              <label className="text-sm">
+                Telefono
+                <input
+                  className="input mt-1"
+                  value={telefono}
+                  onChange={(e) => setTelefono(cleanDigits(e.target.value, 15))}
+                  placeholder="Ej: 3001234567"
+                  inputMode="numeric"
+                  maxLength={15}
+                />
+                {showTelefonoError && <p className="mt-1 text-xs text-orange-700">Ingresa un telefono valido (7 a 15 digitos).</p>}
+              </label>
+              <label className="text-sm">
+                Direccion
+                <input
+                  className="input mt-1"
+                  value={direccion}
+                  onChange={(e) => setDireccion(cleanText(e.target.value, 120))}
+                  placeholder="Ej: Calle 10 # 15-20"
+                  maxLength={120}
+                />
+                {showDireccionError && <p className="mt-1 text-xs text-orange-700">La direccion debe tener al menos 5 caracteres.</p>}
+              </label>
+              <label className="text-sm">
+                Valor domicilio
+                <input
+                  className="input mt-1"
+                  value={valorDomicilio}
+                  onChange={(e) => setValorDomicilio(cleanDigits(e.target.value, 9))}
+                  inputMode="numeric"
+                  maxLength={9}
+                />
+                {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor de domicilio valido.</p>}
+              </label>
+            </>
+          )}
         </div>
 
         <div className="max-h-72 space-y-2 overflow-auto pr-1">
@@ -391,15 +492,16 @@ export function VentasPage() {
                 placeholder="Observacion"
                 value={item.observacion}
                 onChange={(e) =>
-                  setCart((prev) => prev.map((x) => (x.id === item.id ? { ...x, observacion: e.target.value } : x)))
+                  setCart((prev) => prev.map((x) => (x.id === item.id ? { ...x, observacion: cleanText(e.target.value, 120) } : x)))
                 }
+                maxLength={120}
               />
             </div>
           ))}
         </div>
 
         <div className="mt-3 border-t border-pos-border pt-3">
-          <button className="btn-ghost w-full" onClick={() => setShowDiscountModal(true)} disabled={bloqueado}>
+          <button className="btn-ghost w-full" onClick={() => setShowDiscountModal(true)} disabled={bloqueado || esDomi}>
             Descuento: {descuento}%
           </button>
           <div className="mt-2 text-sm text-pos-muted">
@@ -413,23 +515,37 @@ export function VentasPage() {
         <div className="mt-4 grid gap-2">
           <button
             className="btn-primary bg-green-600 hover:bg-green-700"
-            disabled={!cart.length || bloqueado || createSale.isPending || printKitchenPreviewM.isPending}
+            disabled={!cart.length || bloqueado || createSale.isPending || printKitchenPreviewM.isPending || (esDomi && !datosDomicilioValidos)}
             onClick={async () => {
-              await printKitchenPreviewM.mutateAsync();
+              if (esDomi && !datosDomicilioValidos) return;
+              if (esDomi) {
+                await createSale.mutateAsync(buildSalePayload(0, total));
+                return;
+              }
+              if (!esDomi) {
+                await printKitchenPreviewM.mutateAsync();
+              }
               setShowPayModal(true);
               setActiveCalcField("EFECTIVO");
             }}
           >
-            Cobrar
+            {esDomi ? "Enviar pedido" : "Cobrar"}
           </button>
-          <p className="text-xs text-pos-muted">
-            Al confirmar cobro se imprime ticket cocina y factura en la impresora termica.
-          </p>
+          {!esDomi && (
+            <p className="text-xs text-pos-muted">
+              Al confirmar cobro se imprime ticket cocina y factura en la impresora termica.
+            </p>
+          )}
+          {esDomi && (
+            <p className="text-xs text-pos-muted">
+              Para domicilio debes completar telefono, direccion y valor de domicilio.
+            </p>
+          )}
         </div>
 
-        {hasError && (
+        {showInlineError && (
           <p className="mt-3 text-sm text-red-600">
-            {getErrorMessage(catalogQ.error || productsQ.error || inventarioQ.error || createSale.error || printKitchenPreviewM.error)}
+            {pageErrorMessage}
           </p>
         )}
       </section>
@@ -469,8 +585,9 @@ export function VentasPage() {
               <input
                 className="input mt-1"
                 value={descuentoInput}
-                onChange={(e) => setDescuentoInput(e.target.value)}
+                onChange={(e) => setDescuentoInput(cleanDigits(e.target.value, 3))}
                 inputMode="numeric"
+                maxLength={3}
               />
             </label>
             <div className="mt-3 flex gap-2">
@@ -539,8 +656,9 @@ export function VentasPage() {
                 <input
                   className="input mt-2"
                   value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
+                  onChange={(e) => setTransferAmount(cleanDigits(e.target.value, 9))}
                   inputMode="numeric"
+                  maxLength={9}
                 />
               </div>
               <div>
@@ -553,8 +671,9 @@ export function VentasPage() {
                 <input
                   className="input mt-2"
                   value={cashAmount}
-                  onChange={(e) => setCashAmount(e.target.value)}
+                  onChange={(e) => setCashAmount(cleanDigits(e.target.value, 9))}
                   inputMode="numeric"
+                  maxLength={9}
                 />
               </div>
             </div>
@@ -579,7 +698,7 @@ export function VentasPage() {
               </button>
               <button
                 className="btn-primary flex-1"
-                disabled={remaining > 0 || createSale.isPending}
+                disabled={remaining > 0 || createSale.isPending || (esDomi && !datosDomicilioValidos)}
                 onClick={registerSale}
               >
                 Confirmar cobro
@@ -587,6 +706,9 @@ export function VentasPage() {
             </div>
             {remaining > 0 && (
               <p className="mt-2 text-xs text-orange-700">Aun falta dinero por registrar para completar el pago.</p>
+            )}
+            {esDomi && !datosDomicilioValidos && (
+              <p className="mt-2 text-xs text-orange-700">Revisa telefono, direccion y valor de domicilio antes de continuar.</p>
             )}
           </div>
         </div>

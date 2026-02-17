@@ -10,6 +10,7 @@ import type {
   ReporteVentas,
   TipoGasto,
   Turno,
+  Usuario,
   Venta
 } from "../types";
 
@@ -140,6 +141,20 @@ export const posApi = {
   crearUsuario: async (payload: unknown) => {
     const { data } = await http.post("/api/v1/usuarios", payload);
     return data;
+  },
+  getUsuarios: async () => {
+    const { data } = await http.get<Usuario[]>("/api/v1/usuarios");
+    return data;
+  },
+  actualizarUsuario: async (
+    id: number,
+    payload: { username: string; rol: string; activo: boolean; password?: string }
+  ) => {
+    const { data } = await http.put<Usuario>(`/api/v1/usuarios/${id}`, payload);
+    return data;
+  },
+  eliminarUsuario: async (id: number) => {
+    await http.delete(`/api/v1/usuarios/${id}`);
   },
   getTiposGasto: async () => {
     const { data } = await http.get<TipoGasto[]>("/api/v1/tipos-gasto");

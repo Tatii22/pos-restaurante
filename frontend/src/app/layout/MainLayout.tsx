@@ -1,10 +1,9 @@
 import {
   Bell,
-  ClipboardList,
+  Boxes,
   History,
   LayoutDashboard,
   LogOut,
-  Package,
   Settings,
   ShoppingCart,
   Truck,
@@ -31,14 +30,13 @@ type MenuItem = {
 };
 
 const items: MenuItem[] = [
-  { to: "/dashboard", label: "Dashboard", roles: ["ADMIN", "DOMI"], icon: <LayoutDashboard size={16} /> },
-  { to: "/ventas", label: "Ventas", roles: ["CAJA"], icon: <ShoppingCart size={16} /> },
+  { to: "/dashboard", label: "Dashboard", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
+  { to: "/ventas", label: "Ventas", roles: ["CAJA", "DOMI"], icon: <ShoppingCart size={16} /> },
   { to: "/historial", label: "Historial", roles: ["CAJA"], icon: <History size={16} /> },
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
   { to: "/gastos", label: "Gastos", roles: ["CAJA"], icon: <Wallet size={16} /> },
   { to: "/reportes", label: "Reportes", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
-  { to: "/inventario", label: "Inventario", roles: ["ADMIN"], icon: <Package size={16} /> },
-  { to: "/menu-dia", label: "Menu del Dia", roles: ["ADMIN"], icon: <ClipboardList size={16} /> },
+  { to: "/categorias", label: "Categorias", roles: ["ADMIN"], icon: <Boxes size={16} /> },
   { to: "/productos", label: "Productos", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/usuarios", label: "Usuarios", roles: ["ADMIN"], icon: <Users size={16} /> },
   { to: "/configuracion", label: "Configuracion", roles: ["ADMIN"], icon: <Settings size={16} /> }
@@ -59,6 +57,10 @@ export function MainLayout() {
   const [restockQtyByAlert, setRestockQtyByAlert] = useState<Record<number, string>>({});
 
   const menu = items.filter((i) => role && i.roles.includes(role));
+  const menuSetupKey = useMemo(() => {
+    if (!turno) return "";
+    return `menu-setup-locked:${username}:turno:${turno.id}:apertura:${turno.fechaApertura}`;
+  }, [username, turno?.id, turno?.fechaApertura]);
 
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-layout", role],
@@ -108,6 +110,8 @@ export function MainLayout() {
       setStockInicial("10");
       queryClient.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
       queryClient.invalidateQueries({ queryKey: ["catalogo-alertas-caja"] });
+      queryClient.invalidateQueries({ queryKey: ["catalogo-hoy"] });
+      queryClient.invalidateQueries({ queryKey: ["inventario-ventas"] });
     }
   });
 
@@ -133,10 +137,10 @@ export function MainLayout() {
 
   useEffect(() => {
     if (role !== "CAJA" || !turno) return;
-    const key = `menu-setup-locked:${username}:turno:${turno.id}`;
-    const alreadyUnlocked = sessionStorage.getItem(key) === "0";
+    if (!menuSetupKey) return;
+    const alreadyUnlocked = sessionStorage.getItem(menuSetupKey) === "0";
     setMenuSetupLocked(!alreadyUnlocked);
-  }, [role, turno?.id, username]);
+  }, [role, turno?.id, menuSetupKey]);
 
   const turnoClass =
     turno?.estado === "ABIERTO"
@@ -401,9 +405,14 @@ export function MainLayout() {
                   className="btn-primary"
                   disabled={(inventarioQ.data?.length || 0) === 0}
                   onClick={() => {
-                    const key = `menu-setup-locked:${username}:turno:${turno?.id}`;
-                    sessionStorage.setItem(key, "0");
+                    if (menuSetupKey) {
+                      sessionStorage.setItem(menuSetupKey, "0");
+                    }
                     setMenuSetupLocked(false);
+                    queryClient.invalidateQueries({ queryKey: ["catalogo-hoy"] });
+                    queryClient.invalidateQueries({ queryKey: ["inventario-ventas"] });
+                    queryClient.refetchQueries({ queryKey: ["catalogo-hoy"], type: "active" });
+                    queryClient.refetchQueries({ queryKey: ["inventario-ventas"], type: "active" });
                   }}
                 >
                   Finalizar menu del dia

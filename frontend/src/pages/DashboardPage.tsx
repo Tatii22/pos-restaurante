@@ -12,28 +12,33 @@ import {
 } from "chart.js";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage, money } from "../shared/utils";
-import { useAuthStore } from "../shared/store/authStore";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-function formatDate(delta: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - delta);
-  return date.toISOString().slice(0, 10);
+function dateYmd(deltaDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - deltaDays);
+  return d.toISOString().slice(0, 10);
+}
+
+function startOfMonthYmd(): string {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
 }
 
 export function DashboardPage() {
-  const { role } = useAuthStore();
-  const today = formatDate(0);
+  const today = dateYmd(0);
+  const monthStart = startOfMonthYmd();
   const reportQ = useQuery({
-    queryKey: ["dashboard-report", today],
-    queryFn: () => posApi.getReporteVentas(today, today)
+    queryKey: ["dashboard-report-month", monthStart, today],
+    queryFn: () => posApi.getReporteVentas(monthStart, today)
   });
 
   const chartQ = useQuery({
     queryKey: ["dashboard-7days"],
     queryFn: async () => {
-      const days = Array.from({ length: 7 }, (_, i) => formatDate(6 - i));
+      const days = Array.from({ length: 7 }, (_, i) => dateYmd(6 - i));
       const values = await Promise.all(days.map((d) => posApi.getReporteVentas(d, d)));
       return { days, values };
     }
@@ -54,67 +59,50 @@ export function DashboardPage() {
     };
   }, [chartQ.data]);
 
+  const resumen = reportQ.data;
+
   if (reportQ.isError || chartQ.isError) {
     return <p className="text-sm text-red-600">{getErrorMessage(reportQ.error || chartQ.error)}</p>;
   }
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-2xl font-semibold">Dashboard</h2>
-      <div className="grid gap-3 md:grid-cols-4">
+      <h2 className="text-2xl font-semibold">Panel administrativo</h2>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="card p-4">
-          <p className="text-sm text-pos-muted">Ventas del día</p>
-          <p className="text-2xl font-bold">{reportQ.data?.totalVentas ?? 0}</p>
+          <p className="text-sm text-pos-muted">Ventas del mes</p>
+          <p className="text-2xl font-bold">{resumen?.totalVentas ?? 0}</p>
         </div>
         <div className="card p-4">
-          <p className="text-sm text-pos-muted">Caja actual</p>
-          <p className="text-2xl font-bold">{money.format(reportQ.data?.totalNeto ?? 0)}</p>
+          <p className="text-sm text-pos-muted">Total neto del mes</p>
+          <p className="text-2xl font-bold">{money.format(resumen?.totalNeto ?? 0)}</p>
         </div>
         <div className="card p-4">
           <p className="text-sm text-pos-muted">Efectivo</p>
-          <p className="text-2xl font-bold">{money.format(reportQ.data?.totalEfectivo ?? 0)}</p>
+          <p className="text-2xl font-bold">{money.format(resumen?.totalEfectivo ?? 0)}</p>
         </div>
         <div className="card p-4">
-          <p className="text-sm text-pos-muted">Pedidos pendientes</p>
-          <p className="text-2xl font-bold">{role === "DOMI" ? "-" : "Operativo"}</p>
+          <p className="text-sm text-pos-muted">Transferencia</p>
+          <p className="text-2xl font-bold">{money.format(resumen?.totalTransferencia ?? 0)}</p>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         <div className="card p-4">
-          <h3 className="mb-3 text-lg font-semibold">Ventas últimos 7 días</h3>
-          {lineData ? <Line data={lineData} /> : <p>Cargando gráfico...</p>}
+          <h3 className="mb-3 text-lg font-semibold">Tendencia de ventas (ultimos 7 dias)</h3>
+          {lineData ? <Line data={lineData} /> : <p className="text-sm text-pos-muted">Cargando grafico...</p>}
         </div>
 
         <div className="card p-4">
-          <h3 className="mb-3 text-lg font-semibold">Menu del Día Panel</h3>
-          <MenuPanel />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MenuPanel() {
-  const catalogQ = useQuery({
-    queryKey: ["catalogo-dashboard"],
-    queryFn: () => posApi.catalogoHoy()
-  });
-
-  if (catalogQ.isError) return <p className="text-sm text-red-600">{getErrorMessage(catalogQ.error)}</p>;
-  if (!catalogQ.data) return <p>Cargando...</p>;
-
-  return (
-    <div className="grid gap-2">
-      {(catalogQ.data.menuDiario || []).slice(0, 8).map((p) => (
-        <div key={p.id} className="rounded-xl border border-pos-border bg-white p-2 text-sm">
-          <div className="font-medium">{p.nombre}</div>
-          <div className="text-pos-muted">{money.format(p.precio)}</div>
-          <div className={p.agotado ? "text-xs text-red-600" : "text-xs text-green-700"}>
-            {p.agotado ? "No disponible" : "Disponible"}
+          <h3 className="mb-3 text-lg font-semibold">Resumen del mes</h3>
+          <div className="space-y-2 text-sm">
+            <p className="flex justify-between"><span className="text-pos-muted">Bruto</span><span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Descuentos</span><span className="font-semibold">{money.format(resumen?.totalDescuentos ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Neto</span><span className="font-semibold">{money.format(resumen?.totalNeto ?? 0)}</span></p>
           </div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }

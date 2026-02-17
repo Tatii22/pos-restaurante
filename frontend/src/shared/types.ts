@@ -66,6 +66,13 @@ export type Categoria = {
   activa: boolean;
 };
 
+export type Usuario = {
+  id: number;
+  username: string;
+  rol: "ADMIN" | "CAJA" | "DOMI" | string;
+  activo: boolean;
+};
+
 export type TipoGasto = {
   id: number;
   nombre: string;

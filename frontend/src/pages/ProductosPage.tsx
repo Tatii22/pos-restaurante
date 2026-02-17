@@ -1,5 +1,6 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BsPencilSquare, BsToggleOff, BsToggleOn, BsTrash3 } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage, money } from "../shared/utils";
 
@@ -7,6 +8,17 @@ export function ProductosPage() {
   const qc = useQueryClient();
   const productsQ = useQuery({ queryKey: ["productos"], queryFn: () => posApi.getProductos() });
   const categoriesQ = useQuery({ queryKey: ["categorias"], queryFn: () => posApi.getCategorias() });
+  const [buscar, setBuscar] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<"ALL" | "MENU_DIARIO" | "SIEMPRE_DISPONIBLE">("ALL");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: 0,
+    nombre: "",
+    precio: "",
+    categoriaId: "",
+    tipoVenta: "SIEMPRE_DISPONIBLE",
+    activo: true
+  });
 
   const [form, setForm] = useState({
     nombre: "",
@@ -19,7 +31,7 @@ export function ProductosPage() {
   const createM = useMutation({
     mutationFn: () =>
       posApi.crearProducto({
-        nombre: form.nombre,
+        nombre: form.nombre.trim(),
         precio: Number(form.precio),
         categoriaId: Number(form.categoriaId),
         tipoVenta: form.tipoVenta,
@@ -30,28 +42,14 @@ export function ProductosPage() {
       qc.invalidateQueries({ queryKey: ["productos"] });
     }
   });
-  const createCatM = useMutation({
-    mutationFn: (name: string) => posApi.crearCategoria({ nombre: name, activa: true }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] })
-  });
-  const toggleCatM = useMutation({
-    mutationFn: (payload: { id: number; nombre: string; activa: boolean }) =>
-      posApi.actualizarCategoria(payload.id, { nombre: payload.nombre, activa: payload.activa }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] })
-  });
-  const delCatM = useMutation({
-    mutationFn: (id: number) => posApi.eliminarCategoria(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] })
-  });
-  const [newCategoria, setNewCategoria] = useState("");
 
-  const toggleM = useMutation({
-    mutationFn: (payload: { id: number; name: string; price: number; categoryId: number; active: boolean }) =>
+  const updateM = useMutation({
+    mutationFn: (payload: { id: number; name: string; price: number; categoryId: number; type: string; active: boolean }) =>
       posApi.actualizarProducto(payload.id, {
         nombre: payload.name,
         precio: payload.price,
         categoriaId: payload.categoryId,
-        tipoVenta: "SIEMPRE_DISPONIBLE",
+        tipoVenta: payload.type,
         activo: payload.active
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["productos"] })
@@ -62,19 +60,88 @@ export function ProductosPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["productos"] })
   });
 
+  const lista = useMemo(() => {
+    const term = buscar.trim().toLowerCase();
+    return (productsQ.data || []).filter((p) => {
+      const pasaTexto =
+        !term ||
+        p.nombre.toLowerCase().includes(term) ||
+        p.categoriaNombre.toLowerCase().includes(term) ||
+        String(p.precio).includes(term);
+      const pasaTipo = filtroTipo === "ALL" || (p.tipoVenta || "SIEMPRE_DISPONIBLE") === filtroTipo;
+      return pasaTexto && pasaTipo;
+    });
+  }, [productsQ.data, buscar, filtroTipo]);
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (!form.nombre.trim() || Number(form.precio) <= 0 || !form.categoriaId) return;
     createM.mutate();
+  }
+
+  function openEdit(producto: {
+    id: number;
+    nombre: string;
+    precio: number;
+    categoriaId: number;
+    tipoVenta?: "MENU_DIARIO" | "SIEMPRE_DISPONIBLE";
+    activo: boolean;
+  }) {
+    setEditForm({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: String(producto.precio),
+      categoriaId: String(producto.categoriaId),
+      tipoVenta: producto.tipoVenta || "SIEMPRE_DISPONIBLE",
+      activo: producto.activo
+    });
+    setEditOpen(true);
+  }
+
+  function submitEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editForm.nombre.trim() || Number(editForm.precio) <= 0 || !editForm.categoriaId) return;
+    updateM.mutate(
+      {
+        id: editForm.id,
+        name: editForm.nombre.trim(),
+        price: Number(editForm.precio),
+        categoryId: Number(editForm.categoriaId),
+        type: editForm.tipoVenta,
+        active: editForm.activo
+      },
+      {
+        onSuccess: () => {
+          setEditOpen(false);
+        }
+      }
+    );
   }
 
   return (
     <div className="grid gap-4">
       <h2 className="text-2xl font-semibold">Productos</h2>
+
       <form className="card grid gap-3 p-4 md:grid-cols-5" onSubmit={submit}>
-        <input className="input" placeholder="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-        <input className="input" placeholder="Precio" type="number" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} required />
+        <input
+          className="input"
+          placeholder="Nombre"
+          value={form.nombre}
+          onChange={(e) => setForm({ ...form, nombre: e.target.value.slice(0, 80) })}
+          maxLength={80}
+          required
+        />
+        <input
+          className="input"
+          placeholder="Precio"
+          type="number"
+          min={1}
+          value={form.precio}
+          onChange={(e) => setForm({ ...form, precio: e.target.value })}
+          required
+        />
         <select className="input" value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })} required>
-          <option value="">Categoría</option>
+          <option value="">Categoria</option>
           {(categoriesQ.data || []).map((c) => (
             <option key={c.id} value={c.id}>{c.nombre}</option>
           ))}
@@ -83,47 +150,84 @@ export function ProductosPage() {
           <option value="MENU_DIARIO">MENU_DIARIO</option>
           <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
         </select>
-        <button className="btn-primary">Crear</button>
+        <button className="btn-primary" disabled={createM.isPending}>
+          {createM.isPending ? "Creando..." : "Crear"}
+        </button>
       </form>
 
+      <div className="card p-4">
+        <div className="grid gap-2 md:grid-cols-[1fr_260px]">
+          <input
+            className="input"
+            placeholder="Buscar por nombre, categoria o precio..."
+            value={buscar}
+            onChange={(e) => setBuscar(e.target.value.slice(0, 80))}
+            maxLength={80}
+          />
+          <select className="input" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value as "ALL" | "MENU_DIARIO" | "SIEMPRE_DISPONIBLE")}>
+            <option value="ALL">Todos los tipos</option>
+            <option value="MENU_DIARIO">MENU_DIARIO</option>
+            <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
+          </select>
+        </div>
+      </div>
+
       <div className="card overflow-auto">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="border-b border-pos-border">
               <th className="p-3 text-left">ID</th>
               <th className="p-3 text-left">Nombre</th>
               <th className="p-3 text-left">Precio</th>
-              <th className="p-3 text-left">Categoría</th>
+              <th className="p-3 text-left">Categoria</th>
+              <th className="p-3 text-left">Tipo</th>
               <th className="p-3 text-left">Activo</th>
               <th className="p-3 text-left">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {(productsQ.data || []).map((p) => (
+            {lista.map((p) => (
               <tr key={p.id} className="border-b border-pos-border/70">
                 <td className="p-3">{p.id}</td>
                 <td className="p-3">{p.nombre}</td>
                 <td className="p-3">{money.format(p.precio)}</td>
                 <td className="p-3">{p.categoriaNombre}</td>
-                <td className="p-3">{p.activo ? "Sí" : "No"}</td>
+                <td className="p-3">{p.tipoVenta || "-"}</td>
+                <td className="p-3">{p.activo ? "Si" : "No"}</td>
                 <td className="p-3">
                   <div className="flex gap-2">
                     <button
-                      className="btn-ghost"
+                      className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                      title="Editar producto"
+                      aria-label="Editar producto"
+                      onClick={() => openEdit(p)}
+                    >
+                      <BsPencilSquare size={14} />
+                    </button>
+                    <button
+                      className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                      title={p.activo ? "Desactivar producto" : "Activar producto"}
+                      aria-label={p.activo ? "Desactivar producto" : "Activar producto"}
                       onClick={() =>
-                        toggleM.mutate({
+                        updateM.mutate({
                           id: p.id,
                           name: p.nombre,
                           price: p.precio,
                           categoryId: p.categoriaId,
+                          type: p.tipoVenta || "SIEMPRE_DISPONIBLE",
                           active: !p.activo
                         })
                       }
                     >
-                      Toggle Activo
+                      {p.activo ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
                     </button>
-                    <button className="btn-ghost" onClick={() => deleteM.mutate(p.id)}>
-                      Eliminar
+                    <button
+                      className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0 text-red-600 hover:bg-red-50"
+                      title="Eliminar producto"
+                      aria-label="Eliminar producto"
+                      onClick={() => deleteM.mutate(p.id)}
+                    >
+                      <BsTrash3 size={14} />
                     </button>
                   </div>
                 </td>
@@ -132,34 +236,73 @@ export function ProductosPage() {
           </tbody>
         </table>
       </div>
-      <div className="card p-4">
-        <h3 className="mb-3 text-lg font-semibold">Categorías (CRUD básico)</h3>
-        <div className="mb-3 flex gap-2">
-          <input className="input max-w-sm" placeholder="Nueva categoría" value={newCategoria} onChange={(e) => setNewCategoria(e.target.value)} />
-          <button className="btn-primary" onClick={() => newCategoria.trim() && createCatM.mutate(newCategoria.trim())}>
-            Crear categoría
-          </button>
-        </div>
-        <div className="grid gap-2 md:grid-cols-2">
-          {(categoriesQ.data || []).map((c) => (
-            <div key={c.id} className="flex items-center justify-between rounded-xl border border-pos-border p-2">
-              <span>{c.nombre} ({c.activa ? "activa" : "inactiva"})</span>
-              <div className="flex gap-2">
-                <button className="btn-ghost" onClick={() => toggleCatM.mutate({ id: c.id, nombre: c.nombre, activa: !c.activa })}>
-                  Toggle
-                </button>
-                <button className="btn-ghost" onClick={() => delCatM.mutate(c.id)}>
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {(productsQ.isError || createM.isError || toggleM.isError || deleteM.isError) && (
+
+      {!productsQ.isLoading && lista.length === 0 && <p className="text-sm text-pos-muted">No hay productos para mostrar.</p>}
+
+      {(productsQ.isError || categoriesQ.isError || createM.isError || updateM.isError || deleteM.isError) && (
         <p className="text-sm text-red-600">
-          {getErrorMessage(productsQ.error || createM.error || toggleM.error || deleteM.error)}
+          {getErrorMessage(productsQ.error || categoriesQ.error || createM.error || updateM.error || deleteM.error)}
         </p>
+      )}
+
+      {editOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <form className="card w-full max-w-xl grid gap-3 p-5" onSubmit={submitEdit}>
+            <h3 className="text-lg font-semibold">Editar producto</h3>
+            <input
+              className="input"
+              placeholder="Nombre"
+              value={editForm.nombre}
+              onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value.slice(0, 80) })}
+              maxLength={80}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Precio"
+              type="number"
+              min={1}
+              value={editForm.precio}
+              onChange={(e) => setEditForm({ ...editForm, precio: e.target.value })}
+              required
+            />
+            <select
+              className="input"
+              value={editForm.categoriaId}
+              onChange={(e) => setEditForm({ ...editForm, categoriaId: e.target.value })}
+              required
+            >
+              <option value="">Categoria</option>
+              {(categoriesQ.data || []).map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </select>
+            <select
+              className="input"
+              value={editForm.tipoVenta}
+              onChange={(e) => setEditForm({ ...editForm, tipoVenta: e.target.value })}
+            >
+              <option value="MENU_DIARIO">MENU_DIARIO</option>
+              <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
+            </select>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={editForm.activo}
+                onChange={(e) => setEditForm({ ...editForm, activo: e.target.checked })}
+              />
+              Producto activo
+            </label>
+            <div className="mt-1 flex gap-2">
+              <button type="button" className="btn-ghost flex-1" onClick={() => setEditOpen(false)}>
+                Cancelar
+              </button>
+              <button className="btn-primary flex-1" disabled={updateM.isPending}>
+                {updateM.isPending ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

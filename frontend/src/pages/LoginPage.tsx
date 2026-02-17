@@ -19,8 +19,9 @@ export function LoginPage() {
       return { token: login.token, me };
     },
     onSuccess: ({ token, me }) => {
-      setAuth({ token, username: me.username, role: normalizeRole(me.roles) });
-      navigate("/dashboard", { replace: true });
+      const role = normalizeRole(me.roles);
+      setAuth({ token, username: me.username, role });
+      navigate(role === "ADMIN" ? "/dashboard" : "/ventas", { replace: true });
     }
   });
 
