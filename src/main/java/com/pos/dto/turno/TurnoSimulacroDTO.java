@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 
 public record TurnoSimulacroDTO(
 
-        @NotNull
-        @PositiveOrZero
+        @NotNull(message = "El efectivo contado es obligatorio")
+        @PositiveOrZero(message = "El efectivo contado no puede ser negativo")
         BigDecimal efectivoContado
 ) {
 }

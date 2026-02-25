@@ -80,7 +80,10 @@ public class ProductoService {
                             inv.getProducto().getId(),
                             inv.getProducto().getNombre(),
                             inv.getProducto().getPrecio(),
-                            inv.getAgotado()
+                            inv.getAgotado(),
+                            inv.getProducto().getCategoria() != null
+                                    ? inv.getProducto().getCategoria().getNombre()
+                                    : "Sin categoria"
                     ))
                     .toList();
         }
@@ -96,7 +99,10 @@ public class ProductoService {
                                 p.getId(),
                                 p.getNombre(),
                                 p.getPrecio(),
-                                false
+                                false,
+                                p.getCategoria() != null
+                                        ? p.getCategoria().getNombre()
+                                        : "Sin categoria"
                         ))
                         .toList();
 

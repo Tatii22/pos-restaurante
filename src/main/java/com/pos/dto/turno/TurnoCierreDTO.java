@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 
 public record TurnoCierreDTO(
 
-        @NotNull
-        @PositiveOrZero
+        @NotNull(message = "El monto final es obligatorio")
+        @PositiveOrZero(message = "El monto final no puede ser negativo")
         BigDecimal montoFinal
 ) {
 }

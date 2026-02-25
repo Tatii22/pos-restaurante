@@ -7,7 +7,8 @@ public record ProductoVentaDTO(
         Long id,
         String nombre,
         BigDecimal precio,
-        Boolean agotado
+        Boolean agotado,
+        String categoriaNombre
 ) {}
 
 

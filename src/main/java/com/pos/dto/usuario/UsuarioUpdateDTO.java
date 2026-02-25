@@ -8,10 +8,10 @@ import lombok.Setter;
 @Setter
 public class UsuarioUpdateDTO {
 
-    @NotBlank
+    @NotBlank(message = "El usuario es obligatorio")
     private String username;
 
-    @NotBlank
+    @NotBlank(message = "El rol es obligatorio")
     private String rol;
 
     private Boolean activo;
@@ -19,4 +19,3 @@ public class UsuarioUpdateDTO {
     // Opcional: si viene vacío o null, no se cambia la contraseña.
     private String password;
 }
-

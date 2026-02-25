@@ -8,13 +8,13 @@ import lombok.Setter;
 @Setter
 public class UsuarioCreateDTO {
 
-    @NotBlank
+    @NotBlank(message = "El usuario es obligatorio")
     private String username;
 
-    @NotBlank
+    @NotBlank(message = "La contrasena es obligatoria")
     private String password;
 
-    @NotBlank
+    @NotBlank(message = "El rol es obligatorio")
     private String rol; // CAJA o DOMI
 }
 

@@ -1,5 +1,6 @@
 import { http } from "./http";
 import type {
+  AdminConfig,
   AuthMe,
   CatalogoHoy,
   Categoria,
@@ -181,5 +182,13 @@ export const posApi = {
       responseType: "blob"
     });
     return data as Blob;
+  },
+  getAdminConfig: async () => {
+    const { data } = await http.get<AdminConfig>("/api/v1/configuracion");
+    return data;
+  },
+  saveAdminConfig: async (payload: AdminConfig) => {
+    const { data } = await http.put<AdminConfig>("/api/v1/configuracion", payload);
+    return data;
   }
 };

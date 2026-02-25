@@ -2,6 +2,7 @@ package com.pos.service;
 
 import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
+import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
@@ -80,7 +81,8 @@ public class TurnoCajaService {
 
         turno.setEsperado(esperado);
         turno.setFaltante(faltante);
-        turno.setEstado(EstadoTurno.SIMULADO);
+        // La simulacion solo recalcula cifras; el turno debe seguir operativo.
+        turno.setEstado(EstadoTurno.ABIERTO);
 
         return turnoCajaRepository.save(turno);
     }
@@ -94,6 +96,13 @@ public class TurnoCajaService {
         TurnoCaja turno = turnoCajaRepository
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno para cerrar"));
+
+        boolean hayDomiciliosPendientes = ventaRepository.existsByTurnoAndTipoVentaAndEstado(
+                turno, TipoVenta.DOMICILIO, EstadoVenta.EN_PROCESO
+        );
+        if (hayDomiciliosPendientes) {
+            throw new BadRequestException("No puedes cerrar turno: hay domicilios del turno pendientes por despachar");
+        }
 
         BigDecimal totalVentas = ventaRepository
                 .sumarTotalPorTurnoPorEstado(turno.getId(), EstadoVenta.DESPACHADA);

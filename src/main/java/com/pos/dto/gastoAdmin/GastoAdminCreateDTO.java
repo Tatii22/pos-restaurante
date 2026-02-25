@@ -8,17 +8,17 @@ import java.time.LocalDate;
 
 public record GastoAdminCreateDTO(
 
-        @NotNull
+        @NotNull(message = "La fecha es obligatoria")
         LocalDate fecha,
 
-        @NotBlank
+        @NotBlank(message = "La descripcion es obligatoria")
         String descripcion,
 
-        @NotNull
-        @Positive
+        @NotNull(message = "El monto es obligatorio")
+        @Positive(message = "El monto debe ser mayor a 0")
         BigDecimal monto,
 
-        @NotNull
+        @NotNull(message = "Debes seleccionar un tipo de gasto")
         Long tipoGastoId
 ) {
 }

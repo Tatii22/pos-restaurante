@@ -1,18 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-
-type AdminConfig = {
-  negocioNombre: string;
-  negocioNit: string;
-  negocioTelefono: string;
-  negocioDireccion: string;
-  ticketEncabezado: string;
-  ticketPie: string;
-  imprimirFacturaAuto: boolean;
-  imprimirCocinaAuto: boolean;
-  tamanoFuenteTicket: "SMALL" | "NORMAL" | "LARGE";
-};
-
-const STORAGE_KEY = "pos_admin_config_v1";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { posApi } from "../shared/api/posApi";
+import { getErrorMessage } from "../shared/utils";
+import type { AdminConfig } from "../shared/types";
 
 const defaults: AdminConfig = {
   negocioNombre: "Restaurant POS",
@@ -30,20 +20,25 @@ export function ConfiguracionPage() {
   const [config, setConfig] = useState<AdminConfig>(defaults);
   const [msg, setMsg] = useState<string>("");
 
+  const configQ = useQuery({
+    queryKey: ["admin-configuracion"],
+    queryFn: () => posApi.getAdminConfig()
+  });
+
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as Partial<AdminConfig>;
-      const merged: AdminConfig = {
-        ...defaults,
-        ...parsed
-      };
-      setConfig(merged);
-    } catch {
-      // Ignora config corrupta.
+    if (configQ.data) {
+      setConfig(configQ.data);
     }
-  }, []);
+  }, [configQ.data]);
+
+  const saveM = useMutation({
+    mutationFn: (payload: AdminConfig) => posApi.saveAdminConfig(payload),
+    onSuccess: (saved) => {
+      setConfig(saved);
+      setMsg("Configuracion guardada.");
+      setTimeout(() => setMsg(""), 1800);
+    }
+  });
 
   function save() {
     const payload: AdminConfig = {
@@ -55,17 +50,11 @@ export function ConfiguracionPage() {
       negocioTelefono: config.negocioTelefono.trim(),
       negocioDireccion: config.negocioDireccion.trim()
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    setConfig(payload);
-    setMsg("Configuracion guardada.");
-    setTimeout(() => setMsg(""), 1800);
+    saveM.mutate(payload);
   }
 
   function reset() {
-    localStorage.removeItem(STORAGE_KEY);
-    setConfig(defaults);
-    setMsg("Configuracion restablecida.");
-    setTimeout(() => setMsg(""), 1800);
+    saveM.mutate(defaults);
   }
 
   return (
@@ -176,21 +165,24 @@ export function ConfiguracionPage() {
       <section className="card p-4">
         <h3 className="mb-3 text-lg font-semibold">Sistema</h3>
         <div className="grid gap-2 text-sm text-pos-muted">
-          <p>Modo configuracion: Local (frontend).</p>
+          <p>Modo configuracion: Backend (persistente).</p>
           <p>API base actual: {import.meta.env.VITE_API_BASE || "mismo origen"}</p>
-          <p>Estas opciones se guardan por navegador mientras se crean endpoints backend.</p>
         </div>
       </section>
 
       <div className="flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={save}>
+        <button className="btn-primary" onClick={save} disabled={saveM.isPending || configQ.isLoading}>
           Guardar configuracion
         </button>
-        <button className="btn-ghost" onClick={reset}>
+        <button className="btn-ghost" onClick={reset} disabled={saveM.isPending || configQ.isLoading}>
           Restablecer
         </button>
         {msg && <p className="self-center text-sm text-green-700">{msg}</p>}
       </div>
+
+      {(configQ.isError || saveM.isError) && (
+        <p className="text-sm text-red-600">{getErrorMessage(configQ.error || saveM.error)}</p>
+      )}
     </div>
   );
 }

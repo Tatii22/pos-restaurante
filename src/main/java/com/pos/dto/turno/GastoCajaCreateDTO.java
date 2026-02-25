@@ -9,14 +9,14 @@ import java.math.BigDecimal;
 
 public record GastoCajaCreateDTO(
 
-        @NotBlank
+        @NotBlank(message = "La descripcion del gasto es obligatoria")
         String descripcion,
 
-        @NotNull
-        @Positive
+        @NotNull(message = "El monto del gasto es obligatorio")
+        @Positive(message = "El monto del gasto debe ser mayor a 0")
         BigDecimal monto,
 
-        @NotNull
+        @NotNull(message = "Debes seleccionar un tipo de gasto")
         Long tipoGastoId
 ) {
 }

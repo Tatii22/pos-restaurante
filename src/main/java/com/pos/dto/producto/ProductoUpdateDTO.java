@@ -14,14 +14,14 @@ public class ProductoUpdateDTO {
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
 
-    @NotNull
-    @Positive
+    @NotNull(message = "El precio es obligatorio")
+    @Positive(message = "El precio debe ser mayor a 0")
     private BigDecimal precio;
 
-    @NotNull
+    @NotNull(message = "El estado activo es obligatorio")
     private Boolean activo;
 
-    @NotNull
+    @NotNull(message = "La categoria es obligatoria")
     private Long categoriaId;
 
     @NotNull(message = "El tipo de venta es obligatorio")

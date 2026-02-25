@@ -71,7 +71,7 @@ function categoryCardIcon(name: string): JSX.Element {
 
 export function VentasPage() {
   const { role } = useAuthStore();
-  const { isAbierto, setTurno } = useTurnoStore();
+  const { isActivo, setTurno } = useTurnoStore();
   const esDomi = role === "DOMI";
   const qc = useQueryClient();
   const turnoActivoDomiQ = useQuery({
@@ -80,7 +80,7 @@ export function VentasPage() {
     enabled: esDomi,
     retry: false
   });
-  const bloqueado = role === "CAJA" ? !isAbierto() : !turnoActivoDomiQ.data;
+  const bloqueado = role === "CAJA" ? !isActivo() : !turnoActivoDomiQ.data;
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -95,6 +95,7 @@ export function VentasPage() {
   const [orderCode, setOrderCode] = useState(() => String(Math.floor(Math.random() * 9000) + 1000));
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [stockWarn, setStockWarn] = useState<string | null>(null);
+  const [validationWarns, setValidationWarns] = useState<string[]>([]);
   const [showPayModal, setShowPayModal] = useState(false);
   const [transferAmount, setTransferAmount] = useState("0");
   const [cashAmount, setCashAmount] = useState("0");
@@ -160,7 +161,7 @@ export function VentasPage() {
       nombre: p.nombre,
       precio: Number(p.precio),
       agotado: p.agotado,
-      categoria: metaMap.get(p.id)?.categoriaNombre || "Sin categoria",
+      categoria: p.categoriaNombre || metaMap.get(p.id)?.categoriaNombre || "Sin categoria",
       stockInicial: invMap.get(p.id)?.stockInicial,
       stockActual: invMap.get(p.id)?.stockActual,
       stockMinimo: invMap.get(p.id)?.stockMinimo
@@ -170,7 +171,7 @@ export function VentasPage() {
       nombre: p.nombre,
       precio: Number(p.precio),
       agotado: p.agotado,
-      categoria: metaMap.get(p.id)?.categoriaNombre || "Sin categoria"
+      categoria: p.categoriaNombre || metaMap.get(p.id)?.categoriaNombre || "Sin categoria"
     }));
     return [...menu, ...siempre];
   }, [catalogQ.data, productsQ.data, inventarioQ.data]);
@@ -237,6 +238,40 @@ export function VentasPage() {
   const showTelefonoError = esDomi && telefonoLimpio.length > 0 && !telefonoValido;
   const showDireccionError = esDomi && direccionLimpia.length > 0 && !direccionValida;
 
+  function showValidationWarns(messages: string[]) {
+    if (!messages.length) return;
+    setValidationWarns(messages);
+    setTimeout(() => setValidationWarns([]), 3200);
+  }
+
+  function getCheckoutValidationMessages(forDomi: boolean): string[] {
+    const messages: string[] = [];
+    if (bloqueado) messages.push("No hay turno activo para operar.");
+    if (!cart.length) messages.push("Agrega al menos un producto al pedido.");
+
+    if (forDomi) {
+      if (!telefonoLimpio) {
+        messages.push("El telefono es obligatorio.");
+      } else if (!telefonoValido) {
+        messages.push("El telefono debe tener entre 7 y 15 digitos.");
+      }
+
+      if (!direccionLimpia) {
+        messages.push("La direccion es obligatoria.");
+      } else if (!direccionValida) {
+        messages.push("La direccion debe tener al menos 5 caracteres.");
+      }
+
+      if (!valorDomicilio.trim().length) {
+        messages.push("El valor domicilio es obligatorio.");
+      } else if (!valorDomicilioValido) {
+        messages.push("El valor domicilio debe ser un numero valido.");
+      }
+    }
+
+    return messages;
+  }
+
   const transfer = parseAmount(transferAmount);
   const cash = parseAmount(cashAmount);
   const paid = transfer + cash;
@@ -253,6 +288,8 @@ export function VentasPage() {
     return {
       tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
       formaPago: resolveFormaPagoFrom(transferValue, cashValue),
+      pagoEfectivo: cashValue,
+      pagoTransferencia: transferValue,
       clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
       telefono: esDomi ? telefono.trim() : undefined,
       direccion: esDomi ? direccion.trim() : undefined,
@@ -326,13 +363,13 @@ export function VentasPage() {
     <div className="grid gap-4 xl:grid-cols-[130px_1fr_390px]">
       {bloqueado && (
         <div className="xl:col-span-3 rounded-xl border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-          Ventas bloqueadas: no hay turno ABIERTO de caja para operar.
+          Ventas bloqueadas: no hay turno ACTIVO de caja para operar.
         </div>
       )}
 
-      <aside className="card overflow-hidden p-3">
+      <aside className="card p-3">
         <p className="mb-2 text-xs uppercase tracking-wide text-pos-muted">Categorias</p>
-        <div className="grid gap-2">
+        <div className="grid max-h-[70vh] gap-2 overflow-y-auto pr-1">
           {categories.map((c) => {
             const selected = c === selectedCategory;
             return (
@@ -515,9 +552,13 @@ export function VentasPage() {
         <div className="mt-4 grid gap-2">
           <button
             className="btn-primary bg-green-600 hover:bg-green-700"
-            disabled={!cart.length || bloqueado || createSale.isPending || printKitchenPreviewM.isPending || (esDomi && !datosDomicilioValidos)}
+            disabled={createSale.isPending || printKitchenPreviewM.isPending}
             onClick={async () => {
-              if (esDomi && !datosDomicilioValidos) return;
+              const validationMessages = getCheckoutValidationMessages(esDomi);
+              if (validationMessages.length) {
+                showValidationWarns(validationMessages);
+                return;
+              }
               if (esDomi) {
                 await createSale.mutateAsync(buildSalePayload(0, total));
                 return;
@@ -625,6 +666,17 @@ export function VentasPage() {
       {stockWarn && (
         <div className="fixed right-4 top-36 z-50 rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700 shadow-pos">
           {stockWarn}
+        </div>
+      )}
+
+      {validationWarns.length > 0 && (
+        <div className="fixed right-4 top-52 z-50 max-w-md rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-700 shadow-pos">
+          <p className="font-semibold">No se puede continuar por estas validaciones:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {validationWarns.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
         </div>
       )}
 

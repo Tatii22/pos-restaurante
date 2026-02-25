@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
-import { getErrorMessage, money } from "../shared/utils";
+import { getErrorMessages, money } from "../shared/utils";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { useAuthStore } from "../shared/store/authStore";
 import type { Turno } from "../shared/types";
@@ -44,6 +44,8 @@ export function TurnosPage() {
   });
 
   const montoInicialValido = Number(montoInicial) > 0;
+  const openErrors = openM.isError ? getErrorMessages(openM.error) : [];
+  const closeErrors = (simM.isError || closeM.isError) ? getErrorMessages(simM.error || closeM.error) : [];
 
   if (!turno) {
     return (
@@ -70,7 +72,13 @@ export function TurnosPage() {
             >
               {openM.isPending ? "Abriendo..." : "Abrir Turno"}
             </button>
-            {openM.isError && <p className="text-sm text-red-600">{getErrorMessage(openM.error)}</p>}
+            {openErrors.length > 0 && (
+              <ul className="text-left text-sm text-red-600">
+                {openErrors.map((msg) => (
+                  <li key={msg}>- {msg}</li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
@@ -149,8 +157,12 @@ export function TurnosPage() {
         </div>
       </div>
 
-      {(simM.isError || closeM.isError) && (
-        <p className="text-sm text-red-600">{getErrorMessage(simM.error || closeM.error)}</p>
+      {closeErrors.length > 0 && (
+        <ul className="text-sm text-red-600">
+          {closeErrors.map((msg) => (
+            <li key={msg}>- {msg}</li>
+          ))}
+        </ul>
       )}
 
       {showSimModal && simResult && (

@@ -43,6 +43,7 @@ export type ProductoVenta = {
   nombre: string;
   precio: number;
   agotado: boolean;
+  categoriaNombre?: string;
 };
 
 export type CatalogoHoy = {
@@ -119,4 +120,16 @@ export type ReporteVentas = {
   totalEfectivo: number;
   totalTransferencia: number;
   ventas: Venta[];
+};
+
+export type AdminConfig = {
+  negocioNombre: string;
+  negocioNit: string;
+  negocioTelefono: string;
+  negocioDireccion: string;
+  ticketEncabezado: string;
+  ticketPie: string;
+  imprimirFacturaAuto: boolean;
+  imprimirCocinaAuto: boolean;
+  tamanoFuenteTicket: "SMALL" | "NORMAL" | "LARGE";
 };

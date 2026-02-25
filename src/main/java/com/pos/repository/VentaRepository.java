@@ -1,6 +1,7 @@
 package com.pos.repository;
 
 import com.pos.entity.EstadoVenta;
+import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,5 +37,11 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             EstadoVenta estado,
             LocalDateTime inicio,
             LocalDateTime fin
+    );
+
+    boolean existsByTurnoAndTipoVentaAndEstado(
+            TurnoCaja turno,
+            TipoVenta tipoVenta,
+            EstadoVenta estado
     );
 }

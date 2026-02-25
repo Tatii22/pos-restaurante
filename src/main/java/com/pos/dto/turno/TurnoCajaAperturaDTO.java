@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @Setter
 public class TurnoCajaAperturaDTO {
 
-    @NotNull
-    @DecimalMin(value = "0.0", inclusive = false)
+    @NotNull(message = "El monto inicial es obligatorio")
+    @DecimalMin(value = "0.0", inclusive = false, message = "El monto inicial debe ser mayor a 0")
     private BigDecimal montoInicial;
 }

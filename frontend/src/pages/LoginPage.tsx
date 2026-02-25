@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { posApi } from "../shared/api/posApi";
 import { useAuthStore } from "../shared/store/authStore";
-import { getErrorMessage, normalizeRole } from "../shared/utils";
+import { getErrorMessages, normalizeRole } from "../shared/utils";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -24,6 +24,7 @@ export function LoginPage() {
       navigate(role === "ADMIN" ? "/dashboard" : "/ventas", { replace: true });
     }
   });
+  const loginErrors = mutation.isError ? getErrorMessages(mutation.error) : [];
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -54,7 +55,13 @@ export function LoginPage() {
             {mutation.isPending ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
-        {mutation.isError && <p className="mt-3 text-sm text-red-600">{getErrorMessage(mutation.error)}</p>}
+        {loginErrors.length > 0 && (
+          <ul className="mt-3 text-sm text-red-600">
+            {loginErrors.map((msg) => (
+              <li key={msg}>- {msg}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

@@ -142,6 +142,19 @@ export function MainLayout() {
     setMenuSetupLocked(!alreadyUnlocked);
   }, [role, turno?.id, menuSetupKey]);
 
+  useEffect(() => {
+    if (role !== "CAJA" || !turno) return;
+    if (!inventarioQ.data) return;
+    // Si ya hay inventario/menu cargado para el turno actual, no se debe volver
+    // a mostrar la tarjeta de configuracion por reinicios o recargas.
+    if (inventarioQ.data.length > 0) {
+      if (menuSetupKey) {
+        sessionStorage.setItem(menuSetupKey, "0");
+      }
+      setMenuSetupLocked(false);
+    }
+  }, [role, turno?.id, inventarioQ.data, menuSetupKey]);
+
   const turnoClass =
     turno?.estado === "ABIERTO"
       ? "bg-green-100 text-green-700"

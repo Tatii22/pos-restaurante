@@ -3,13 +3,20 @@ import type { ApiError, Role } from "./types";
 export const TOKEN_KEY = "pos_token";
 export const money = new Intl.NumberFormat("es-CO");
 
-export function getErrorMessage(error: unknown): string {
+export function getErrorMessages(error: unknown): string[] {
   const api = error as ApiError;
   if (api?.fieldErrors) {
-    const first = Object.values(api.fieldErrors)[0];
-    if (first) return first;
+    const all = Object.values(api.fieldErrors)
+      .map((m) => (m || "").trim())
+      .filter(Boolean);
+    if (all.length) return Array.from(new Set(all));
   }
-  return api?.message || api?.mensaje || "Error inesperado";
+  const fallback = (api?.message || api?.mensaje || "Error inesperado").trim();
+  return [fallback];
+}
+
+export function getErrorMessage(error: unknown): string {
+  return getErrorMessages(error).join(" | ");
 }
 
 export function normalizeRole(roles: string[]): Role {

@@ -31,6 +31,8 @@ public class VentaService {
     private final InventarioDiarioRepository inventarioDiarioRepository;
     private final MenuDiarioRepository menuDiarioRepository;
     private final ImpresoraTtermicaService impresoraTtermicaService;
+    private final ConfiguracionService configuracionService;
+    private final VentaPagoDetalleService ventaPagoDetalleService;
 
     /* ===================== REGISTRAR ===================== */
 
@@ -223,9 +225,10 @@ public class VentaService {
         }
 
         Venta ventaGuardada = ventaRepository.save(venta);
+        ventaPagoDetalleService.guardar(ventaGuardada.getId(), dto.pagoEfectivo(), dto.pagoTransferencia());
 
-        if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA) {
-            imprimirFacturaSeguro(ventaGuardada);
+        if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
+            imprimirFacturaSeguro(ventaGuardada, dto.pagoEfectivo(), dto.pagoTransferencia());
         }
 
         return ventaGuardada;
@@ -234,6 +237,10 @@ public class VentaService {
     public void imprimirTicketCocinaPreview(VentaCocinaPreviewDTO dto, Usuario usuario) {
         if (usuario == null || usuario.getRol() == null || !"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede imprimir ticket de cocina previo");
+        }
+
+        if (!isCocinaAutoEnabled()) {
+            return;
         }
 
         if (dto == null || dto.detalles() == null || dto.detalles().isEmpty()) {
@@ -296,7 +303,9 @@ public class VentaService {
 
         turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
-        imprimirFacturaSeguro(ventaGuardada);
+        if (isFacturaAutoEnabled()) {
+            imprimirFacturaSeguro(ventaGuardada);
+        }
         return ventaGuardada;
     }
 
@@ -430,6 +439,14 @@ public class VentaService {
         }
     }
 
+    private void imprimirFacturaSeguro(Venta venta, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+        try {
+            impresoraTtermicaService.imprimirFactura(venta, pagoEfectivo, pagoTransferencia);
+        } catch (Exception ex) {
+            log.warn("No se pudo imprimir factura de la venta {}", venta.getId(), ex);
+        }
+    }
+
     private void imprimirTicketCocinaSeguro(Venta venta) {
         try {
             impresoraTtermicaService.imprimirTicketCocina(venta);
@@ -480,6 +497,24 @@ public class VentaService {
         return usuario != null
                 && usuario.getRol() != null
                 && "CAJA".equals(usuario.getRol().getNombre());
+    }
+
+    private boolean isFacturaAutoEnabled() {
+        try {
+            return configuracionService.obtener().imprimirFacturaAuto();
+        } catch (Exception ex) {
+            log.warn("No se pudo leer configuracion de impresion de factura, se usara habilitada por defecto", ex);
+            return true;
+        }
+    }
+
+    private boolean isCocinaAutoEnabled() {
+        try {
+            return configuracionService.obtener().imprimirCocinaAuto();
+        } catch (Exception ex) {
+            log.warn("No se pudo leer configuracion de impresion de cocina, se usara habilitada por defecto", ex);
+            return true;
+        }
     }
 }
 
