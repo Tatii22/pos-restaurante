@@ -86,6 +86,15 @@ export type GastoCaja = {
   valor: number;
 };
 
+export type GastoAdmin = {
+  id: number;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  tipo?: { id: number; nombre: string };
+  usuario?: { id: number; username: string };
+};
+
 export type InventarioDiario = {
   id: number;
   fecha: string;
@@ -120,6 +129,24 @@ export type ReporteVentas = {
   totalEfectivo: number;
   totalTransferencia: number;
   ventas: Venta[];
+};
+
+export type GastoReporte = {
+  id: number;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  origen: "CAJA" | "ADMIN" | string;
+};
+
+export type ReporteRentabilidad = {
+  fechaInicio: string;
+  fechaFin: string;
+  totalVentas: number;
+  totalGastos: number;
+  gananciaNeta: number;
+  ventas: Venta[];
+  gastos: GastoReporte[];
 };
 
 export type AdminConfig = {

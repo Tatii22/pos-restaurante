@@ -58,4 +58,15 @@ public class GastoAdminController {
                 gastoAdminService.listarPorRango(inicio, fin)
         );
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        Usuario usuario = usuarioService.obtenerPorUsername(auth.getName());
+        gastoAdminService.eliminarPorId(id, usuario);
+        return ResponseEntity.noContent().build();
+    }
 }

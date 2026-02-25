@@ -38,9 +38,19 @@ export function HistorialVentasPage() {
     }
   });
 
+  const pedidoNumeroByVentaId = useMemo(() => {
+    const all = [...(listQ.data?.content || [])].sort((a, b) => {
+      const fa = new Date(a.fecha).getTime();
+      const fb = new Date(b.fecha).getTime();
+      if (fa !== fb) return fa - fb;
+      return a.id - b.id;
+    });
+    return new Map(all.map((v, index) => [v.id, index + 1]));
+  }, [listQ.data]);
+
   const ventas = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const all = listQ.data?.content || [];
+    const all = (listQ.data?.content || []).filter((v) => v.estado !== "EN_PROCESO");
     if (!term) return all;
     return all.filter((v) => {
       const cliente = (v.clienteNombre || "").toLowerCase();
@@ -86,11 +96,39 @@ export function HistorialVentasPage() {
         </div>
       </section>
 
-      <section className="card overflow-auto">
+      <section className="card md:hidden p-3">
+        <div className="grid gap-2">
+          {ventas.map((v) => (
+            <div key={v.id} className="rounded-xl border border-pos-border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">Pedido #{pedidoNumeroByVentaId.get(v.id) ?? "-"}</p>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
+              </div>
+              <p className="text-xs text-pos-muted">{new Date(v.fecha).toLocaleString()}</p>
+              <p className="text-sm">Tipo: {v.tipoVenta}</p>
+              <p className="text-sm">Cliente: {v.clienteNombre || "-"}</p>
+              <p className="text-sm">Pago: {v.formaPago}</p>
+              <p className="text-sm font-semibold">{money.format(v.total)}</p>
+              <div className="mt-2">
+                {v.estado === "DESPACHADA" ? (
+                  <button className="btn-ghost bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setConfirmAnularId(v.id)}>
+                    Anular
+                  </button>
+                ) : (
+                  <span className="text-xs text-pos-muted">No disponible</span>
+                )}
+              </div>
+            </div>
+          ))}
+          {!ventas.length && <p className="text-sm text-pos-muted">No hay ventas registradas en este turno.</p>}
+        </div>
+      </section>
+
+      <section className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="border-b border-pos-border">
-              <th className="p-3 text-left">ID</th>
+              <th className="p-3 text-left">Pedido</th>
               <th className="p-3 text-left">Fecha</th>
               <th className="p-3 text-left">Tipo</th>
               <th className="p-3 text-left">Cliente</th>
@@ -103,11 +141,11 @@ export function HistorialVentasPage() {
           <tbody>
             {ventas.map((v) => (
               <tr key={v.id} className="border-b border-pos-border/70">
-                <td className="p-3">#{v.id}</td>
+                <td className="p-3">#{pedidoNumeroByVentaId.get(v.id) ?? "-"}</td>
                 <td className="p-3">{new Date(v.fecha).toLocaleString()}</td>
                 <td className="p-3">{v.tipoVenta}</td>
                 <td className="p-3">{v.clienteNombre || "-"}</td>
-                <td className="p-3">
+                <td className="p-3 whitespace-nowrap">
                   <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
                 </td>
                 <td className="p-3">{v.formaPago}</td>

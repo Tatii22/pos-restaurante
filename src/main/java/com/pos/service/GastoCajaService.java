@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -80,5 +82,54 @@ public class GastoCajaService {
                         g.getMonto()
                 ))
                 .toList();
+    }
+
+    public List<GastoCajaResponseDTO> listarPorRango(LocalDate inicio, LocalDate fin, Usuario usuario) {
+        if (usuario == null || usuario.getRol() == null) {
+            throw new BadRequestException("Usuario no valido");
+        }
+        String rol = usuario.getRol().getNombre();
+        if (!"CAJA".equals(rol) && !"ADMIN".equals(rol)) {
+            throw new BadRequestException("No autorizado para ver gastos de caja");
+        }
+        if (inicio == null || fin == null) {
+            throw new BadRequestException("Las fechas son obligatorias");
+        }
+        if (inicio.isAfter(fin)) {
+            throw new BadRequestException("La fecha inicio no puede ser mayor a la fecha fin");
+        }
+
+        LocalDateTime desde = inicio.atStartOfDay();
+        LocalDateTime hasta = fin.atTime(23, 59, 59);
+
+        return gastoCajaRepository.findByFechaBetween(desde, hasta)
+                .stream()
+                .sorted((a, b) -> b.getFecha().compareTo(a.getFecha()))
+                .map(g -> new GastoCajaResponseDTO(
+                        g.getId(),
+                        g.getFecha(),
+                        g.getDescripcion(),
+                        g.getMonto()
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public void eliminarPorId(Long id, Usuario usuario) {
+        if (usuario == null || usuario.getRol() == null || !"ADMIN".equals(usuario.getRol().getNombre())) {
+            throw new BadRequestException("Solo ADMIN puede eliminar gastos de caja");
+        }
+
+        GastoCaja gasto = gastoCajaRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Gasto de caja no encontrado"));
+
+        TurnoCaja turno = gasto.getTurno();
+        if (turno != null && turno.getTotalGastos() != null) {
+            BigDecimal nuevoTotal = turno.getTotalGastos().subtract(gasto.getMonto());
+            turno.setTotalGastos(nuevoTotal.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : nuevoTotal);
+            turnoCajaRepository.save(turno);
+        }
+
+        gastoCajaRepository.delete(gasto);
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.pos.entity.Usuario;
+import com.pos.exception.BadRequestException;
 import com.pos.mapper.MenuDiarioMapper;
 import com.pos.repository.UsuarioRepository;
 
@@ -38,7 +39,7 @@ public class MenuDiarioController {
         Usuario usuario = usuarioRepository
                 .findByUsername(userDetails.getUsername())
                 .orElseThrow(() ->
-                        new RuntimeException("Usuario no encontrado")
+                        new BadRequestException("Usuario no encontrado")
                 );
 
         return ResponseEntity.ok(

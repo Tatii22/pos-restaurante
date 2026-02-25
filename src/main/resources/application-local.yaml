@@ -14,6 +14,7 @@ app:
     expiration-ms: 36000000
   cors:
     allowed-origins: http://localhost:5173,http://localhost:3000
+    allowed-origin-patterns: http://192.168.*:*,http://10.*:*,http://172.*:*
   bootstrap:
     default-admin:
       enabled: true

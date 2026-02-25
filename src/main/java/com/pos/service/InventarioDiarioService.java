@@ -6,6 +6,7 @@ import com.pos.exception.BadRequestException;
 import com.pos.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -62,13 +63,17 @@ public class InventarioDiarioService {
             return List.of();
         }
 
-        return inventarioRepository.findByMenuDiario(menu);
+        return inventarioRepository.findByMenuDiarioWithProducto(menu);
     }
 
 
+    @Transactional
     public InventarioDiario reabastecer(Long id, Integer cantidad) {
+        if (cantidad == null || cantidad <= 0) {
+            throw new BadRequestException("La cantidad a reabastecer debe ser mayor a cero");
+        }
 
-        InventarioDiario inv = inventarioRepository.findById(id)
+        InventarioDiario inv = inventarioRepository.findByIdWithProducto(id)
                 .orElseThrow(() ->
                         new BadRequestException("Inventario no encontrado")
                 );

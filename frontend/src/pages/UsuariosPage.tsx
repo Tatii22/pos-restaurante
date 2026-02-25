@@ -154,8 +154,58 @@ export function UsuariosPage() {
         />
       </div>
 
-      <div className="card overflow-auto pl-5 pr-2 py-2">
-        <table className="w-full table-fixed text-sm">
+      <div className="card p-3 md:hidden">
+        <div className="grid gap-2">
+          {usuariosFiltrados.map((u) => (
+            <div key={u.id} className="rounded-xl border border-pos-border p-3">
+              <p className="font-semibold">{u.username}</p>
+              <p className="text-xs text-pos-muted">ID: {u.id}</p>
+              <p className="text-sm">Rol: {u.rol}</p>
+              <p className="text-sm">Estado: {u.activo ? "Activo" : "Inactivo"}</p>
+              <div className="mt-2 flex items-center gap-1">
+                <button
+                  className="btn-ghost inline-flex h-7 w-7 items-center justify-center p-0"
+                  title="Editar usuario"
+                  aria-label="Editar usuario"
+                  onClick={() => openEdit(u)}
+                  disabled={u.rol === "ADMIN"}
+                >
+                  <BsPencilSquare size={14} />
+                </button>
+                <button
+                  className="btn-ghost inline-flex h-7 w-7 items-center justify-center p-0"
+                  title={u.activo ? "Desactivar usuario" : "Activar usuario"}
+                  aria-label={u.activo ? "Desactivar usuario" : "Activar usuario"}
+                  onClick={() =>
+                    updateM.mutate({
+                      id: u.id,
+                      username: u.username,
+                      rol: u.rol,
+                      activo: !u.activo,
+                      password: ""
+                    })
+                  }
+                  disabled={u.rol === "ADMIN"}
+                >
+                  {u.activo ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
+                </button>
+                <button
+                  className="btn-ghost inline-flex h-7 w-7 items-center justify-center p-0 text-red-600 hover:bg-red-50"
+                  title="Eliminar usuario"
+                  aria-label="Eliminar usuario"
+                  onClick={() => deleteM.mutate(u.id)}
+                  disabled={u.rol === "ADMIN"}
+                >
+                  <BsTrash3 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card hidden overflow-x-auto pl-5 pr-2 py-2 md:block">
+        <table className="w-full min-w-[760px] table-fixed text-sm">
           <colgroup>
             <col style={{ width: "10%" }} />
             <col style={{ width: "38%" }} />
@@ -179,7 +229,7 @@ export function UsuariosPage() {
                 <td className="truncate p-1.5" title={u.username}>{u.username}</td>
                 <td className="p-2">{u.rol}</td>
                 <td className="p-2">{u.activo ? "Activo" : "Inactivo"}</td>
-                <td className="p-2">
+                <td className="p-2 whitespace-nowrap">
                   <div className="flex items-center justify-center gap-1">
                     <button
                       className="btn-ghost inline-flex h-7 w-7 items-center justify-center p-0"

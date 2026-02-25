@@ -33,7 +33,7 @@ public class ProductoService {
     }
 
     public List<Producto> listar() {
-        return productoRepository.findAll();
+        return productoRepository.findAllWithCategoria();
     }
 
     public Producto obtenerPorId(Long id) {
@@ -74,7 +74,7 @@ public class ProductoService {
 
         if (menuActivo != null) {
             menuDiario = inventarioDiarioRepository
-                    .findByMenuDiario(menuActivo)
+                    .findByMenuDiarioWithProducto(menuActivo)
                     .stream()
                     .map(inv -> new ProductoVentaDTO(
                             inv.getProducto().getId(),
@@ -91,7 +91,7 @@ public class ProductoService {
         // 3️⃣ Siempre disponibles
         List<ProductoVentaDTO> siempreDisponibles =
                 productoRepository
-                        .findByTipoVentaAndActivoTrue(
+                        .findByTipoVentaAndActivoTrueWithCategoria(
                                 TipoVentaProducto.SIEMPRE_DISPONIBLE
                         )
                         .stream()

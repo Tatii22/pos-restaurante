@@ -5,10 +5,12 @@ import type {
   CatalogoHoy,
   Categoria,
   GastoCaja,
+  GastoAdmin,
   InventarioDiario,
   PageResponse,
   Producto,
   ReporteVentas,
+  ReporteRentabilidad,
   TipoGasto,
   Turno,
   Usuario,
@@ -36,8 +38,11 @@ export const posApi = {
     const { data } = await http.post<Venta>("/api/v1/ventas", payload);
     return data;
   },
-  despachar: async (id: number) => {
-    const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/despachar`);
+  despachar: async (
+    id: number,
+    payload?: { formaPago?: "EFECTIVO" | "TRANSFERENCIA"; pagoEfectivo?: number; pagoTransferencia?: number }
+  ) => {
+    const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/despachar`, payload ?? {});
     return data;
   },
   cancelar: async (id: number) => {
@@ -75,6 +80,12 @@ export const posApi = {
     const { data } = await http.get<Turno | null>("/api/v1/turnos/activo");
     return data;
   },
+  getTurnosByRango: async (fechaInicio: string, fechaFin: string) => {
+    const { data } = await http.get<Turno[]>("/api/v1/turnos/rango", {
+      params: { fechaInicio, fechaFin }
+    });
+    return data;
+  },
   crearMenuDiario: async () => {
     const { data } = await http.post("/api/v1/menu-diario");
     return data;
@@ -90,7 +101,7 @@ export const posApi = {
     return data;
   },
   reabastecerInventario: async (id: number, cantidad: number) => {
-    const { data } = await http.post(`/api/v1/inventario-diario/${id}/reabastecer`, null, {
+    const { data } = await http.post<InventarioDiario>(`/api/v1/inventario-diario/${id}/reabastecer`, null, {
       params: { cantidad }
     });
     return data;
@@ -105,6 +116,12 @@ export const posApi = {
   },
   getReporteVentas: async (fechaInicio: string, fechaFin: string) => {
     const { data } = await http.get<ReporteVentas>("/api/v1/reportes/ventas", {
+      params: { fechaInicio, fechaFin }
+    });
+    return data;
+  },
+  getReporteRentabilidad: async (fechaInicio: string, fechaFin: string) => {
+    const { data } = await http.get<ReporteRentabilidad>("/api/v1/reportes/rentabilidad", {
       params: { fechaInicio, fechaFin }
     });
     return data;
@@ -169,6 +186,32 @@ export const posApi = {
     const { data } = await http.get<GastoCaja[]>("/api/v1/gastos-caja");
     return data;
   },
+  getGastosCajaByRango: async (inicio: string, fin: string) => {
+    const { data } = await http.get<GastoCaja[]>("/api/v1/gastos-caja/rango", {
+      params: { inicio, fin }
+    });
+    return data;
+  },
+  eliminarGastoCaja: async (id: number) => {
+    await http.delete(`/api/v1/gastos-caja/${id}`);
+  },
+  registrarGastoAdmin: async (payload: { fecha: string; descripcion: string; monto: number; tipoGastoId: number }) => {
+    const { data } = await http.post<GastoAdmin>("/api/v1/gastos-admin", payload);
+    return data;
+  },
+  getGastosAdminByFecha: async (fecha: string) => {
+    const { data } = await http.get<GastoAdmin[]>(`/api/v1/gastos-admin/fecha/${fecha}`);
+    return data;
+  },
+  getGastosAdminByRango: async (inicio: string, fin: string) => {
+    const { data } = await http.get<GastoAdmin[]>("/api/v1/gastos-admin/rango", {
+      params: { inicio, fin }
+    });
+    return data;
+  },
+  eliminarGastoAdmin: async (id: number) => {
+    await http.delete(`/api/v1/gastos-admin/${id}`);
+  },
   exportVentasPdf: async (fechaInicio: string, fechaFin: string) => {
     const { data } = await http.get("/api/v1/export/ventas/pdf", {
       params: { fechaInicio, fechaFin },
@@ -178,6 +221,20 @@ export const posApi = {
   },
   exportVentasExcel: async (fechaInicio: string, fechaFin: string) => {
     const { data } = await http.get("/api/v1/export/ventas/excel", {
+      params: { fechaInicio, fechaFin },
+      responseType: "blob"
+    });
+    return data as Blob;
+  },
+  exportRentabilidadPdf: async (fechaInicio: string, fechaFin: string) => {
+    const { data } = await http.get("/api/v1/export/rentabilidad/pdf", {
+      params: { fechaInicio, fechaFin },
+      responseType: "blob"
+    });
+    return data as Blob;
+  },
+  exportRentabilidadExcel: async (fechaInicio: string, fechaFin: string) => {
+    const { data } = await http.get("/api/v1/export/rentabilidad/excel", {
       params: { fechaInicio, fechaFin },
       responseType: "blob"
     });

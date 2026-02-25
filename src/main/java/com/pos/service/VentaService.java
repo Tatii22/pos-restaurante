@@ -2,6 +2,7 @@ package com.pos.service;
 
 import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaCocinaPreviewDTO;
+import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
@@ -37,8 +38,9 @@ public class VentaService {
     /* ===================== REGISTRAR ===================== */
 
     public Venta obtenerPorId(Long ventaId) {
-        return ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
+        return reconciliarFormaPagoDesdeDetalle(venta);
     }
 
     public Page<Venta> listarOperativas(
@@ -86,11 +88,14 @@ public class VentaService {
                     cb.like(cb.lower(root.get("telefono")), pattern));
         }
 
-        return ventaRepository.findAll(
+        Page<Venta> pageResult = ventaRepository.findAll(
                 spec,
                 PageRequest.of(Math.max(page, 0), Math.max(size, 1), org.springframework.data.domain.Sort.by(
                         org.springframework.data.domain.Sort.Direction.DESC, "fecha"))
         );
+
+        pageResult.forEach(this::reconciliarFormaPagoDesdeDetalle);
+        return pageResult;
     }
 
     @Transactional
@@ -128,7 +133,9 @@ public class VentaService {
         Venta venta = new Venta();
         venta.setFecha(LocalDateTime.now());
         venta.setTipoVenta(dto.tipoVenta());
-        venta.setFormaPago(dto.formaPago());
+        BigDecimal pagoEfectivo = dto.pagoEfectivo() == null ? BigDecimal.ZERO : dto.pagoEfectivo();
+        BigDecimal pagoTransferencia = dto.pagoTransferencia() == null ? BigDecimal.ZERO : dto.pagoTransferencia();
+        venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setUsuario(usuario);
         venta.setTurno(turno);
 
@@ -225,10 +232,10 @@ public class VentaService {
         }
 
         Venta ventaGuardada = ventaRepository.save(venta);
-        ventaPagoDetalleService.guardar(ventaGuardada.getId(), dto.pagoEfectivo(), dto.pagoTransferencia());
+        ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
 
         if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
-            imprimirFacturaSeguro(ventaGuardada, dto.pagoEfectivo(), dto.pagoTransferencia());
+            imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
         }
 
         return ventaGuardada;
@@ -279,7 +286,7 @@ public class VentaService {
     /* ===================== DESPACHAR DOMICILIO ===================== */
 
     @Transactional
-    public Venta despacharVenta(Long ventaId, Usuario usuario) {
+    public Venta despacharVenta(Long ventaId, VentaDespachoDTO dto, Usuario usuario) {
 
         Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
@@ -297,14 +304,35 @@ public class VentaService {
         }
 
         TurnoCaja turno = venta.getTurno();
+        BigDecimal pagoEfectivo = null;
+        BigDecimal pagoTransferencia = null;
+        if (dto != null) {
+            pagoEfectivo = nonNegative(dto.pagoEfectivo());
+            pagoTransferencia = nonNegative(dto.pagoTransferencia());
+            BigDecimal totalPagado = pagoEfectivo.add(pagoTransferencia);
+
+            if (totalPagado.compareTo(venta.getTotal()) < 0) {
+                throw new BadRequestException("El pago es insuficiente para despachar la venta");
+            }
+        }
 
         venta.setEstado(EstadoVenta.DESPACHADA);
+        if (dto != null) {
+            venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
+        }
         turno.setTotalVentas(turno.getTotalVentas().add(venta.getTotal()));
 
         turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
+        if (dto != null) {
+            ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
+        }
         if (isFacturaAutoEnabled()) {
-            imprimirFacturaSeguro(ventaGuardada);
+            if (dto != null) {
+                imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
+            } else {
+                imprimirFacturaSeguro(ventaGuardada);
+            }
         }
         return ventaGuardada;
     }
@@ -515,6 +543,51 @@ public class VentaService {
             log.warn("No se pudo leer configuracion de impresion de cocina, se usara habilitada por defecto", ex);
             return true;
         }
+    }
+
+    private FormaPago resolverFormaPago(FormaPago formaPagoDeclarada, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+        BigDecimal efectivo = pagoEfectivo == null ? BigDecimal.ZERO : pagoEfectivo;
+        BigDecimal transferencia = pagoTransferencia == null ? BigDecimal.ZERO : pagoTransferencia;
+
+        boolean tieneEfectivo = efectivo.compareTo(BigDecimal.ZERO) > 0;
+        boolean tieneTransferencia = transferencia.compareTo(BigDecimal.ZERO) > 0;
+
+        if (tieneTransferencia && !tieneEfectivo) {
+            return FormaPago.TRANSFERENCIA;
+        }
+        if (tieneEfectivo && !tieneTransferencia) {
+            return FormaPago.EFECTIVO;
+        }
+        if (tieneEfectivo && tieneTransferencia) {
+            return transferencia.compareTo(efectivo) >= 0 ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+        }
+
+        return formaPagoDeclarada != null ? formaPagoDeclarada : FormaPago.EFECTIVO;
+    }
+
+    private BigDecimal nonNegative(BigDecimal value) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return value;
+    }
+
+    private Venta reconciliarFormaPagoDesdeDetalle(Venta venta) {
+        if (venta == null || venta.getId() == null) {
+            return venta;
+        }
+
+        var detalle = ventaPagoDetalleService.obtener(venta.getId());
+        if (detalle == null) {
+            return venta;
+        }
+
+        FormaPago formaCalculada = resolverFormaPago(venta.getFormaPago(), detalle.pagoEfectivo(), detalle.pagoTransferencia());
+        if (formaCalculada != venta.getFormaPago()) {
+            venta.setFormaPago(formaCalculada);
+            ventaRepository.save(venta);
+        }
+        return venta;
     }
 }
 

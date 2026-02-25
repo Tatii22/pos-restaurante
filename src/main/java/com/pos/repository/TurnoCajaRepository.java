@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface TurnoCajaRepository extends JpaRepository<TurnoCaja, Long> {
 
@@ -19,4 +20,6 @@ public interface TurnoCajaRepository extends JpaRepository<TurnoCaja, Long> {
 
     // 🟢 Para saber si ya hay turno abierto
     boolean existsByEstado(EstadoTurno estado);
+
+    List<TurnoCaja> findByFechaAperturaBetweenOrderByFechaAperturaDesc(LocalDateTime inicio, LocalDateTime fin);
 }

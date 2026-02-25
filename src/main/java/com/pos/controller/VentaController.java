@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaCocinaPreviewDTO;
+import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.dto.venta.VentaValorDomicilioDTO;
 import com.pos.entity.Usuario;
@@ -176,12 +177,13 @@ public class VentaController {
     @Operation(summary = "Despachar venta domicilio en proceso")
     public ResponseEntity<VentaResponseDTO> despachar(
             @PathVariable Long id,
+            @Valid @RequestBody(required = false) VentaDespachoDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        Venta venta = ventaService.despacharVenta(id, usuario);
+        Venta venta = ventaService.despacharVenta(id, dto, usuario);
         return ResponseEntity.ok(toDTO(venta));
     }
 

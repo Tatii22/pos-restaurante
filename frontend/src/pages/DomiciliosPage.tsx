@@ -84,19 +84,39 @@ export function DomiciliosPage() {
 
   function pagarExacto() {
     if (!selected || dispatchM.isPending) return;
+    let efectivoFinal = montoEfectivo;
+    let transferenciaFinal = montoTransferencia;
     if (faltante > 0) {
       if (activeCalcField === "TRANSFERENCIA") {
-        setPagoTransferencia(String(montoTransferencia + faltante));
+        transferenciaFinal = montoTransferencia + faltante;
+        setPagoTransferencia(String(transferenciaFinal));
       } else {
-        setPagoEfectivo(String(montoEfectivo + faltante));
+        efectivoFinal = montoEfectivo + faltante;
+        setPagoEfectivo(String(efectivoFinal));
       }
     }
-    dispatchM.mutate(selected.id);
+    dispatchM.mutate({
+      id: selected.id,
+      pagoEfectivo: efectivoFinal,
+      pagoTransferencia: transferenciaFinal,
+      formaPago: resolveFormaPagoFrom(transferenciaFinal, efectivoFinal)
+    });
     setShowCobro(false);
   }
 
+  function resolveFormaPagoFrom(transferValue: number, cashValue: number): "EFECTIVO" | "TRANSFERENCIA" {
+    if (transferValue > 0 && cashValue === 0) return "TRANSFERENCIA";
+    if (cashValue > 0 && transferValue === 0) return "EFECTIVO";
+    return transferValue >= cashValue ? "TRANSFERENCIA" : "EFECTIVO";
+  }
+
   const dispatchM = useMutation({
-    mutationFn: (id: number) => posApi.despachar(id),
+    mutationFn: (payload: { id: number; pagoEfectivo: number; pagoTransferencia: number; formaPago: "EFECTIVO" | "TRANSFERENCIA" }) =>
+      posApi.despachar(payload.id, {
+        formaPago: payload.formaPago,
+        pagoEfectivo: payload.pagoEfectivo,
+        pagoTransferencia: payload.pagoTransferencia
+      }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["domicilios-list"] });
       await qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
@@ -160,7 +180,34 @@ export function DomiciliosPage() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <section className="card overflow-auto">
+      <section className="card p-3 md:hidden">
+        <div className="grid gap-2">
+          {(listQ.data?.content || []).map((v) => (
+            <div key={v.id} className="rounded-xl border border-pos-border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">#{v.id} {v.clienteNombre || "-"}</p>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
+              </div>
+              <p className="text-sm break-words">{v.direccion || "-"}</p>
+              <p className="text-sm">{v.telefono || "-"}</p>
+              <p className="text-sm font-semibold">{money.format(v.total)}</p>
+              <div className="mt-2">
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    setSelectedId(v.id);
+                    setNuevoDomicilio(String(v.valorDomicilio || 0));
+                  }}
+                >
+                  Ver
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[680px] table-fixed text-sm">
           <thead>
             <tr className="border-b border-pos-border">
@@ -184,7 +231,7 @@ export function DomiciliosPage() {
                   <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
                 </td>
                 <td className="p-3">{money.format(v.total)}</td>
-                <td className="p-3">
+                <td className="p-3 whitespace-nowrap">
                   <button className="btn-ghost" onClick={() => {
                     setSelectedId(v.id);
                     setNuevoDomicilio(String(v.valorDomicilio || 0));
@@ -360,7 +407,12 @@ export function DomiciliosPage() {
                 className="btn-primary flex-1"
                 disabled={faltante > 0 || dispatchM.isPending}
                 onClick={() => {
-                  dispatchM.mutate(selected.id);
+                  dispatchM.mutate({
+                    id: selected.id,
+                    pagoEfectivo: montoEfectivo,
+                    pagoTransferencia: montoTransferencia,
+                    formaPago: resolveFormaPagoFrom(montoTransferencia, montoEfectivo)
+                  });
                   setShowCobro(false);
                 }}
               >

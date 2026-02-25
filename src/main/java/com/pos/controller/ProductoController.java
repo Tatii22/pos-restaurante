@@ -63,9 +63,9 @@ public class ProductoController {
                                 p.getNombre(),
                                 p.getPrecio(),
                                 p.getActivo(),
-                                p.getCategoria().getId(),
-                                p.getCategoria().getNombre(),
-                                p.getTipoVenta()
+                                p.getCategoria() != null ? p.getCategoria().getId() : null,
+                                p.getCategoria() != null ? p.getCategoria().getNombre() : "Sin categoria",
+                                p.getTipoVenta() != null ? p.getTipoVenta() : com.pos.entity.TipoVentaProducto.SIEMPRE_DISPONIBLE
                         ))
                         .toList();
 

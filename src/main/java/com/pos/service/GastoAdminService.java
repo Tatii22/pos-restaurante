@@ -63,4 +63,13 @@ public class GastoAdminService {
 
         return gastoAdminRepository.save(gasto);
     }
+
+    public void eliminarPorId(Long id, Usuario usuario) {
+        if (usuario == null || usuario.getRol() == null || !"ADMIN".equals(usuario.getRol().getNombre())) {
+            throw new BadRequestException("Solo ADMIN puede eliminar gastos administrativos");
+        }
+        GastoAdmin gasto = gastoAdminRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Gasto administrativo no encontrado"));
+        gastoAdminRepository.delete(gasto);
+    }
 }

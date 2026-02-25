@@ -46,6 +46,7 @@ public class SecurityConfig {
                         ).permitAll();
                     }
                     auth.requestMatchers("/api/v1/turnos/activo").hasAnyRole("CAJA","DOMI");
+                    auth.requestMatchers("/api/v1/turnos/rango").hasRole("ADMIN");
                     auth.requestMatchers("/api/v1/turnos/**").hasRole("CAJA");
                     auth.anyRequest().authenticated();
                 })

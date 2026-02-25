@@ -43,7 +43,7 @@ public class TurnoCajaService {
             throw new BadRequestException("Ya existe un turno activo");
         }
 
-        // Reinicia TODO el inventario del día al iniciar cada turno.
+        
         inventarioDiarioRepository.deleteByFecha(LocalDate.now());
 
         TurnoCaja turno = TurnoCaja.builder()
@@ -128,5 +128,24 @@ public class TurnoCajaService {
         return turnoCajaRepository
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElse(null);
+    }
+
+    public List<TurnoCaja> listarPorRango(LocalDate fechaInicio, LocalDate fechaFin, String username) {
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException("Usuario no existe"));
+
+        if (!"ADMIN".equals(usuario.getRol().getNombre())) {
+            throw new BadRequestException("Solo ADMIN puede consultar historico de turnos");
+        }
+        if (fechaInicio == null || fechaFin == null) {
+            throw new BadRequestException("Las fechas son obligatorias");
+        }
+        if (fechaInicio.isAfter(fechaFin)) {
+            throw new BadRequestException("La fecha inicio no puede ser mayor a la fecha fin");
+        }
+
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(23, 59, 59);
+        return turnoCajaRepository.findByFechaAperturaBetweenOrderByFechaAperturaDesc(inicio, fin);
     }
 }

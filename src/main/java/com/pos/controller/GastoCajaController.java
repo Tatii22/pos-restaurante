@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/gastos-caja")
@@ -48,5 +49,33 @@ public class GastoCajaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         return ResponseEntity.ok(gastoCajaService.listarTurnoActivo(usuario));
+    }
+
+    @GetMapping("/rango")
+    @PreAuthorize("hasAnyRole('CAJA','ADMIN')")
+    public ResponseEntity<List<GastoCajaResponseDTO>> listarPorRango(
+            @RequestParam LocalDate inicio,
+            @RequestParam LocalDate fin,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository
+                .findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        return ResponseEntity.ok(gastoCajaService.listarPorRango(inicio, fin, usuario));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> eliminar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository
+                .findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        gastoCajaService.eliminarPorId(id, usuario);
+        return ResponseEntity.noContent().build();
     }
 }

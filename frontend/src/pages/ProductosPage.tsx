@@ -66,7 +66,7 @@ export function ProductosPage() {
       const pasaTexto =
         !term ||
         p.nombre.toLowerCase().includes(term) ||
-        p.categoriaNombre.toLowerCase().includes(term) ||
+        (p.categoriaNombre || "").toLowerCase().includes(term) ||
         String(p.precio).includes(term);
       const pasaTipo = filtroTipo === "ALL" || (p.tipoVenta || "SIEMPRE_DISPONIBLE") === filtroTipo;
       return pasaTexto && pasaTipo;
@@ -172,7 +172,57 @@ export function ProductosPage() {
         </div>
       </div>
 
-      <div className="card overflow-auto">
+      <div className="card md:hidden p-3">
+        <div className="grid gap-2">
+          {lista.map((p) => (
+            <div key={p.id} className="rounded-xl border border-pos-border p-3">
+              <p className="font-semibold">{p.nombre}</p>
+              <p className="text-xs text-pos-muted">ID: {p.id}</p>
+              <p className="text-sm">{money.format(p.precio)}</p>
+              <p className="text-sm text-pos-muted">{p.categoriaNombre || "Sin categoria"}</p>
+              <p className="text-xs">{p.tipoVenta || "-"}</p>
+              <p className="text-xs">{p.activo ? "Activo" : "Inactivo"}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                  title="Editar producto"
+                  aria-label="Editar producto"
+                  onClick={() => openEdit(p)}
+                >
+                  <BsPencilSquare size={14} />
+                </button>
+                <button
+                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                  title={p.activo ? "Desactivar producto" : "Activar producto"}
+                  aria-label={p.activo ? "Desactivar producto" : "Activar producto"}
+                  onClick={() =>
+                    updateM.mutate({
+                      id: p.id,
+                      name: p.nombre,
+                      price: p.precio,
+                      categoryId: p.categoriaId,
+                      type: p.tipoVenta || "SIEMPRE_DISPONIBLE",
+                      active: !p.activo
+                    })
+                  }
+                >
+                  {p.activo ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
+                </button>
+                <button
+                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0 text-red-600 hover:bg-red-50"
+                  title="Eliminar producto"
+                  aria-label="Eliminar producto"
+                  onClick={() => deleteM.mutate(p.id)}
+                >
+                  <BsTrash3 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="border-b border-pos-border">
@@ -191,10 +241,10 @@ export function ProductosPage() {
                 <td className="p-3">{p.id}</td>
                 <td className="p-3">{p.nombre}</td>
                 <td className="p-3">{money.format(p.precio)}</td>
-                <td className="p-3">{p.categoriaNombre}</td>
+                <td className="p-3">{p.categoriaNombre || "Sin categoria"}</td>
                 <td className="p-3">{p.tipoVenta || "-"}</td>
                 <td className="p-3">{p.activo ? "Si" : "No"}</td>
-                <td className="p-3">
+                <td className="p-3 whitespace-nowrap">
                   <div className="flex gap-2">
                     <button
                       className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"

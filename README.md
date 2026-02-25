@@ -77,6 +77,27 @@ npm run dev
 
 Frontend por defecto en `http://localhost:5173` con proxy de `/api` hacia `http://localhost:8080`.
 
+## Prueba offline en LAN (PC + celular)
+Requisito: ambos dispositivos en el mismo WiFi local.
+
+### Opcion rapida (Windows)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-lan-dev.ps1
+```
+
+Esto levanta:
+- Backend con perfil `local`
+- Frontend en LAN (`vite --host 0.0.0.0`)
+
+Luego abre en el celular:
+- `http://IP_DE_TU_PC:5173`
+
+Notas:
+- Si el firewall bloquea, permite puertos `8080` y `5173` en red privada.
+- El login admin inicial se crea automaticamente en `local` si no existe ningun admin:
+  - usuario: `admin1`
+  - password: `admin1`
+
 ## Build para produccion
 
 ### Backend

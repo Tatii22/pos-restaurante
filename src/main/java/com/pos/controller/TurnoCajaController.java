@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/turnos")
@@ -67,6 +69,21 @@ public class TurnoCajaController {
             return ResponseEntity.ok(null);
         }
         return ResponseEntity.ok(TurnoCajaMapper.toDTO(turno));
+    }
+
+    @GetMapping("/rango")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<TurnoCajaResponseDTO>> listarPorRango(
+            @RequestParam LocalDate fechaInicio,
+            @RequestParam LocalDate fechaFin,
+            Authentication auth
+    ) {
+        List<TurnoCajaResponseDTO> data = turnoCajaService
+                .listarPorRango(fechaInicio, fechaFin, auth.getName())
+                .stream()
+                .map(TurnoCajaMapper::toDTO)
+                .toList();
+        return ResponseEntity.ok(data);
     }
 
 

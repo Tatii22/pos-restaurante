@@ -16,11 +16,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import clsx from "clsx";
+import { flushSync } from "react-dom";
 import { useAuthStore } from "../../shared/store/authStore";
 import type { Role } from "../../shared/types";
 import { useTurnoStore } from "../../shared/store/turnoStore";
 import { posApi } from "../../shared/api/posApi";
-import { getErrorMessage, money } from "../../shared/utils";
+import { getErrorMessage, money, normalizeRole } from "../../shared/utils";
 
 type MenuItem = {
   to: string;
@@ -34,7 +35,7 @@ const items: MenuItem[] = [
   { to: "/ventas", label: "Ventas", roles: ["CAJA", "DOMI"], icon: <ShoppingCart size={16} /> },
   { to: "/historial", label: "Historial", roles: ["CAJA"], icon: <History size={16} /> },
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
-  { to: "/gastos", label: "Gastos", roles: ["CAJA"], icon: <Wallet size={16} /> },
+  { to: "/gastos", label: "Gastos", roles: ["CAJA", "ADMIN"], icon: <Wallet size={16} /> },
   { to: "/reportes", label: "Reportes", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/categorias", label: "Categorias", roles: ["ADMIN"], icon: <Boxes size={16} /> },
   { to: "/productos", label: "Productos", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
@@ -45,7 +46,7 @@ const items: MenuItem[] = [
 export function MainLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { role, username, clearAuth } = useAuthStore();
+  const { token, role, username, setAuth, clearAuth } = useAuthStore();
   const { turno, setTurno, clearTurno } = useTurnoStore();
   const [showAlerts, setShowAlerts] = useState(false);
 
@@ -56,36 +57,59 @@ export function MainLayout() {
   const [dismissedAlerts, setDismissedAlerts] = useState<Record<number, number>>({});
   const [restockQtyByAlert, setRestockQtyByAlert] = useState<Record<number, string>>({});
 
-  const menu = items.filter((i) => role && i.roles.includes(role));
-  const menuSetupKey = useMemo(() => {
-    if (!turno) return "";
-    return `menu-setup-locked:${username}:turno:${turno.id}:apertura:${turno.fechaApertura}`;
-  }, [username, turno?.id, turno?.fechaApertura]);
+  const sessionQ = useQuery({
+    queryKey: ["auth-me-layout", token],
+    queryFn: () => posApi.me(),
+    enabled: !!token,
+    retry: false
+  });
+  const resolvedRole = sessionQ.data ? normalizeRole(sessionQ.data.roles) : role;
+  const isCajaSessionReady = !!token && sessionQ.isSuccess && resolvedRole === "CAJA";
+
+  useEffect(() => {
+    if (!token) return;
+    if (!sessionQ.data) return;
+    const normalized = normalizeRole(sessionQ.data.roles);
+    if (normalized !== role || sessionQ.data.username !== username) {
+      setAuth({ token, username: sessionQ.data.username, role: normalized });
+    }
+  }, [token, role, username, sessionQ.data, setAuth]);
+
+  useEffect(() => {
+    if (!token) return;
+    if (!sessionQ.isError) return;
+    clearTurno();
+    clearAuth();
+    navigate("/login", { replace: true });
+  }, [token, sessionQ.isError, clearTurno, clearAuth, navigate]);
+
+  const menu = items.filter((i) => resolvedRole && i.roles.includes(resolvedRole));
 
   const turnoActivoQ = useQuery({
-    queryKey: ["turno-activo-layout", role],
+    queryKey: ["turno-activo-layout", resolvedRole],
     queryFn: () => posApi.getTurnoActivo(),
-    enabled: role === "CAJA",
+    enabled: isCajaSessionReady,
     retry: false
   });
 
   const inventarioQ = useQuery({
-    queryKey: ["inventario-arranque-caja", role],
+    queryKey: ["inventario-arranque-caja", resolvedRole],
     queryFn: () => posApi.getInventarioDiario(),
-    enabled: role === "CAJA" && !!turno,
+    enabled: isCajaSessionReady && !!turno,
     retry: false
   });
 
   const productosQ = useQuery({
-    queryKey: ["productos-arranque-caja", role],
+    queryKey: ["productos-arranque-caja", resolvedRole],
     queryFn: () => posApi.getProductos(),
-    enabled: role === "CAJA"
+    enabled: isCajaSessionReady
   });
 
   const openTurnoM = useMutation({
     mutationFn: () => posApi.abrirTurno(Number(montoInicial)),
     onSuccess: (data) => {
       setTurno(data);
+      setMenuSetupLocked(true);
       queryClient.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
       queryClient.invalidateQueries({ queryKey: ["catalogo-alertas-caja"] });
     }
@@ -116,44 +140,69 @@ export function MainLayout() {
   });
 
   const restockM = useMutation({
-    mutationFn: ({ id, cantidad }: { id: number; cantidad: number }) => posApi.reabastecerInventario(id, cantidad),
-    onSuccess: () => {
+    mutationFn: ({ id, cantidad }: { id: number; cantidad: number; stockAntes: number }) => posApi.reabastecerInventario(id, cantidad),
+    onMutate: (variables) => {
+      const prevArranque = queryClient.getQueryData<typeof inventarioQ.data>(["inventario-arranque-caja", role]);
+      const prevVentas = queryClient.getQueryData<typeof inventarioQ.data>(["inventario-ventas"]);
+      queryClient.setQueryData(["inventario-arranque-caja", role], (current: typeof inventarioQ.data) =>
+        (current || []).map((item) =>
+          item.id === variables.id ? { ...item, stockActual: item.stockActual + variables.cantidad, agotado: false } : item
+        )
+      );
+      queryClient.setQueryData(["inventario-ventas"], (current: typeof inventarioQ.data) =>
+        (current || []).map((item) =>
+          item.id === variables.id ? { ...item, stockActual: item.stockActual + variables.cantidad, agotado: false } : item
+        )
+      );
+      return { prevArranque, prevVentas };
+    },
+    onSuccess: (updated, variables) => {
+      queryClient.setQueryData(["inventario-arranque-caja", role], (current: typeof inventarioQ.data) =>
+        (current || []).map((item) => (item.id === updated.id ? updated : item))
+      );
+      queryClient.setQueryData(["inventario-ventas"], (current: typeof inventarioQ.data) =>
+        (current || []).map((item) => (item.id === updated.id ? updated : item))
+      );
       queryClient.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
       queryClient.invalidateQueries({ queryKey: ["catalogo-alertas-caja"] });
       queryClient.invalidateQueries({ queryKey: ["inventario-ventas"] });
       queryClient.invalidateQueries({ queryKey: ["catalogo-hoy"] });
+    },
+    onError: (_error, variables, context) => {
+      setDismissedAlerts((prev) => {
+        const next = { ...prev };
+        delete next[variables.id];
+        return next;
+      });
+      if (context?.prevArranque) {
+        queryClient.setQueryData(["inventario-arranque-caja", role], context.prevArranque);
+      }
+      if (context?.prevVentas) {
+        queryClient.setQueryData(["inventario-ventas"], context.prevVentas);
+      }
     }
   });
 
+  function hideAlertNow(id: number, stockActual: number) {
+    flushSync(() => {
+      setDismissedAlerts((prev) => ({ ...prev, [id]: stockActual }));
+      setRestockQtyByAlert((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    });
+  }
+
   useEffect(() => {
-    if (role !== "CAJA") return;
+    if (resolvedRole !== "CAJA") return;
     if (turnoActivoQ.data === undefined) return;
     if (turnoActivoQ.data) {
       setTurno(turnoActivoQ.data);
       return;
     }
     clearTurno();
-  }, [role, turnoActivoQ.data, setTurno, clearTurno]);
-
-  useEffect(() => {
-    if (role !== "CAJA" || !turno) return;
-    if (!menuSetupKey) return;
-    const alreadyUnlocked = sessionStorage.getItem(menuSetupKey) === "0";
-    setMenuSetupLocked(!alreadyUnlocked);
-  }, [role, turno?.id, menuSetupKey]);
-
-  useEffect(() => {
-    if (role !== "CAJA" || !turno) return;
-    if (!inventarioQ.data) return;
-    // Si ya hay inventario/menu cargado para el turno actual, no se debe volver
-    // a mostrar la tarjeta de configuracion por reinicios o recargas.
-    if (inventarioQ.data.length > 0) {
-      if (menuSetupKey) {
-        sessionStorage.setItem(menuSetupKey, "0");
-      }
-      setMenuSetupLocked(false);
-    }
-  }, [role, turno?.id, inventarioQ.data, menuSetupKey]);
+  }, [resolvedRole, turnoActivoQ.data, setTurno, clearTurno]);
 
   const turnoClass =
     turno?.estado === "ABIERTO"
@@ -162,27 +211,28 @@ export function MainLayout() {
         ? "bg-yellow-100 text-yellow-700"
         : "bg-red-100 text-red-700";
 
-  const lowStockAlerts = (inventarioQ.data || []).filter(
-    (i) => i.stockActual <= i.stockMinimo && dismissedAlerts[i.id] === undefined
-  );
+  const lowStockAlerts = (inventarioQ.data || []).filter((i) => {
+    if (i.stockActual > i.stockMinimo) {
+      return false;
+    }
+    const stockWhenDismissed = dismissedAlerts[i.id];
+    if (stockWhenDismissed === undefined) {
+      return true;
+    }
+    return i.stockActual < stockWhenDismissed;
+  });
 
   useEffect(() => {
     if (!inventarioQ.data || Object.keys(dismissedAlerts).length === 0) return;
-    // Rehabilita alerta si:
-    // 1) ya salió del nivel crítico (reabastecido), o
-    // 2) sigue crítico pero bajó más el stock desde que se ocultó.
+    // Reinicia ciclo de notificación cuando el stock sube por encima del mínimo.
+    // Mantiene "oculto" mientras siga crítico y no baje más que el punto ocultado.
     setDismissedAlerts((prev) => {
       let changed = false;
       const next = { ...prev };
-      Object.entries(prev).forEach(([idRaw, stockWhenDismissed]) => {
+      Object.entries(prev).forEach(([idRaw]) => {
         const id = Number(idRaw);
         const item = inventarioQ.data.find((i) => i.id === id);
-        if (!item) {
-          delete next[id];
-          changed = true;
-          return;
-        }
-        if (item.stockActual > item.stockMinimo || item.stockActual < stockWhenDismissed) {
+        if (!item || item.stockActual > item.stockMinimo) {
           delete next[id];
           changed = true;
         }
@@ -193,14 +243,14 @@ export function MainLayout() {
 
   useEffect(() => {
     // Al cerrar turno se limpia el estado de notificaciones.
-    if (role !== "CAJA") return;
+    if (resolvedRole !== "CAJA") return;
     if (turno && turno.estado !== "CERRADO") return;
     setShowAlerts(false);
     setDismissedAlerts({});
     setRestockQtyByAlert({});
-  }, [role, turno]);
-  const needsTurno = role === "CAJA" && !turno;
-  const needsMenu = role === "CAJA" && !!turno && menuSetupLocked;
+  }, [resolvedRole, turno]);
+  const needsTurno = resolvedRole === "CAJA" && !turno;
+  const needsMenu = resolvedRole === "CAJA" && !!turno && menuSetupLocked;
   const blockCajaNavigation = needsTurno || needsMenu;
 
   const productosDisponiblesMenu = useMemo(() => {
@@ -212,35 +262,35 @@ export function MainLayout() {
   const montoInicialValido = Number(montoInicial) > 0;
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-pos-border bg-white">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-lg font-bold">Restaurant POS</span>
-            <span className="font-semibold">{username}</span>
-            {role === "CAJA" && (
-              <span className={clsx("rounded-full px-2 py-1 text-xs font-semibold", turnoClass)}>
-                Turno: {turno?.estado ?? "CERRADO"}
-              </span>
+    <div className="min-h-screen overflow-x-hidden">
+      <header className="sticky top-0 z-20 overflow-x-hidden border-b border-pos-border bg-white">
+        <div className="grid grid-cols-1 gap-2 px-2 py-2 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3">
+          <div className="min-w-0 flex items-center gap-2 overflow-hidden text-sm">
+            <span className="shrink-0 text-base font-bold sm:text-lg">Restaurant POS</span>
+            <span className="min-w-0 max-w-[140px] truncate font-semibold sm:max-w-[220px]">{username}</span>
+            {resolvedRole === "CAJA" && (
+              <>
+                <span className={clsx("rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap", turnoClass)}>
+                  Turno: {turno?.estado ?? "CERRADO"}
+                </span>
+                <button className="btn-soft relative h-7 w-7 shrink-0 p-0" onClick={() => setShowAlerts((v) => !v)}>
+                  <Bell size={14} />
+                  {lowStockAlerts.length > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {lowStockAlerts.length}
+                    </span>
+                  )}
+                </button>
+              </>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {role === "CAJA" && (
-              <button className="btn-soft" onClick={() => navigate("/turnos")} disabled={needsTurno}>
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            {resolvedRole === "CAJA" && (
+              <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
                 {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
               </button>
             )}
-            {role === "CAJA" && (
-              <button className="btn-soft relative" onClick={() => setShowAlerts((v) => !v)}>
-                <Bell size={16} />
-                {lowStockAlerts.length > 0 && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                    {lowStockAlerts.length}
-                  </span>
-                )}
-              </button>
-            )}
-            <button className="btn-ghost" onClick={clearAuth}>
+            <button className="btn-ghost w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={clearAuth}>
               <LogOut size={16} className="mr-1" />
               Salir
             </button>
@@ -248,27 +298,29 @@ export function MainLayout() {
         </div>
 
         {!blockCajaNavigation && (
-          <nav className="flex gap-2 overflow-x-auto border-t border-pos-border px-4 py-2">
-            {menu.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  clsx(
-                    "inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm",
-                    isActive ? "border-pos-accent bg-pos-accentSoft text-pos-text" : "border-pos-border bg-white hover:bg-gray-50"
-                  )
-                }
-              >
-                {item.icon}
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="w-full max-w-[100vw] overflow-x-auto overflow-y-hidden border-t border-pos-border">
+            <nav className="inline-flex min-w-max gap-2 px-3 py-2 sm:px-4">
+              {menu.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    clsx(
+                      "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm",
+                      isActive ? "border-pos-accent bg-pos-accentSoft text-pos-text" : "border-pos-border bg-white hover:bg-gray-50"
+                    )
+                  }
+                >
+                  {item.icon}
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
         )}
       </header>
 
-      {showAlerts && role === "CAJA" && (
+      {showAlerts && resolvedRole === "CAJA" && (
         <div className="fixed right-4 top-20 z-40 w-[360px] max-w-[95vw] rounded-2xl border border-pos-border bg-white p-4 shadow-pos">
           <div className="mb-2 flex items-center justify-between">
             <h4 className="font-semibold">Alertas de inventario</h4>
@@ -277,10 +329,12 @@ export function MainLayout() {
                 <button
                   className="btn-ghost px-2 py-1 text-xs"
                   onClick={() =>
-                    setDismissedAlerts((prev) => ({
-                      ...prev,
-                      ...Object.fromEntries(lowStockAlerts.map((a) => [a.id, a.stockActual]))
-                    }))
+                    flushSync(() =>
+                      setDismissedAlerts((prev) => ({
+                        ...prev,
+                        ...Object.fromEntries(lowStockAlerts.map((a) => [a.id, a.stockActual]))
+                      }))
+                    )
                   }
                 >
                   Borrar
@@ -308,14 +362,23 @@ export function MainLayout() {
                   />
                   <button
                     className="btn-soft h-8 px-2 text-xs"
-                    onClick={() => restockM.mutate({ id: a.id, cantidad: Number(restockQtyByAlert[a.id] ?? "5") })}
+                    onClick={() => {
+                      const cantidad = Number(restockQtyByAlert[a.id] ?? "5");
+                      if (!Number.isFinite(cantidad) || cantidad <= 0) return;
+                      hideAlertNow(a.id, a.stockActual + cantidad);
+                      restockM.mutate({
+                        id: a.id,
+                        cantidad,
+                        stockAntes: a.stockActual
+                      });
+                    }}
                     disabled={restockM.isPending || Number(restockQtyByAlert[a.id] ?? "5") <= 0}
                   >
                     Agregar stock
                   </button>
                   <button
                     className="btn-ghost h-8 px-2 text-xs"
-                    onClick={() => setDismissedAlerts((prev) => ({ ...prev, [a.id]: a.stockActual }))}
+                    onClick={() => hideAlertNow(a.id, a.stockActual)}
                   >
                     Ocultar
                   </button>
@@ -418,9 +481,6 @@ export function MainLayout() {
                   className="btn-primary"
                   disabled={(inventarioQ.data?.length || 0) === 0}
                   onClick={() => {
-                    if (menuSetupKey) {
-                      sessionStorage.setItem(menuSetupKey, "0");
-                    }
                     setMenuSetupLocked(false);
                     queryClient.invalidateQueries({ queryKey: ["catalogo-hoy"] });
                     queryClient.invalidateQueries({ queryKey: ["inventario-ventas"] });
