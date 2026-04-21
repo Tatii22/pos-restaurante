@@ -6,7 +6,6 @@ import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
-import com.pos.repository.InventarioDiarioRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.UsuarioRepository;
 import com.pos.repository.VentaRepository;
@@ -26,8 +25,6 @@ public class TurnoCajaService {
     private final TurnoCajaRepository turnoCajaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VentaRepository ventaRepository;
-    private final InventarioDiarioRepository inventarioDiarioRepository;
-
     @Transactional
     public TurnoCaja abrirTurno(BigDecimal montoInicial, String username) {
 
@@ -42,10 +39,6 @@ public class TurnoCajaService {
                 List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))) {
             throw new BadRequestException("Ya existe un turno activo");
         }
-
-        
-        inventarioDiarioRepository.deleteByFecha(LocalDate.now());
-
         TurnoCaja turno = TurnoCaja.builder()
                 .fechaApertura(LocalDateTime.now())
                 .montoInicial(montoInicial)

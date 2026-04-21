@@ -28,6 +28,12 @@ public class GastoAdmin {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal monto;
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoEfectivo;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoTransferencia;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tipo_gasto_id", nullable = false)
     private TipoGasto tipo;

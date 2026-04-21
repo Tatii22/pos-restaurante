@@ -17,10 +17,11 @@ public class MenuDiarioService {
 
     private final MenuDiarioRepository menuDiarioRepository;
     private final InventarioDiarioRepository inventarioDiarioRepository;
+    private final FechaOperativaService fechaOperativaService;
 
     @Transactional
     public MenuDiario crearMenuHoy(Usuario usuario) {
-        LocalDate hoy = LocalDate.now();
+        LocalDate hoy = fechaOperativaService.obtenerFechaOperativa();
 
         // Idempotente por dia: si ya existe registro (activo o inactivo), se reutiliza.
         MenuDiario menuExistente = menuDiarioRepository.findByFecha(hoy).orElse(null);
@@ -44,7 +45,7 @@ public class MenuDiarioService {
 
     public MenuDiario obtenerMenuActivo() {
         return menuDiarioRepository
-                .findByFechaAndActivoTrue(LocalDate.now())
+                .findByFechaAndActivoTrue(fechaOperativaService.obtenerFechaOperativa())
                 .orElseThrow(() -> new BadRequestException("No hay menu activo hoy"));
     }
 }

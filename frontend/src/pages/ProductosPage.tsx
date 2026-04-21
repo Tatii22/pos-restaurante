@@ -2,7 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsPencilSquare, BsToggleOff, BsToggleOn, BsTrash3 } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
-import { getErrorMessage, money } from "../shared/utils";
+import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 
 export function ProductosPage() {
   const qc = useQueryClient();
@@ -28,11 +28,21 @@ export function ProductosPage() {
     activo: true
   });
 
+  function handlePriceChange(
+    value: string,
+    setter: (next: string) => void
+  ) {
+    const result = normalizeCurrencyInput(value, { maxDigits: 9, allowZero: false });
+    if (result.value !== null) {
+      setter(result.value);
+    }
+  }
+
   const createM = useMutation({
     mutationFn: () =>
       posApi.crearProducto({
         nombre: form.nombre.trim(),
-        precio: Number(form.precio),
+        precio: parseCurrencyInput(form.precio),
         categoriaId: Number(form.categoriaId),
         tipoVenta: form.tipoVenta,
         activo: form.activo
@@ -75,7 +85,7 @@ export function ProductosPage() {
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (!form.nombre.trim() || Number(form.precio) <= 0 || !form.categoriaId) return;
+    if (!form.nombre.trim() || parseCurrencyInput(form.precio) <= 0 || !form.categoriaId) return;
     createM.mutate();
   }
 
@@ -90,7 +100,7 @@ export function ProductosPage() {
     setEditForm({
       id: producto.id,
       nombre: producto.nombre,
-      precio: String(producto.precio),
+      precio: String(Math.trunc(producto.precio)),
       categoriaId: String(producto.categoriaId),
       tipoVenta: producto.tipoVenta || "SIEMPRE_DISPONIBLE",
       activo: producto.activo
@@ -100,12 +110,12 @@ export function ProductosPage() {
 
   function submitEdit(e: FormEvent) {
     e.preventDefault();
-    if (!editForm.nombre.trim() || Number(editForm.precio) <= 0 || !editForm.categoriaId) return;
+    if (!editForm.nombre.trim() || parseCurrencyInput(editForm.precio) <= 0 || !editForm.categoriaId) return;
     updateM.mutate(
       {
         id: editForm.id,
         name: editForm.nombre.trim(),
-        price: Number(editForm.precio),
+        price: parseCurrencyInput(editForm.precio),
         categoryId: Number(editForm.categoriaId),
         type: editForm.tipoVenta,
         active: editForm.activo
@@ -134,10 +144,9 @@ export function ProductosPage() {
         <input
           className="input"
           placeholder="Precio"
-          type="number"
-          min={1}
-          value={form.precio}
-          onChange={(e) => setForm({ ...form, precio: e.target.value })}
+          inputMode="numeric"
+          value={formatCurrencyInput(form.precio)}
+          onChange={(e) => handlePriceChange(e.target.value, (precio) => setForm({ ...form, precio }))}
           required
         />
         <select className="input" value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })} required>
@@ -310,10 +319,9 @@ export function ProductosPage() {
             <input
               className="input"
               placeholder="Precio"
-              type="number"
-              min={1}
-              value={editForm.precio}
-              onChange={(e) => setEditForm({ ...editForm, precio: e.target.value })}
+              inputMode="numeric"
+              value={formatCurrencyInput(editForm.precio)}
+              onChange={(e) => handlePriceChange(e.target.value, (precio) => setEditForm({ ...editForm, precio }))}
               required
             />
             <select

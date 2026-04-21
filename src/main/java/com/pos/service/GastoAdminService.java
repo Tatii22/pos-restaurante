@@ -1,13 +1,16 @@
 package com.pos.service;
 
 import com.pos.dto.gastoAdmin.GastoAdminCreateDTO;
-import com.pos.entity.*;
+import com.pos.entity.GastoAdmin;
+import com.pos.entity.TipoGasto;
+import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.TipoGastoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -24,14 +27,12 @@ public class GastoAdminService {
 
     public List<GastoAdmin> listarPorRango(LocalDate inicio, LocalDate fin) {
         return gastoAdminRepository.findByFechaBetween(inicio, fin);
-}
+    }
 
     public GastoAdmin registrar(
             GastoAdminCreateDTO dto,
             Usuario usuario
     ) {
-
-        // 🔐 Solo ADMIN
         if (!usuario.getRol().getNombre().equals("ADMIN")) {
             throw new BadRequestException("Solo ADMIN puede registrar gastos administrativos");
         }
@@ -42,21 +43,20 @@ public class GastoAdminService {
             throw new BadRequestException("Fecha demasiado antigua");
         }
 
-
-
-        // 🏷️ Tipo de gasto
         TipoGasto tipo = tipoGastoRepository.findById(dto.tipoGastoId())
                 .orElseThrow(() -> new BadRequestException("Tipo de gasto no existe"));
 
+        BigDecimal montoEfectivo = resolverMontoEfectivo(dto.monto(), dto.montoEfectivo(), dto.montoTransferencia());
+        BigDecimal montoTransferencia = nonNegative(dto.montoTransferencia());
+        BigDecimal montoTotal = montoEfectivo.add(montoTransferencia);
+        validarMontoTotal(montoTotal);
 
         GastoAdmin gasto = GastoAdmin.builder()
-                .fecha(
-                        dto.fecha() != null
-                                ? dto.fecha()
-                                : LocalDate.now()
-                )
+                .fecha(dto.fecha() != null ? dto.fecha() : LocalDate.now())
                 .descripcion(dto.descripcion())
-                .monto(dto.monto())
+                .monto(montoTotal)
+                .montoEfectivo(montoEfectivo)
+                .montoTransferencia(montoTransferencia)
                 .tipo(tipo)
                 .usuario(usuario)
                 .build();
@@ -71,5 +71,29 @@ public class GastoAdminService {
         GastoAdmin gasto = gastoAdminRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Gasto administrativo no encontrado"));
         gastoAdminRepository.delete(gasto);
+    }
+
+    private BigDecimal resolverMontoEfectivo(BigDecimal montoLegacy, BigDecimal montoEfectivo, BigDecimal montoTransferencia) {
+        BigDecimal efectivo = nonNegative(montoEfectivo);
+        BigDecimal transferencia = nonNegative(montoTransferencia);
+        if (efectivo.compareTo(BigDecimal.ZERO) == 0
+                && transferencia.compareTo(BigDecimal.ZERO) == 0
+                && montoLegacy != null) {
+            return nonNegative(montoLegacy);
+        }
+        return efectivo;
+    }
+
+    private void validarMontoTotal(BigDecimal montoTotal) {
+        if (montoTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Debes registrar un monto mayor a 0 en efectivo, transferencia o ambos");
+        }
+    }
+
+    private BigDecimal nonNegative(BigDecimal value) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return value;
     }
 }

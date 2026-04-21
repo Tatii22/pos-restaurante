@@ -13,8 +13,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/gastos-caja")
@@ -26,7 +27,7 @@ public class GastoCajaController {
 
     @PostMapping
     @PreAuthorize("hasRole('CAJA')")
-    public ResponseEntity<GastoCaja> registrar(
+    public ResponseEntity<GastoCajaResponseDTO> registrar(
             @Valid @RequestBody GastoCajaCreateDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
@@ -36,7 +37,7 @@ public class GastoCajaController {
 
         GastoCaja gasto = gastoCajaService.registrar(dto, usuario);
 
-        return ResponseEntity.ok(gasto);
+        return ResponseEntity.ok(toResponse(gasto));
     }
 
     @GetMapping
@@ -77,5 +78,16 @@ public class GastoCajaController {
 
         gastoCajaService.eliminarPorId(id, usuario);
         return ResponseEntity.noContent().build();
+    }
+
+    private GastoCajaResponseDTO toResponse(GastoCaja gasto) {
+        return new GastoCajaResponseDTO(
+                gasto.getId(),
+                gasto.getFecha(),
+                gasto.getDescripcion(),
+                gasto.getMonto(),
+                gasto.getMontoEfectivo(),
+                gasto.getMontoTransferencia()
+        );
     }
 }

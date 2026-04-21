@@ -21,12 +21,13 @@ public class InventarioDiarioService {
     private final InventarioDiarioRepository inventarioRepository;
     private final MenuDiarioRepository menuDiarioRepository;
     private final ProductoService productoService;
+    private final FechaOperativaService fechaOperativaService;
 
     public InventarioDiario crearInventario(
             Long productoId,
             Integer stockInicial
     ) {
-        LocalDate hoy = LocalDate.now();
+        LocalDate hoy = fechaOperativaService.obtenerFechaOperativa();
 
         MenuDiario menu = menuDiarioRepository
                 .findByFechaAndActivoTrue(hoy)
@@ -56,7 +57,7 @@ public class InventarioDiarioService {
     public List<InventarioDiario> listarHoy() {
 
         MenuDiario menu = menuDiarioRepository
-                .findByFechaAndActivoTrue(LocalDate.now())
+                .findByFechaAndActivoTrue(fechaOperativaService.obtenerFechaOperativa())
                 .orElse(null);
 
         if (menu == null) {

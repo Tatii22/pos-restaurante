@@ -2,15 +2,19 @@ package com.pos.service;
 
 import com.pos.dto.turno.GastoCajaCreateDTO;
 import com.pos.dto.turno.GastoCajaResponseDTO;
-import com.pos.entity.*;
+import com.pos.entity.EstadoTurno;
+import com.pos.entity.GastoCaja;
+import com.pos.entity.TipoGasto;
+import com.pos.entity.TurnoCaja;
+import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.GastoCajaRepository;
 import com.pos.repository.TipoGastoRepository;
 import com.pos.repository.TurnoCajaRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,36 +33,34 @@ public class GastoCajaService {
             GastoCajaCreateDTO dto,
             Usuario usuario
     ) {
-
-        // 🔐 Solo CAJA
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede registrar gastos de caja");
         }
 
-        // 🔓 Turno abierto
         TurnoCaja turno = turnoCajaRepository
-                .findByEstado(EstadoTurno.ABIERTO)
-                .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
+                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
-        // 🏷️ Tipo de gasto
         TipoGasto tipo = tipoGastoRepository.findById(dto.tipoGastoId())
                 .orElseThrow(() -> new BadRequestException("Tipo de gasto no existe"));
 
+        BigDecimal montoEfectivo = resolverMontoEfectivo(dto.monto(), dto.montoEfectivo(), dto.montoTransferencia());
+        BigDecimal montoTransferencia = nonNegative(dto.montoTransferencia());
+        BigDecimal montoTotal = montoEfectivo.add(montoTransferencia);
+        validarMontoTotal(montoTotal);
 
         GastoCaja gasto = GastoCaja.builder()
                 .descripcion(dto.descripcion())
-                .monto(dto.monto())
+                .monto(montoTotal)
+                .montoEfectivo(montoEfectivo)
+                .montoTransferencia(montoTransferencia)
                 .fecha(LocalDateTime.now())
                 .tipo(tipo)
                 .turno(turno)
                 .usuario(usuario)
                 .build();
 
-        // 🔥 Impacto directo en el turno
-        turno.setTotalGastos(
-                turno.getTotalGastos().add(dto.monto())
-        );
-
+        turno.setTotalGastos(turno.getTotalGastos().add(montoTotal));
         turnoCajaRepository.save(turno);
 
         return gastoCajaRepository.save(gasto);
@@ -75,12 +77,7 @@ public class GastoCajaService {
 
         return gastoCajaRepository.findByTurnoOrderByFechaDesc(turno)
                 .stream()
-                .map(g -> new GastoCajaResponseDTO(
-                        g.getId(),
-                        g.getFecha(),
-                        g.getDescripcion(),
-                        g.getMonto()
-                ))
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -105,12 +102,7 @@ public class GastoCajaService {
         return gastoCajaRepository.findByFechaBetween(desde, hasta)
                 .stream()
                 .sorted((a, b) -> b.getFecha().compareTo(a.getFecha()))
-                .map(g -> new GastoCajaResponseDTO(
-                        g.getId(),
-                        g.getFecha(),
-                        g.getDescripcion(),
-                        g.getMonto()
-                ))
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -131,5 +123,40 @@ public class GastoCajaService {
         }
 
         gastoCajaRepository.delete(gasto);
+    }
+
+    private GastoCajaResponseDTO toResponse(GastoCaja gasto) {
+        return new GastoCajaResponseDTO(
+                gasto.getId(),
+                gasto.getFecha(),
+                gasto.getDescripcion(),
+                gasto.getMonto(),
+                nonNegative(gasto.getMontoEfectivo()),
+                nonNegative(gasto.getMontoTransferencia())
+        );
+    }
+
+    private BigDecimal resolverMontoEfectivo(BigDecimal montoLegacy, BigDecimal montoEfectivo, BigDecimal montoTransferencia) {
+        BigDecimal efectivo = nonNegative(montoEfectivo);
+        BigDecimal transferencia = nonNegative(montoTransferencia);
+        if (efectivo.compareTo(BigDecimal.ZERO) == 0
+                && transferencia.compareTo(BigDecimal.ZERO) == 0
+                && montoLegacy != null) {
+            return nonNegative(montoLegacy);
+        }
+        return efectivo;
+    }
+
+    private void validarMontoTotal(BigDecimal montoTotal) {
+        if (montoTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Debes registrar un monto mayor a 0 en efectivo, transferencia o ambos");
+        }
+    }
+
+    private BigDecimal nonNegative(BigDecimal value) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return value;
     }
 }

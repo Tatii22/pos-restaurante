@@ -1,6 +1,7 @@
 package com.pos.controller;
 
 import com.pos.dto.gastoAdmin.GastoAdminCreateDTO;
+import com.pos.dto.gastoAdmin.GastoAdminResponseDTO;
 import com.pos.entity.GastoAdmin;
 import com.pos.entity.Usuario;
 import com.pos.service.GastoAdminService;
@@ -23,39 +24,38 @@ public class GastoAdminController {
     private final GastoAdminService gastoAdminService;
     private final UsuarioService usuarioService;
 
-    // ✅ Registrar gasto administrativo
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GastoAdmin> registrar(
+    public ResponseEntity<GastoAdminResponseDTO> registrar(
             @Valid @RequestBody GastoAdminCreateDTO dto,
             Authentication auth
     ) {
         Usuario usuario = usuarioService.obtenerPorUsername(auth.getName());
-        return ResponseEntity.ok(
-                gastoAdminService.registrar(dto, usuario)
-        );
+        return ResponseEntity.ok(toResponse(gastoAdminService.registrar(dto, usuario)));
     }
 
-    // 📅 Listar por fecha
     @GetMapping("/fecha/{fecha}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<GastoAdmin>> listarPorFecha(
+    public ResponseEntity<List<GastoAdminResponseDTO>> listarPorFecha(
             @PathVariable LocalDate fecha
     ) {
         return ResponseEntity.ok(
-                gastoAdminService.listarPorFecha(fecha)
+                gastoAdminService.listarPorFecha(fecha).stream()
+                        .map(this::toResponse)
+                        .toList()
         );
     }
 
-    // 📆 Listar por rango
     @GetMapping("/rango")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<GastoAdmin>> listarPorRango(
+    public ResponseEntity<List<GastoAdminResponseDTO>> listarPorRango(
             @RequestParam LocalDate inicio,
             @RequestParam LocalDate fin
     ) {
         return ResponseEntity.ok(
-                gastoAdminService.listarPorRango(inicio, fin)
+                gastoAdminService.listarPorRango(inicio, fin).stream()
+                        .map(this::toResponse)
+                        .toList()
         );
     }
 
@@ -68,5 +68,18 @@ public class GastoAdminController {
         Usuario usuario = usuarioService.obtenerPorUsername(auth.getName());
         gastoAdminService.eliminarPorId(id, usuario);
         return ResponseEntity.noContent().build();
+    }
+
+    private GastoAdminResponseDTO toResponse(GastoAdmin gasto) {
+        return new GastoAdminResponseDTO(
+                gasto.getId(),
+                gasto.getFecha(),
+                gasto.getDescripcion(),
+                gasto.getMonto(),
+                gasto.getMontoEfectivo(),
+                gasto.getMontoTransferencia(),
+                gasto.getTipo().getNombre(),
+                gasto.getUsuario().getUsername()
+        );
     }
 }

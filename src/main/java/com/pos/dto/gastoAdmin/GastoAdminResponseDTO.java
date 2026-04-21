@@ -13,6 +13,8 @@ public class GastoAdminResponseDTO {
     private LocalDate fecha;
     private String descripcion;
     private BigDecimal monto;
+    private BigDecimal montoEfectivo;
+    private BigDecimal montoTransferencia;
     private String tipoGasto;
     private String usuario;
 }

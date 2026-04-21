@@ -25,6 +25,12 @@ public class GastoCaja {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal monto;
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoEfectivo;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal montoTransferencia;
+
     @Column(nullable = false)
     private LocalDateTime fecha;
 

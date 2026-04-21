@@ -12,14 +12,25 @@ public class GastoCajaResponseDTO {
     private LocalDateTime fecha;
     private String descripcion;
     private BigDecimal valor;
+    private BigDecimal montoEfectivo;
+    private BigDecimal montoTransferencia;
 
     public GastoCajaResponseDTO() {}
 
-    public GastoCajaResponseDTO(Long id, LocalDateTime fecha, String descripcion, BigDecimal valor) {
+    public GastoCajaResponseDTO(
+            Long id,
+            LocalDateTime fecha,
+            String descripcion,
+            BigDecimal valor,
+            BigDecimal montoEfectivo,
+            BigDecimal montoTransferencia
+    ) {
         this.id = id;
         this.fecha = fecha;
         this.descripcion = descripcion;
         this.valor = valor;
+        this.montoEfectivo = montoEfectivo;
+        this.montoTransferencia = montoTransferencia;
     }
 
 }

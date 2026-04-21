@@ -24,6 +24,7 @@ public class ProductoService {
     private final ProductoRepository productoRepository;
     private final InventarioDiarioRepository inventarioDiarioRepository;
     private final MenuDiarioRepository menuDiarioRepository;
+    private final FechaOperativaService fechaOperativaService;
 
     public Producto crear(Producto producto) {
         if (producto == null) {
@@ -66,7 +67,7 @@ public class ProductoService {
 
         // 1️⃣ Menú activo hoy
         MenuDiario menuActivo = menuDiarioRepository
-                .findByFechaAndActivoTrue(LocalDate.now())
+                .findByFechaAndActivoTrue(fechaOperativaService.obtenerFechaOperativa())
                 .orElse(null);
 
         // 2️⃣ Inventario del menú (si existe)

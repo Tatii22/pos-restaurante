@@ -21,6 +21,10 @@ public class ReporteCierreTurnoDTO {
     private BigDecimal totalEfectivo;
     private BigDecimal totalTransferencia;
     private BigDecimal totalGastos;
+    private BigDecimal totalGastosEfectivo;
+    private BigDecimal totalGastosTransferencia;
+    private BigDecimal gananciaEfectivo;
+    private BigDecimal gananciaTransferencia;
 
     private BigDecimal netoEnCaja;
 
