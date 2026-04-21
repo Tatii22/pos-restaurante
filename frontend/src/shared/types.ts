@@ -17,6 +17,7 @@ export type Venta = {
   id: number;
   fecha: string;
   tipoVenta: "LOCAL" | "DOMICILIO";
+  paraLlevar?: boolean | null;
   estado: "EN_PROCESO" | "DESPACHADA" | "CANCELADA" | "ANULADA";
   clienteNombre: string | null;
   telefono: string | null;
@@ -26,6 +27,25 @@ export type Venta = {
   descuentoValor: number | null;
   total: number;
   formaPago: "EFECTIVO" | "TRANSFERENCIA";
+  pagoEfectivo?: number | null;
+  pagoTransferencia?: number | null;
+};
+
+export type VentaDetalleItem = {
+  productoId: number | null;
+  productoNombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  observacion: string | null;
+};
+
+export type VentaDetalle = Venta & {
+  pagoEfectivo: number;
+  pagoTransferencia: number;
+  fechaAnulacion: string | null;
+  motivoAnulacion: string | null;
+  detalles: VentaDetalleItem[];
 };
 
 export type PageResponse<T> = {
@@ -84,6 +104,8 @@ export type GastoCaja = {
   fecha: string;
   descripcion: string;
   valor: number;
+  montoEfectivo?: number | null;
+  montoTransferencia?: number | null;
 };
 
 export type GastoAdmin = {
@@ -91,8 +113,10 @@ export type GastoAdmin = {
   fecha: string;
   descripcion: string;
   monto: number;
-  tipo?: { id: number; nombre: string };
-  usuario?: { id: number; username: string };
+  montoEfectivo?: number | null;
+  montoTransferencia?: number | null;
+  tipoGasto?: string;
+  usuario?: string;
 };
 
 export type InventarioDiario = {
@@ -147,6 +171,23 @@ export type ReporteRentabilidad = {
   gananciaNeta: number;
   ventas: Venta[];
   gastos: GastoReporte[];
+};
+
+export type ReporteCierreTurno = {
+  turnoId: number;
+  apertura: string;
+  cierre: string | null;
+  totalVentas: number;
+  totalEfectivo: number;
+  totalTransferencia: number;
+  totalGastos: number;
+  totalGastosEfectivo: number;
+  totalGastosTransferencia: number;
+  gananciaEfectivo: number;
+  gananciaTransferencia: number;
+  netoEnCaja: number;
+  ventas: Venta[];
+  gastos: GastoCaja[];
 };
 
 export type AdminConfig = {

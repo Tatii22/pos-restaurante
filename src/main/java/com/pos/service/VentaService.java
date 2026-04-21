@@ -1,12 +1,20 @@
 package com.pos.service;
 
-import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaCocinaPreviewDTO;
+import com.pos.dto.venta.VentaCreateDTO;
+import com.pos.dto.venta.VentaDetalleResponseDTO;
 import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
+import com.pos.dto.venta.VentaItemResponseDTO;
+import com.pos.dto.venta.VentaPagoDetalleDTO;
+import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
-import com.pos.repository.*;
+import com.pos.repository.InventarioDiarioRepository;
+import com.pos.repository.MenuDiarioRepository;
+import com.pos.repository.ProductoRepository;
+import com.pos.repository.TurnoCajaRepository;
+import com.pos.repository.VentaRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +42,74 @@ public class VentaService {
     private final ImpresoraTtermicaService impresoraTtermicaService;
     private final ConfiguracionService configuracionService;
     private final VentaPagoDetalleService ventaPagoDetalleService;
-
-    /* ===================== REGISTRAR ===================== */
+    private final FechaOperativaService fechaOperativaService;
 
     public Venta obtenerPorId(Long ventaId) {
-        Venta venta = ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findByIdWithDetalles(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
         return reconciliarFormaPagoDesdeDetalle(venta);
+    }
+
+    public VentaDetalleResponseDTO obtenerDetallePorId(Long ventaId) {
+        Venta venta = obtenerPorId(ventaId);
+        VentaPagoDetalleDTO pago = ventaPagoDetalleService.obtener(venta.getId());
+
+        return new VentaDetalleResponseDTO(
+                venta.getId(),
+                venta.getFecha(),
+                venta.getTipoVenta(),
+                venta.getEstado(),
+                venta.getClienteNombre(),
+                venta.getTelefono(),
+                venta.getDireccion(),
+                venta.getValorDomicilio(),
+                venta.getParaLlevar(),
+                venta.getDescuentoPorcentaje(),
+                venta.getDescuentoValor(),
+                venta.getTotal(),
+                venta.getFormaPago(),
+                pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
+                venta.getFechaAnulacion(),
+                venta.getMotivoAnulacion(),
+                venta.getDetalles() == null
+                        ? List.of()
+                        : venta.getDetalles().stream()
+                        .map(d -> new VentaItemResponseDTO(
+                                d.getProducto() != null ? d.getProducto().getId() : null,
+                                d.getProducto() != null ? d.getProducto().getNombre() : "Producto",
+                                d.getCantidad(),
+                                d.getPrecioUnitario(),
+                                d.getSubtotal(),
+                                d.getObservacion()
+                        ))
+                        .toList()
+        );
+    }
+
+    public com.pos.dto.venta.VentaResponseDTO construirRespuesta(Venta venta) {
+        Venta reconciliada = reconciliarFormaPagoDesdeDetalle(venta);
+        VentaPagoDetalleDTO pago = reconciliada.getId() != null
+                ? ventaPagoDetalleService.obtener(reconciliada.getId())
+                : null;
+
+        return new com.pos.dto.venta.VentaResponseDTO(
+                reconciliada.getId(),
+                reconciliada.getFecha(),
+                reconciliada.getTipoVenta(),
+                reconciliada.getEstado(),
+                reconciliada.getClienteNombre(),
+                reconciliada.getTelefono(),
+                reconciliada.getDireccion(),
+                reconciliada.getValorDomicilio(),
+                reconciliada.getParaLlevar(),
+                reconciliada.getDescuentoPorcentaje(),
+                reconciliada.getDescuentoValor(),
+                reconciliada.getTotal(),
+                reconciliada.getFormaPago(),
+                pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
+        );
     }
 
     public Page<Venta> listarOperativas(
@@ -90,8 +159,14 @@ public class VentaService {
 
         Page<Venta> pageResult = ventaRepository.findAll(
                 spec,
-                PageRequest.of(Math.max(page, 0), Math.max(size, 1), org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "fecha"))
+                PageRequest.of(
+                        Math.max(page, 0),
+                        Math.max(size, 1),
+                        org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.DESC,
+                                "fecha"
+                        )
+                )
         );
 
         pageResult.forEach(this::reconciliarFormaPagoDesdeDetalle);
@@ -100,19 +175,15 @@ public class VentaService {
 
     @Transactional
     public Venta registrarVenta(VentaCreateDTO dto, Usuario usuario) {
-
         TurnoCaja turno = turnoCajaRepository
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
-        // 🔐 Rol vs tipo venta
-        if (dto.tipoVenta() == TipoVenta.LOCAL &&
-                !usuario.getRol().getNombre().equals("CAJA")) {
+        if (dto.tipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede registrar ventas locales");
         }
 
-        if (dto.tipoVenta() == TipoVenta.DOMICILIO &&
-                !usuario.getRol().getNombre().equals("DOMI")) {
+        if (dto.tipoVenta() == TipoVenta.DOMICILIO && !"DOMI".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo DOMI puede registrar ventas a domicilio");
         }
 
@@ -120,49 +191,44 @@ public class VentaService {
             throw new BadRequestException("Para crear domicilios el turno debe estar ABIERTO");
         }
 
-        // 🧾 Validaciones DOMICILIO
         if (dto.tipoVenta() == TipoVenta.DOMICILIO) {
             if (dto.telefono() == null || dto.telefono().isBlank()) {
-                throw new BadRequestException("El teléfono es obligatorio");
+                throw new BadRequestException("El telefono es obligatorio");
             }
             if (dto.direccion() == null || dto.direccion().isBlank()) {
-                throw new BadRequestException("La dirección es obligatoria");
+                throw new BadRequestException("La direccion es obligatoria");
             }
         }
 
         Venta venta = new Venta();
         venta.setFecha(LocalDateTime.now());
         venta.setTipoVenta(dto.tipoVenta());
-        BigDecimal pagoEfectivo = dto.pagoEfectivo() == null ? BigDecimal.ZERO : dto.pagoEfectivo();
-        BigDecimal pagoTransferencia = dto.pagoTransferencia() == null ? BigDecimal.ZERO : dto.pagoTransferencia();
+
+        BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
+        BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
+
         venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setUsuario(usuario);
         venta.setTurno(turno);
-
-        venta.setEstado(
-                dto.tipoVenta() == TipoVenta.LOCAL
-                        ? EstadoVenta.DESPACHADA
-                        : EstadoVenta.EN_PROCESO
-        );
-
+        venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
         venta.setClienteNombre(dto.clienteNombre());
         venta.setTelefono(dto.telefono());
         venta.setDireccion(dto.direccion());
         venta.setValorDomicilio(dto.valorDomicilio());
+        venta.setParaLlevar(dto.tipoVenta() == TipoVenta.LOCAL && Boolean.TRUE.equals(dto.paraLlevar()));
 
         BigDecimal total = BigDecimal.ZERO;
         List<VentaDetalle> detalles = new ArrayList<>();
         MenuDiario menuActivo = null;
 
         for (VentaDetalleCreateDTO d : dto.detalles()) {
-
             Producto producto = productoRepository.findById(d.productoId())
                     .orElseThrow(() -> new BadRequestException("Producto no existe"));
 
             if (producto.getTipoVenta() == TipoVentaProducto.MENU_DIARIO && menuActivo == null) {
                 menuActivo = menuDiarioRepository
-                        .findByFechaAndActivoTrue(LocalDate.now())
-                        .orElseThrow(() -> new BadRequestException("No hay menú activo hoy"));
+                        .findByFechaAndActivoTrue(fechaOperativaService.obtenerFechaOperativa())
+                        .orElseThrow(() -> new BadRequestException("No hay menu activo hoy"));
             }
 
             BigDecimal subtotal = producto.getPrecio()
@@ -181,11 +247,12 @@ public class VentaService {
 
             detalles.add(detalle);
 
-            // 🔻 Impacto inventario
             if (producto.getTipoVenta() == TipoVentaProducto.MENU_DIARIO) {
-                InventarioDiario inv = inventarioDiarioRepository
-                        .findByProductoAndMenuDiario(producto, menuActivo)
-                        .orElseThrow(() -> new BadRequestException("Producto no está en el menú"));
+                InventarioDiario inv = obtenerInventarioParaActualizar(
+                        producto,
+                        menuActivo,
+                        "Producto no esta en el menu"
+                );
 
                 if (inv.getStockActual() < d.cantidad()) {
                     throw new BadRequestException("Stock insuficiente");
@@ -200,13 +267,10 @@ public class VentaService {
         if (dto.tipoVenta() == TipoVenta.DOMICILIO && dto.valorDomicilio() != null) {
             total = total.add(dto.valorDomicilio());
         }
-        BigDecimal descuentoValor = BigDecimal.ZERO;
-        // 💸 Aplicar descuento si existe
-        if (dto.descuentoPorcentaje() != null &&
-            dto.descuentoPorcentaje().compareTo(BigDecimal.ZERO) > 0) {
 
-            // (opcional pero recomendado)
-            if (!usuario.getRol().getNombre().equals("CAJA")) {
+        BigDecimal descuentoValor = BigDecimal.ZERO;
+        if (dto.descuentoPorcentaje() != null && dto.descuentoPorcentaje().compareTo(BigDecimal.ZERO) > 0) {
+            if (!"CAJA".equals(usuario.getRol().getNombre())) {
                 throw new BadRequestException("Solo CAJA puede aplicar descuentos");
             }
 
@@ -217,16 +281,18 @@ public class VentaService {
             total = total.subtract(descuentoValor);
         }
 
-
-
         venta.setDescuentoPorcentaje(dto.descuentoPorcentaje());
         venta.setDescuentoValor(descuentoValor);
         venta.setTotal(total);
         venta.setDetalles(detalles);
 
-
-        // 💰 LOCAL entra inmediatamente a caja
         if (dto.tipoVenta() == TipoVenta.LOCAL) {
+            validarPagoSuficiente(
+                    total,
+                    pagoEfectivo,
+                    pagoTransferencia,
+                    "El pago es insuficiente para registrar la venta"
+            );
             turno.setTotalVentas(turno.getTotalVentas().add(total));
             turnoCajaRepository.save(turno);
         }
@@ -258,6 +324,7 @@ public class VentaService {
         ventaPreview.setId(System.currentTimeMillis());
         ventaPreview.setFecha(LocalDateTime.now());
         ventaPreview.setClienteNombre(dto.clienteNombre());
+        ventaPreview.setParaLlevar(Boolean.TRUE.equals(dto.paraLlevar()));
 
         List<VentaDetalle> detalles = new ArrayList<>();
         for (VentaDetalleCreateDTO d : dto.detalles()) {
@@ -283,11 +350,8 @@ public class VentaService {
         imprimirTicketCocinaSeguro(ventaPreview);
     }
 
-    /* ===================== DESPACHAR DOMICILIO ===================== */
-
     @Transactional
     public Venta despacharVenta(Long ventaId, VentaDespachoDTO dto, Usuario usuario) {
-
         Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
@@ -296,85 +360,74 @@ public class VentaService {
         }
 
         if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
-            throw new BadRequestException("La venta no está en proceso");
+            throw new BadRequestException("La venta no esta en proceso");
         }
 
-        if (!usuario.getRol().getNombre().equals("CAJA")) {
+        if (!"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede despachar");
         }
 
-        TurnoCaja turno = venta.getTurno();
-        BigDecimal pagoEfectivo = null;
-        BigDecimal pagoTransferencia = null;
-        if (dto != null) {
-            pagoEfectivo = nonNegative(dto.pagoEfectivo());
-            pagoTransferencia = nonNegative(dto.pagoTransferencia());
-            BigDecimal totalPagado = pagoEfectivo.add(pagoTransferencia);
-
-            if (totalPagado.compareTo(venta.getTotal()) < 0) {
-                throw new BadRequestException("El pago es insuficiente para despachar la venta");
-            }
+        if (dto == null) {
+            throw new BadRequestException("Debe informar el pago para despachar la venta");
         }
+
+        TurnoCaja turno = venta.getTurno();
+        BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
+        BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
+
+        validarPagoSuficiente(
+                venta.getTotal(),
+                pagoEfectivo,
+                pagoTransferencia,
+                "El pago es insuficiente para despachar la venta"
+        );
 
         venta.setEstado(EstadoVenta.DESPACHADA);
-        if (dto != null) {
-            venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
-        }
+        venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         turno.setTotalVentas(turno.getTotalVentas().add(venta.getTotal()));
 
         turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
-        if (dto != null) {
-            ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
-        }
+        ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
+
         if (isFacturaAutoEnabled()) {
-            if (dto != null) {
-                imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
-            } else {
-                imprimirFacturaSeguro(ventaGuardada);
-            }
+            imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
         }
+
         return ventaGuardada;
     }
 
-    /* ===================== CANCELAR (SIN COBRO) ===================== */
-
     @Transactional
     public Venta cancelarVenta(Long ventaId, Usuario usuario) {
-
         Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
-        // 🔒 Estado válido
         if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
             throw new BadRequestException("Solo se pueden cancelar ventas en proceso");
         }
 
-        // 🔐 Permisos por tipo de venta
-        if (venta.getTipoVenta() == TipoVenta.LOCAL &&
-                !usuario.getRol().getNombre().equals("CAJA")) {
+        if (venta.getTipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede cancelar ventas locales");
         }
 
-        if (venta.getTipoVenta() == TipoVenta.DOMICILIO &&
-                !usuario.getRol().getNombre().equals("CAJA") &&
-                !usuario.getRol().getNombre().equals("DOMI")) {
+        if (venta.getTipoVenta() == TipoVenta.DOMICILIO
+                && !"CAJA".equals(usuario.getRol().getNombre())
+                && !"DOMI".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("No autorizado para cancelar este pedido");
         }
 
-        // 🔄 Devolver inventario
         devolverInventario(venta);
-
         venta.setEstado(EstadoVenta.CANCELADA);
         return ventaRepository.save(venta);
     }
 
-
-    /* ===================== ANULAR (CON DEVOLUCIÓN) ===================== */
-
     @Transactional
     public Venta anularVenta(Long ventaId, Usuario usuario) {
+        return anularVenta(ventaId, null, usuario);
+    }
 
+    @Transactional
+    public Venta anularVenta(Long ventaId, String motivo, Usuario usuario) {
         Venta venta = ventaRepository.findById(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
@@ -382,7 +435,7 @@ public class VentaService {
             throw new BadRequestException("Solo se pueden anular ventas despachadas");
         }
 
-        if (!usuario.getRol().getNombre().equals("CAJA")) {
+        if (!"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede anular ventas");
         }
 
@@ -392,6 +445,8 @@ public class VentaService {
         devolverInventario(venta);
 
         venta.setEstado(EstadoVenta.ANULADA);
+        venta.setFechaAnulacion(LocalDateTime.now());
+        venta.setMotivoAnulacion(normalizeMotivoAnulacion(motivo));
 
         turnoCajaRepository.save(turno);
         return ventaRepository.save(venta);
@@ -405,7 +460,7 @@ public class VentaService {
         validarOperacionEnProcesoDomicilio(venta, usuario);
 
         if (valorDomicilio == null || valorDomicilio.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("El valor del domicilio es inválido");
+            throw new BadRequestException("El valor del domicilio es invalido");
         }
 
         venta.setValorDomicilio(valorDomicilio);
@@ -432,25 +487,24 @@ public class VentaService {
         return venta;
     }
 
-    /* ===================== INVENTARIO ===================== */
-
     private void devolverInventario(Venta venta) {
-
         MenuDiario menuActivo = menuDiarioRepository
                 .findByFechaAndActivoTrue(venta.getFecha().toLocalDate())
                 .orElse(null);
 
-        if (menuActivo == null) return;
+        if (menuActivo == null) {
+            return;
+        }
 
         for (VentaDetalle detalle : venta.getDetalles()) {
-
             Producto producto = detalle.getProducto();
 
             if (producto.getTipoVenta() == TipoVentaProducto.MENU_DIARIO) {
-
-                InventarioDiario inv = inventarioDiarioRepository
-                        .findByProductoAndMenuDiario(producto, menuActivo)
-                        .orElseThrow(() -> new BadRequestException("Inventario no encontrado"));
+                InventarioDiario inv = obtenerInventarioParaActualizar(
+                        producto,
+                        menuActivo,
+                        "Inventario no encontrado"
+                );
 
                 inv.setStockActual(inv.getStockActual() + detalle.getCantidad());
                 inv.setAgotado(false);
@@ -485,16 +539,16 @@ public class VentaService {
 
     private void validarOperacionEnProcesoDomicilio(Venta venta, Usuario usuario) {
         if (venta.getTipoVenta() != TipoVenta.DOMICILIO) {
-            throw new BadRequestException("Esta operación aplica solo a ventas domicilio");
+            throw new BadRequestException("Esta operacion aplica solo a ventas domicilio");
         }
         if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
-            throw new BadRequestException("Solo se permite cuando la venta está en proceso");
+            throw new BadRequestException("Solo se permite cuando la venta esta en proceso");
         }
         if (usuario == null || usuario.getRol() == null) {
-            throw new BadRequestException("Usuario no válido");
+            throw new BadRequestException("Usuario no valido");
         }
         if (!esPedidoPorCaja(usuario) && !"DOMI".equals(usuario.getRol().getNombre())) {
-            throw new BadRequestException("No autorizado para esta operación");
+            throw new BadRequestException("No autorizado para esta operacion");
         }
     }
 
@@ -565,11 +619,31 @@ public class VentaService {
         return formaPagoDeclarada != null ? formaPagoDeclarada : FormaPago.EFECTIVO;
     }
 
+    private void validarPagoSuficiente(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia, String mensaje) {
+        BigDecimal totalPagado = nonNegative(pagoEfectivo).add(nonNegative(pagoTransferencia));
+        if (totalPagado.compareTo(total) < 0) {
+            throw new BadRequestException(mensaje);
+        }
+    }
+
     private BigDecimal nonNegative(BigDecimal value) {
         if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
             return BigDecimal.ZERO;
         }
         return value;
+    }
+
+    private InventarioDiario obtenerInventarioParaActualizar(Producto producto, MenuDiario menuDiario, String errorMessage) {
+        return inventarioDiarioRepository.findByProductoAndMenuDiarioForUpdate(producto, menuDiario)
+                .orElseThrow(() -> new BadRequestException(errorMessage));
+    }
+
+    private String normalizeMotivoAnulacion(String motivo) {
+        if (motivo == null || motivo.isBlank()) {
+            return "Sin motivo registrado";
+        }
+        String clean = motivo.trim().replace("\r", " ").replace("\n", " ");
+        return clean.length() > 255 ? clean.substring(0, 255) : clean;
     }
 
     private Venta reconciliarFormaPagoDesdeDetalle(Venta venta) {
@@ -582,7 +656,11 @@ public class VentaService {
             return venta;
         }
 
-        FormaPago formaCalculada = resolverFormaPago(venta.getFormaPago(), detalle.pagoEfectivo(), detalle.pagoTransferencia());
+        FormaPago formaCalculada = resolverFormaPago(
+                venta.getFormaPago(),
+                detalle.pagoEfectivo(),
+                detalle.pagoTransferencia()
+        );
         if (formaCalculada != venta.getFormaPago()) {
             venta.setFormaPago(formaCalculada);
             ventaRepository.save(venta);
@@ -590,4 +668,3 @@ public class VentaService {
         return venta;
     }
 }
-

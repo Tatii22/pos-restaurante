@@ -16,6 +16,15 @@ import java.util.List;
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
     @Query("""
+        select distinct v
+        from Venta v
+        left join fetch v.detalles d
+        left join fetch d.producto
+        where v.id = :id
+    """)
+    java.util.Optional<Venta> findByIdWithDetalles(@Param("id") Long id);
+
+    @Query("""
         SELECT COALESCE(SUM(v.total), 0)
         FROM Venta v
         WHERE v.turno.id = :turnoId

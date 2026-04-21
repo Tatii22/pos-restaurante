@@ -10,6 +10,7 @@ import com.pos.entity.Venta;
 import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.GastoCajaRepository;
 import com.pos.repository.VentaRepository;
+import com.pos.service.VentaService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,15 +24,18 @@ public class ReporteRentabilidadService {
     private final VentaRepository ventaRepository;
     private final GastoCajaRepository gastoCajaRepository;
     private final GastoAdminRepository gastoAdminRepository;
+    private final VentaService ventaService;
 
     public ReporteRentabilidadService(
             VentaRepository ventaRepository,
             GastoCajaRepository gastoCajaRepository,
-            GastoAdminRepository gastoAdminRepository
+            GastoAdminRepository gastoAdminRepository,
+            VentaService ventaService
     ) {
         this.ventaRepository = ventaRepository;
         this.gastoCajaRepository = gastoCajaRepository;
         this.gastoAdminRepository = gastoAdminRepository;
+        this.ventaService = ventaService;
     }
 
     public ReporteRentabilidadDTO generarReporte(
@@ -110,20 +114,7 @@ public class ReporteRentabilidadService {
 
     private List<VentaResponseDTO> mapVentas(List<Venta> ventas) {
         return ventas.stream()
-                .map(v -> new VentaResponseDTO(
-                        v.getId(),
-                        v.getFecha(),
-                        v.getTipoVenta(),
-                        v.getEstado(),
-                        v.getClienteNombre(),
-                        v.getTelefono(),
-                        v.getDireccion(),
-                        v.getValorDomicilio(),
-                        v.getDescuentoPorcentaje(),
-                        v.getDescuentoValor(),
-                        v.getTotal(),
-                        v.getFormaPago()
-                ))
+                .map(ventaService::construirRespuesta)
                 .toList();
     }
 

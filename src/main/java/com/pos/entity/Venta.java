@@ -50,6 +50,10 @@ public class Venta {
     @Column(precision = 10, scale = 2)
     private BigDecimal descuentoValor;
 
+    private LocalDateTime fechaAnulacion;
+
+    @Column(length = 255)
+    private String motivoAnulacion;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -63,6 +67,9 @@ public class Venta {
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<VentaDetalle> detalles;
+
+    @Column(nullable = false)
+    private Boolean paraLlevar;
 
 }
 

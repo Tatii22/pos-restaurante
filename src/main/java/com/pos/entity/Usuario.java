@@ -1,5 +1,6 @@
 package com.pos.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,7 @@ public class Usuario {
     private String username;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @ManyToOne(fetch = FetchType.EAGER)

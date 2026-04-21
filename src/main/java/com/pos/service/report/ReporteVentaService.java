@@ -2,8 +2,7 @@ package com.pos.service.report;
 import com.pos.dto.report.ReporteVentaDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.entity.EstadoVenta;
-import com.pos.entity.FormaPago;
-
+import com.pos.service.VentaService;
 import com.pos.repository.VentaRepository;
 import org.springframework.stereotype.Service;
 import com.pos.entity.Venta;
@@ -16,9 +15,11 @@ import java.util.List;
 public class ReporteVentaService {
 
     private final VentaRepository ventaRepository;
+    private final VentaService ventaService;
 
-    public ReporteVentaService(VentaRepository ventaRepository) {
+    public ReporteVentaService(VentaRepository ventaRepository, VentaService ventaService) {
         this.ventaRepository = ventaRepository;
+        this.ventaService = ventaService;
     }
 
     public ReporteVentaDTO generarReporteVentas(
@@ -45,23 +46,23 @@ public class ReporteVentaService {
         BigDecimal totalTransferencia = BigDecimal.ZERO;
 
         for (Venta venta : ventas) {
-
             if (venta.getEstado() == EstadoVenta.ANULADA) {
                 continue;
             }
 
             BigDecimal descuento = obtenerDescuento(venta);
             BigDecimal totalFinal = venta.getTotal().subtract(descuento);
+            VentaResponseDTO ventaDTO = mapToVentaResponse(venta);
 
             totalBruto = totalBruto.add(venta.getTotal());
             totalDescuentos = totalDescuentos.add(descuento);
             totalNeto = totalNeto.add(totalFinal);
-
-            if (venta.getFormaPago() == FormaPago.EFECTIVO) {
-                totalEfectivo = totalEfectivo.add(totalFinal);
-            } else if (venta.getFormaPago() == FormaPago.TRANSFERENCIA) {
-                totalTransferencia = totalTransferencia.add(totalFinal);
-            }
+            totalEfectivo = totalEfectivo.add(
+                    ventaDTO.pagoEfectivo() != null ? ventaDTO.pagoEfectivo() : BigDecimal.ZERO
+            );
+            totalTransferencia = totalTransferencia.add(
+                    ventaDTO.pagoTransferencia() != null ? ventaDTO.pagoTransferencia() : BigDecimal.ZERO
+            );
         }
 
         List<VentaResponseDTO> ventasDTO = ventas.stream()
@@ -93,19 +94,6 @@ public class ReporteVentaService {
     }
 
     private VentaResponseDTO mapToVentaResponse(Venta venta) {
-        return new VentaResponseDTO(
-                venta.getId(),
-                venta.getFecha(),
-                venta.getTipoVenta(),
-                venta.getEstado(),
-                venta.getClienteNombre(),
-                venta.getTelefono(),
-                venta.getDireccion(),
-                venta.getValorDomicilio(),
-                venta.getDescuentoPorcentaje(),
-                venta.getDescuentoValor(),
-                venta.getTotal(),
-                venta.getFormaPago()
-        );
+        return ventaService.construirRespuesta(venta);
     }
 }

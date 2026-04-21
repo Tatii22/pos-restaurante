@@ -146,7 +146,15 @@ class VentaDomicilioFlowIntegrationTest {
                 .andExpect(jsonPath("$.content[0].id").value(ventaId));
 
         mockMvc.perform(post("/api/v1/ventas/{id}/despachar", ventaId)
-                        .with(user(usernameCaja).roles("CAJA")))
+                        .with(user(usernameCaja).roles("CAJA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formaPago": "EFECTIVO",
+                                  "pagoEfectivo": 23000,
+                                  "pagoTransferencia": 0
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value(EstadoVenta.DESPACHADA.name()))
                 .andExpect(jsonPath("$.total").value(23000));
@@ -169,7 +177,15 @@ class VentaDomicilioFlowIntegrationTest {
         Long ventaId = crearVentaDomicilioEnProceso();
 
         mockMvc.perform(post("/api/v1/ventas/{id}/despachar", ventaId)
-                        .with(user(usernameDomi).roles("DOMI")))
+                        .with(user(usernameDomi).roles("DOMI"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formaPago": "EFECTIVO",
+                                  "pagoEfectivo": 20000,
+                                  "pagoTransferencia": 0
+                                }
+                                """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
@@ -202,7 +218,15 @@ class VentaDomicilioFlowIntegrationTest {
         Long ventaId = crearVentaDomicilioEnProceso();
 
         mockMvc.perform(post("/api/v1/ventas/{id}/despachar", ventaId)
-                        .with(user(usernameCaja).roles("CAJA")))
+                        .with(user(usernameCaja).roles("CAJA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formaPago": "EFECTIVO",
+                                  "pagoEfectivo": 20000,
+                                  "pagoTransferencia": 0
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value(EstadoVenta.DESPACHADA.name()));
 
@@ -212,6 +236,25 @@ class VentaDomicilioFlowIntegrationTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.path").value("/api/v1/ventas/" + ventaId + "/imprimir-factura"));
+    }
+
+    @Test
+    void noDebePermitirDespacharSinPagoSuficiente() throws Exception {
+        Long ventaId = crearVentaDomicilioEnProceso();
+
+        mockMvc.perform(post("/api/v1/ventas/{id}/despachar", ventaId)
+                        .with(user(usernameCaja).roles("CAJA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formaPago": "EFECTIVO",
+                                  "pagoEfectivo": 10000,
+                                  "pagoTransferencia": 0
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("El pago es insuficiente para despachar la venta"));
     }
 
     private Long crearVentaDomicilioEnProceso() throws Exception {

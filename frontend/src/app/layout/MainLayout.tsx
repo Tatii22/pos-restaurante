@@ -249,6 +249,13 @@ export function MainLayout() {
     setDismissedAlerts({});
     setRestockQtyByAlert({});
   }, [resolvedRole, turno]);
+
+  useEffect(() => {
+    if (!showAlerts) return;
+    if (lowStockAlerts.length > 0) return;
+    setShowAlerts(false);
+  }, [lowStockAlerts.length, showAlerts]);
+
   const needsTurno = resolvedRole === "CAJA" && !turno;
   const needsMenu = resolvedRole === "CAJA" && !!turno && menuSetupLocked;
   const blockCajaNavigation = needsTurno || needsMenu;
@@ -260,20 +267,33 @@ export function MainLayout() {
     );
   }, [productosQ.data, inventarioQ.data]);
   const montoInicialValido = Number(montoInicial) > 0;
+  const logoutButtonClass =
+    resolvedRole === "DOMI"
+      ? "inline-flex w-full items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 md:hidden"
+      : "btn-ghost w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm";
+  const logoutButtonDesktopDomiClass =
+    "hidden items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 md:inline-flex";
+  const isDomiMobileNav = resolvedRole === "DOMI";
 
   return (
     <div className="min-h-screen overflow-x-hidden">
       <header className="sticky top-0 z-20 overflow-x-hidden border-b border-pos-border bg-white">
         <div className="grid grid-cols-1 gap-2 px-2 py-2 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3">
-          <div className="min-w-0 flex items-center gap-2 overflow-hidden text-sm">
-            <span className="shrink-0 text-base font-bold sm:text-lg">Restaurant POS</span>
-            <span className="min-w-0 max-w-[140px] truncate font-semibold sm:max-w-[220px]">{username}</span>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_auto_auto] items-center gap-1 overflow-hidden text-[11px] sm:flex sm:items-center sm:gap-2 sm:text-sm">
+            <span className="min-w-0 truncate text-sm font-bold sm:shrink-0 sm:text-lg">Restaurant POS</span>
+            <span className="min-w-0 truncate text-right font-semibold sm:max-w-[220px] sm:text-left">{username}</span>
+            {resolvedRole === "DOMI" && (
+              <button className={logoutButtonClass} onClick={clearAuth}>
+                <LogOut size={16} className="mr-1" />
+                Salir
+              </button>
+            )}
             {resolvedRole === "CAJA" && (
               <>
-                <span className={clsx("rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap", turnoClass)}>
+                <span className={clsx("rounded-full px-1.5 py-1 text-[10px] font-semibold whitespace-nowrap sm:px-2 sm:text-xs", turnoClass)}>
                   Turno: {turno?.estado ?? "CERRADO"}
                 </span>
-                <button className="btn-soft relative h-7 w-7 shrink-0 p-0" onClick={() => setShowAlerts((v) => !v)}>
+                <button className="btn-soft relative h-7 w-7 shrink-0 p-0 sm:hidden" onClick={() => setShowAlerts((v) => !v)}>
                   <Bell size={14} />
                   {lowStockAlerts.length > 0 && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
@@ -286,27 +306,52 @@ export function MainLayout() {
           </div>
           <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {resolvedRole === "CAJA" && (
-              <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
-                {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
+              <>
+                <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowAlerts((v) => !v)}>
+                  <Bell size={14} />
+                  {lowStockAlerts.length > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {lowStockAlerts.length}
+                    </span>
+                  )}
+                </button>
+                <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
+                  {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
+                </button>
+              </>
+            )}
+            {resolvedRole === "DOMI" && (
+              <button className={logoutButtonDesktopDomiClass} onClick={clearAuth}>
+                <LogOut size={16} className="mr-1" />
+                Salir
               </button>
             )}
-            <button className="btn-ghost w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={clearAuth}>
-              <LogOut size={16} className="mr-1" />
-              Salir
-            </button>
+            {resolvedRole !== "DOMI" && (
+              <button className={logoutButtonClass} onClick={clearAuth}>
+                <LogOut size={16} className="mr-1" />
+                Salir
+              </button>
+            )}
           </div>
         </div>
 
         {!blockCajaNavigation && (
-          <div className="w-full max-w-[100vw] overflow-x-auto overflow-y-hidden border-t border-pos-border">
-            <nav className="inline-flex min-w-max gap-2 px-3 py-2 sm:px-4">
+          <div className="w-full max-w-[100vw] overflow-x-hidden border-t border-pos-border">
+            <nav
+              className={clsx(
+                "grid gap-2 px-2 py-2 sm:inline-flex sm:px-4",
+                isDomiMobileNav && "grid-cols-2 bg-gray-50/80"
+              )}
+              style={{ gridTemplateColumns: `repeat(${Math.max(menu.length, 1)}, minmax(0, 1fr))` }}
+            >
               {menu.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
                     clsx(
-                      "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-2 text-sm",
+                      "inline-flex min-w-0 items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs text-center sm:shrink-0 sm:gap-2 sm:px-3 sm:text-sm",
+                      isDomiMobileNav && "min-h-[44px] gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold shadow-sm",
                       isActive ? "border-pos-accent bg-pos-accentSoft text-pos-text" : "border-pos-border bg-white hover:bg-gray-50"
                     )
                   }

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
-import { getErrorMessage, money } from "../shared/utils";
+import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 
@@ -100,6 +100,7 @@ export function VentasPage() {
   const [transferAmount, setTransferAmount] = useState("0");
   const [cashAmount, setCashAmount] = useState("0");
   const [activeCalcField, setActiveCalcField] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
+  const [checkoutMode, setCheckoutMode] = useState<"SALON" | "LLEVAR">("SALON");
 
   const productsMetaEnabled = role === "CAJA";
   const catalogQ = useQuery({ queryKey: ["catalogo-hoy"], queryFn: () => posApi.catalogoHoy() });
@@ -129,6 +130,7 @@ export function VentasPage() {
       setShowPayModal(false);
       setTransferAmount("0");
       setCashAmount("0");
+      setCheckoutMode("SALON");
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 2200);
       qc.invalidateQueries({ queryKey: ["catalogo-hoy"] });
@@ -146,11 +148,11 @@ export function VentasPage() {
   });
 
   const printKitchenPreviewM = useMutation({
-    mutationFn: () =>
-      posApi.imprimirCocinaPreview({
-        clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
-        detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
-      })
+    mutationFn: (payload: {
+      clienteNombre?: string;
+      paraLlevar?: boolean;
+      detalles: Array<{ productoId: number; cantidad: number; observacion?: string }>;
+    }) => posApi.imprimirCocinaPreview(payload)
   });
 
   const products = useMemo(() => {
@@ -223,14 +225,19 @@ export function VentasPage() {
     setCart((prev) => prev.filter((x) => x.id !== itemId));
   }
 
-  function parseAmount(value: string): number {
-    const normalized = value.replace(/[^\d]/g, "");
-    return Number(normalized || "0");
+  function handleCurrencyChange(
+    value: string,
+    setValue: (next: string) => void
+  ) {
+    const result = normalizeCurrencyInput(value, { maxDigits: 9, allowZero: true });
+    if (result.value !== null) {
+      setValue(result.value || "0");
+    }
   }
 
   const telefonoLimpio = telefono.trim();
   const direccionLimpia = direccion.trim();
-  const valorDomicilioNumero = parseAmount(valorDomicilio);
+  const valorDomicilioNumero = parseCurrencyInput(valorDomicilio);
   const telefonoValido = !esDomi || /^\d{7,15}$/.test(telefonoLimpio);
   const direccionValida = !esDomi || direccionLimpia.length >= 5;
   const valorDomicilioValido = !esDomi || (valorDomicilio.trim().length > 0 && valorDomicilioNumero >= 0);
@@ -272,8 +279,8 @@ export function VentasPage() {
     return messages;
   }
 
-  const transfer = parseAmount(transferAmount);
-  const cash = parseAmount(cashAmount);
+  const transfer = parseCurrencyInput(transferAmount);
+  const cash = parseCurrencyInput(cashAmount);
   const paid = transfer + cash;
   const remaining = Math.max(0, total - paid);
   const change = Math.max(0, paid - total);
@@ -294,6 +301,7 @@ export function VentasPage() {
       telefono: esDomi ? telefono.trim() : undefined,
       direccion: esDomi ? direccion.trim() : undefined,
       valorDomicilio: esDomi ? valorDomicilioNumero : undefined,
+      paraLlevar: !esDomi && checkoutMode === "LLEVAR",
       descuentoPorcentaje: esDomi ? 0 : descuento,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
     };
@@ -314,9 +322,9 @@ export function VentasPage() {
   }
 
   async function setExactPayment() {
-    const remainingNow = Math.max(0, total - (parseAmount(transferAmount) + parseAmount(cashAmount)));
-    const transferNow = parseAmount(transferAmount);
-    const cashNow = parseAmount(cashAmount);
+    const remainingNow = Math.max(0, total - (parseCurrencyInput(transferAmount) + parseCurrencyInput(cashAmount)));
+    const transferNow = parseCurrencyInput(transferAmount);
+    const cashNow = parseCurrencyInput(cashAmount);
     if (bloqueado || cart.length === 0 || createSale.isPending) return;
 
     let transferFinal = transferNow;
@@ -340,6 +348,23 @@ export function VentasPage() {
     if (remaining > 0) return;
 
     await createSale.mutateAsync(buildSalePayload(transfer, cash));
+  }
+
+  async function startCajaCheckout(mode: "SALON" | "LLEVAR") {
+    const validationMessages = getCheckoutValidationMessages(false);
+    if (validationMessages.length) {
+      showValidationWarns(validationMessages);
+      return;
+    }
+
+    setCheckoutMode(mode);
+    await printKitchenPreviewM.mutateAsync({
+      clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
+      paraLlevar: mode === "LLEVAR",
+      detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
+    });
+    setShowPayModal(true);
+    setActiveCalcField("EFECTIVO");
   }
 
   const showInventarioError = inventarioQ.isError && role === "CAJA";
@@ -493,8 +518,8 @@ export function VentasPage() {
                 Valor domicilio
                 <input
                   className="input mt-1"
-                  value={valorDomicilio}
-                  onChange={(e) => setValorDomicilio(cleanDigits(e.target.value, 9))}
+                  value={formatCurrencyInput(valorDomicilio)}
+                  onChange={(e) => handleCurrencyChange(e.target.value, setValorDomicilio)}
                   inputMode="numeric"
                   maxLength={9}
                 />
@@ -550,33 +575,40 @@ export function VentasPage() {
         </div>
 
         <div className="mt-4 grid gap-2">
-          <button
-            className="btn-primary bg-green-600 hover:bg-green-700"
-            disabled={createSale.isPending || printKitchenPreviewM.isPending}
-            onClick={async () => {
-              const validationMessages = getCheckoutValidationMessages(esDomi);
-              if (validationMessages.length) {
-                showValidationWarns(validationMessages);
-                return;
-              }
-              if (esDomi) {
+          {esDomi ? (
+            <button
+              className="btn-primary bg-green-600 hover:bg-green-700"
+              disabled={createSale.isPending || printKitchenPreviewM.isPending}
+              onClick={async () => {
+                const validationMessages = getCheckoutValidationMessages(true);
+                if (validationMessages.length) {
+                  showValidationWarns(validationMessages);
+                  return;
+                }
                 await createSale.mutateAsync(buildSalePayload(0, total));
-                return;
-              }
-              if (!esDomi) {
-                await printKitchenPreviewM.mutateAsync();
-              }
-              setShowPayModal(true);
-              setActiveCalcField("EFECTIVO");
-            }}
-          >
-            {esDomi ? "Enviar pedido" : "Cobrar"}
-          </button>
-          {!esDomi && (
-            <p className="text-xs text-pos-muted">
-              Al confirmar cobro se imprime ticket cocina y factura en la impresora termica.
-            </p>
+              }}
+            >
+              Enviar pedido
+            </button>
+          ) : (
+            <>
+              <button
+                className="btn-primary bg-green-600 hover:bg-green-700"
+                disabled={createSale.isPending || printKitchenPreviewM.isPending}
+                onClick={() => startCajaCheckout("SALON")}
+              >
+                COBRAR
+              </button>
+              <button
+                className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                disabled={createSale.isPending || printKitchenPreviewM.isPending}
+                onClick={() => startCajaCheckout("LLEVAR")}
+              >
+                  COBRAR PARA LLEVAR
+              </button>
+            </>
           )}
+          
           {esDomi && (
             <p className="text-xs text-pos-muted">
               Para domicilio debes completar telefono, direccion y valor de domicilio.
@@ -707,10 +739,10 @@ export function VentasPage() {
                 </button>
                 <input
                   className="input mt-2"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(cleanDigits(e.target.value, 9))}
-                  inputMode="numeric"
-                  maxLength={9}
+                    value={formatCurrencyInput(transferAmount)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setTransferAmount)}
+                    inputMode="numeric"
+                    maxLength={9}
                 />
               </div>
               <div>
@@ -722,10 +754,10 @@ export function VentasPage() {
                 </button>
                 <input
                   className="input mt-2"
-                  value={cashAmount}
-                  onChange={(e) => setCashAmount(cleanDigits(e.target.value, 9))}
-                  inputMode="numeric"
-                  maxLength={9}
+                    value={formatCurrencyInput(cashAmount)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setCashAmount)}
+                    inputMode="numeric"
+                    maxLength={9}
                 />
               </div>
             </div>

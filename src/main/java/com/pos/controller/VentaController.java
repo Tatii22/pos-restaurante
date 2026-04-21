@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaCocinaPreviewDTO;
+import com.pos.dto.venta.AnularVentaDTO;
+import com.pos.dto.venta.VentaDetalleResponseDTO;
 import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.dto.venta.VentaValorDomicilioDTO;
@@ -54,7 +56,7 @@ public class VentaController {
 
         Venta venta = ventaService.registrarVenta(dto, usuario);
 
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     /* ===================== CANCELAR ===================== */
@@ -72,7 +74,7 @@ public class VentaController {
 
         Venta venta = ventaService.cancelarVenta(id, usuario);
 
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     /* ===================== ANULAR ===================== */
@@ -82,23 +84,23 @@ public class VentaController {
     @Operation(summary = "Anular venta despachada")
     public ResponseEntity<VentaResponseDTO> anular(
             @PathVariable Long id,
+            @RequestBody(required = false) AnularVentaDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
 
         Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        Venta venta = ventaService.anularVenta(id, usuario);
+        Venta venta = ventaService.anularVenta(id, dto != null ? dto.motivo() : null, usuario);
 
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
     @GetMapping("/{id}")
     @Operation(summary = "Obtener venta por id")
-    public ResponseEntity<VentaResponseDTO> obtenerPorId(@PathVariable Long id) {
-        Venta venta = ventaService.obtenerPorId(id);
-        return ResponseEntity.ok(toDTO(venta));
+    public ResponseEntity<VentaDetalleResponseDTO> obtenerPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(ventaService.obtenerDetallePorId(id));
     }
 
     @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
@@ -126,7 +128,7 @@ public class VentaController {
     ) {
         Page<VentaResponseDTO> ventas = ventaService
                 .listarOperativas(estado, tipoVenta, turnoId, fechaInicio, fechaFin, clienteNombre, telefono, page, size)
-                .map(this::toDTO);
+                .map(ventaService::construirRespuesta);
         return ResponseEntity.ok(ventas);
     }
 
@@ -141,7 +143,7 @@ public class VentaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Venta venta = ventaService.imprimirFacturaEnProceso(id, usuario);
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     @PreAuthorize("hasAnyRole('CAJA','DOMI')")
@@ -155,7 +157,7 @@ public class VentaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Venta venta = ventaService.imprimirTicketCocinaEnProceso(id, usuario);
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     @PreAuthorize("hasRole('CAJA')")
@@ -177,14 +179,14 @@ public class VentaController {
     @Operation(summary = "Despachar venta domicilio en proceso")
     public ResponseEntity<VentaResponseDTO> despachar(
             @PathVariable Long id,
-            @Valid @RequestBody(required = false) VentaDespachoDTO dto,
+            @Valid @RequestBody VentaDespachoDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Venta venta = ventaService.despacharVenta(id, dto, usuario);
-        return ResponseEntity.ok(toDTO(venta));
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
     @PreAuthorize("hasAnyRole('CAJA','DOMI')")
@@ -199,25 +201,6 @@ public class VentaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Venta venta = ventaService.actualizarValorDomicilio(id, dto.valorDomicilio(), usuario);
-        return ResponseEntity.ok(toDTO(venta));
-    }
-
-    /* ===================== MAPPER ===================== */
-
-    private VentaResponseDTO toDTO(Venta venta) {
-        return new VentaResponseDTO(
-                venta.getId(),
-                venta.getFecha(),
-                venta.getTipoVenta(),
-                venta.getEstado(),
-                venta.getClienteNombre(),
-                venta.getTelefono(),
-                venta.getDireccion(),
-                venta.getValorDomicilio(),
-                venta.getDescuentoPorcentaje(),
-                venta.getDescuentoValor(),
-                venta.getTotal(),
-                venta.getFormaPago()
-        );
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 
 public record VentaCocinaPreviewDTO(
         String clienteNombre,
+        Boolean paraLlevar,
         @NotEmpty(message = "Debe enviar al menos un producto para cocina")
         @Valid
         List<VentaDetalleCreateDTO> detalles

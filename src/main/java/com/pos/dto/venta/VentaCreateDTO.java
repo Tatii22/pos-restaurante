@@ -33,6 +33,8 @@ public record VentaCreateDTO(
         @PositiveOrZero(message = "El valor domicilio no puede ser negativo")
         BigDecimal valorDomicilio,
 
+        Boolean paraLlevar,
+
         // Opcional: permite reflejar pago mixto en ticket/factura
         @PositiveOrZero(message = "El pago en efectivo no puede ser negativo")
         BigDecimal pagoEfectivo,

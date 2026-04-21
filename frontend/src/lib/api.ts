@@ -8,7 +8,8 @@ import type {
   ReporteVentas,
   Turno,
   UsuarioCreado,
-  Venta
+  Venta,
+  VentaDetalle
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -68,8 +69,8 @@ export function getVentas(
   });
 }
 
-export function getVentaById(token: string, id: number): Promise<Venta> {
-  return jsonRequest<Venta>(`/api/v1/ventas/${id}`, { headers: makeHeaders(token) });
+export function getVentaById(token: string, id: number): Promise<VentaDetalle> {
+  return jsonRequest<VentaDetalle>(`/api/v1/ventas/${id}`, { headers: makeHeaders(token) });
 }
 
 export function despachar(token: string, id: number): Promise<Venta> {

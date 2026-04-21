@@ -17,6 +17,7 @@ export type Venta = {
   id: number;
   fecha: string;
   tipoVenta: "LOCAL" | "DOMICILIO";
+  paraLlevar?: boolean | null;
   estado: "EN_PROCESO" | "DESPACHADA" | "CANCELADA" | "ANULADA";
   clienteNombre: string | null;
   telefono: string | null;
@@ -26,6 +27,25 @@ export type Venta = {
   descuentoValor: number | null;
   total: number;
   formaPago: "EFECTIVO" | "TRANSFERENCIA";
+  pagoEfectivo?: number | null;
+  pagoTransferencia?: number | null;
+};
+
+export type VentaDetalleItem = {
+  productoId: number | null;
+  productoNombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+  observacion: string | null;
+};
+
+export type VentaDetalle = Venta & {
+  pagoEfectivo: number;
+  pagoTransferencia: number;
+  fechaAnulacion: string | null;
+  motivoAnulacion: string | null;
+  detalles: VentaDetalleItem[];
 };
 
 export type PageResponse<T> = {

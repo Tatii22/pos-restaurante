@@ -135,6 +135,9 @@ public class ImpresoraTtermicaService {
         if (venta.getTipoVenta() == TipoVenta.DOMICILIO) {
             appendCentered(sb, "PEDIDO DOMICILIO");
         }
+        if (Boolean.TRUE.equals(venta.getParaLlevar())) {
+            appendCentered(sb, "PARA LLEVAR");
+        }
         sb.append(DOUBLE_LINE).append("\n");
         sb.append(kvLine("Pedido", String.valueOf(venta.getId()))).append("\n");
         sb.append(kvLine("Fecha", formatFecha(venta.getFecha()))).append("\n");

@@ -46,6 +46,16 @@ export function DomiciliosPage() {
       })
   });
 
+  const numeracionTurno = useMemo(() => {
+    const ventasOrdenadas = [...(listQ.data?.content || [])].sort((a, b) => {
+      const fechaA = new Date(a.fecha).getTime();
+      const fechaB = new Date(b.fecha).getTime();
+      if (fechaA !== fechaB) return fechaA - fechaB;
+      return a.id - b.id;
+    });
+    return new Map(ventasOrdenadas.map((venta, index) => [venta.id, index + 1]));
+  }, [listQ.data?.content]);
+
   const selected = useMemo(
     () => (listQ.data?.content || []).find((v) => v.id === selectedId) ?? null,
     [listQ.data, selectedId]
@@ -183,17 +193,29 @@ export function DomiciliosPage() {
       <section className="card p-3 md:hidden">
         <div className="grid gap-2">
           {(listQ.data?.content || []).map((v) => (
-            <div key={v.id} className="rounded-xl border border-pos-border p-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold">#{v.id} {v.clienteNombre || "-"}</p>
+            <div key={v.id} className="rounded-2xl border border-pos-border bg-gradient-to-br from-white to-slate-50 p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white">
+                      #{numeracionTurno.get(v.id) || "-"}
+                    </span>
+                    <p className="truncate font-semibold">{v.clienteNombre || "Cliente sin nombre"}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-pos-muted">Pedido domicilio</p>
+                </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
               </div>
-              <p className="text-sm break-words">{v.direccion || "-"}</p>
-              <p className="text-sm">{v.telefono || "-"}</p>
-              <p className="text-sm font-semibold">{money.format(v.total)}</p>
-              <div className="mt-2">
+
+              <div className="mt-3 grid gap-2 rounded-xl bg-white/80 p-3 text-sm">
+                <p className="break-words"><span className="text-pos-muted">Direccion:</span> {v.direccion || "-"}</p>
+                <p><span className="text-pos-muted">Telefono:</span> {v.telefono || "-"}</p>
+                <p className="font-semibold"><span className="font-normal text-pos-muted">Total:</span> {money.format(v.total)}</p>
+              </div>
+
+              <div className="mt-3">
                 <button
-                  className="btn-ghost"
+                  className="btn-soft w-full"
                   onClick={() => {
                     setSelectedId(v.id);
                     setNuevoDomicilio(String(v.valorDomicilio || 0));
@@ -211,7 +233,7 @@ export function DomiciliosPage() {
         <table className="w-full min-w-[680px] table-fixed text-sm">
           <thead>
             <tr className="border-b border-pos-border">
-              <th className="w-16 p-3 text-left">ID</th>
+              <th className="w-16 p-3 text-left">N</th>
               <th className="w-32 p-3 text-left">Cliente</th>
               <th className="p-3 text-left">Direccion</th>
               <th className="w-28 p-3 text-left">Telefono</th>
@@ -223,7 +245,7 @@ export function DomiciliosPage() {
           <tbody>
             {(listQ.data?.content || []).map((v) => (
               <tr key={v.id} className="border-b border-pos-border/70">
-                <td className="p-3">#{v.id}</td>
+                <td className="p-3 font-semibold">{numeracionTurno.get(v.id) || "-"}</td>
                 <td className="truncate p-3" title={v.clienteNombre || "-"}>{v.clienteNombre || "-"}</td>
                 <td className="truncate p-3" title={v.direccion || "-"}>{v.direccion || "-"}</td>
                 <td className="truncate p-3" title={v.telefono || "-"}>{v.telefono || "-"}</td>
@@ -245,8 +267,8 @@ export function DomiciliosPage() {
         </table>
       </section>
 
-      <section className="card p-4">
-        <h2 className="mb-2 text-xl font-semibold">Domicilio {selected ? `#${selected.id}` : ""}</h2>
+      <section className="card hidden p-4 xl:block">
+        <h2 className="mb-2 text-xl font-semibold">Domicilio {selected ? `#${numeracionTurno.get(selected.id) || "-"}` : ""}</h2>
         {!selected && <p className="text-sm text-pos-muted">Selecciona un pedido para gestionar.</p>}
         {selected && (
           <div className="grid gap-3">
@@ -282,8 +304,20 @@ export function DomiciliosPage() {
                 </label>
 
                 <div className="grid gap-2">
-                  <button className="btn-soft" onClick={() => printCocinaM.mutate(selected.id)}>Imprimir Cocina</button>
-                  <button className="btn-soft" onClick={() => printFacturaM.mutate(selected.id)}>Imprimir Factura</button>
+                  <button
+                    className="btn-soft"
+                    disabled={printCocinaM.isPending || printFacturaM.isPending}
+                    onClick={() => printCocinaM.mutate(selected.id)}
+                  >
+                    {printCocinaM.isPending ? "Imprimiendo cocina..." : "Imprimir Cocina"}
+                  </button>
+                  <button
+                    className="btn-soft"
+                    disabled={printFacturaM.isPending || printCocinaM.isPending}
+                    onClick={() => printFacturaM.mutate(selected.id)}
+                  >
+                    {printFacturaM.isPending ? "Imprimiendo factura..." : "Imprimir Factura"}
+                  </button>
                   {role === "CAJA" && (
                     <button
                       className="btn-primary"
@@ -335,11 +369,101 @@ export function DomiciliosPage() {
         </div>
       )}
 
+      {selected && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 xl:hidden">
+          <div className="card w-full max-w-lg p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold">Domicilio #{numeracionTurno.get(selected.id) || "-"}</h2>
+                <p className="text-sm text-pos-muted">Gestiona el pedido seleccionado.</p>
+              </div>
+              <button className="btn-ghost p-1" onClick={() => setSelectedId(null)}>
+                <BsXLg size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-1 text-sm break-words">
+              <p><span className="text-pos-muted">Estado:</span> {selected.estado}</p>
+              <p><span className="text-pos-muted">Cliente:</span> {selected.clienteNombre || "-"}</p>
+              <p><span className="text-pos-muted">Direccion:</span> {selected.direccion || "-"}</p>
+              <p><span className="text-pos-muted">Telefono:</span> {selected.telefono || "-"}</p>
+              <p><span className="text-pos-muted">Total:</span> {money.format(selected.total)}</p>
+            </div>
+
+            {selected.estado === "EN_PROCESO" && (role === "CAJA" || role === "DOMI") && (
+              <>
+                <label className="mt-4 block text-sm">
+                  Valor domicilio
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      className="input"
+                      value={nuevoDomicilio}
+                      onChange={(e) => setNuevoDomicilio(cleanDigits(e.target.value, 9))}
+                      inputMode="numeric"
+                      maxLength={9}
+                    />
+                    <button
+                      className="btn-soft"
+                      disabled={!valorDomicilioValido || domicilioM.isPending}
+                      onClick={() => domicilioM.mutate({ id: selected.id, valor: nuevoDomicilioNumero })}
+                    >
+                      Actualizar
+                    </button>
+                  </div>
+                  {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor valido para domicilio.</p>}
+                </label>
+
+                <div className="mt-4 grid gap-2">
+                  <button
+                    className="btn-soft"
+                    disabled={printCocinaM.isPending || printFacturaM.isPending}
+                    onClick={() => printCocinaM.mutate(selected.id)}
+                  >
+                    {printCocinaM.isPending ? "Imprimiendo cocina..." : "Imprimir Cocina"}
+                  </button>
+                  <button
+                    className="btn-soft"
+                    disabled={printFacturaM.isPending || printCocinaM.isPending}
+                    onClick={() => printFacturaM.mutate(selected.id)}
+                  >
+                    {printFacturaM.isPending ? "Imprimiendo factura..." : "Imprimir Factura"}
+                  </button>
+                  {role === "CAJA" && (
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        setPagoEfectivo("0");
+                        setPagoTransferencia("0");
+                        setActiveCalcField("EFECTIVO");
+                        setShowCobro(true);
+                      }}
+                    >
+                      Despachar
+                    </button>
+                  )}
+                  <button className="btn-ghost bg-yellow-100 text-yellow-800 hover:bg-yellow-200" onClick={() => setConfirm({ id: selected.id, action: "cancelar" })}>
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+
+            {selected.estado === "DESPACHADA" && role === "CAJA" && (
+              <div className="mt-4">
+                <button className="btn-ghost w-full bg-red-100 text-red-700 hover:bg-red-200" onClick={() => setConfirm({ id: selected.id, action: "anular" })}>
+                  Anular
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showCobro && selected && role === "CAJA" && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-lg p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h4 className="font-semibold">Cobro de domicilio #{selected.id}</h4>
+              <h4 className="font-semibold">Cobro de domicilio #{numeracionTurno.get(selected.id) || "-"}</h4>
               <button className="btn-ghost p-1" onClick={() => setShowCobro(false)}>
                 <BsXLg size={14} />
               </button>
@@ -427,7 +551,7 @@ export function DomiciliosPage() {
       )}
 
       {(dispatchM.isError || cancelM.isError || anularM.isError || domicilioM.isError || printCocinaM.isError || printFacturaM.isError) && (
-        <p className="xl:col-span-2 text-sm text-red-600">
+        <p className="text-sm text-red-600">
           {getErrorMessage(dispatchM.error || cancelM.error || anularM.error || domicilioM.error || printCocinaM.error || printFacturaM.error)}
         </p>
       )}

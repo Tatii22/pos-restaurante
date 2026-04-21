@@ -9,12 +9,14 @@ import type {
   InventarioDiario,
   PageResponse,
   Producto,
+  ReporteCierreTurno,
   ReporteVentas,
   ReporteRentabilidad,
   TipoGasto,
   Turno,
   Usuario,
-  Venta
+  Venta,
+  VentaDetalle
 } from "../types";
 
 export const posApi = {
@@ -31,7 +33,7 @@ export const posApi = {
     return data;
   },
   getVentaById: async (id: number) => {
-    const { data } = await http.get<Venta>(`/api/v1/ventas/${id}`);
+    const { data } = await http.get<VentaDetalle>(`/api/v1/ventas/${id}`);
     return data;
   },
   crearVenta: async (payload: unknown) => {
@@ -49,15 +51,19 @@ export const posApi = {
     const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/cancelar`);
     return data;
   },
-  anular: async (id: number) => {
-    const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/anular`);
+  anular: async (id: number, payload?: { motivo?: string }) => {
+    const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/anular`, payload ?? {});
     return data;
   },
   imprimirCocina: async (id: number) => {
     const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/imprimir-cocina`);
     return data;
   },
-  imprimirCocinaPreview: async (payload: { clienteNombre?: string; detalles: Array<{ productoId: number; cantidad: number; observacion?: string }> }) => {
+  imprimirCocinaPreview: async (payload: {
+    clienteNombre?: string;
+    paraLlevar?: boolean;
+    detalles: Array<{ productoId: number; cantidad: number; observacion?: string }>;
+  }) => {
     await http.post("/api/v1/ventas/imprimir-cocina-preview", payload);
   },
   imprimirFactura: async (id: number) => {
@@ -126,6 +132,10 @@ export const posApi = {
     });
     return data;
   },
+  getReporteTurno: async (turnoId: number) => {
+    const { data } = await http.get<ReporteCierreTurno>(`/api/v1/reportes/turnos/${turnoId}`);
+    return data;
+  },
   getProductos: async () => {
     const { data } = await http.get<Producto[]>("/api/v1/productos");
     return data;
@@ -178,7 +188,12 @@ export const posApi = {
     const { data } = await http.get<TipoGasto[]>("/api/v1/tipos-gasto");
     return data;
   },
-  registrarGastoCaja: async (payload: { descripcion: string; monto: number; tipoGastoId: number }) => {
+  registrarGastoCaja: async (payload: {
+    descripcion: string;
+    montoEfectivo: number;
+    montoTransferencia: number;
+    tipoGastoId: number;
+  }) => {
     const { data } = await http.post("/api/v1/gastos-caja", payload);
     return data;
   },
@@ -195,7 +210,13 @@ export const posApi = {
   eliminarGastoCaja: async (id: number) => {
     await http.delete(`/api/v1/gastos-caja/${id}`);
   },
-  registrarGastoAdmin: async (payload: { fecha: string; descripcion: string; monto: number; tipoGastoId: number }) => {
+  registrarGastoAdmin: async (payload: {
+    fecha: string;
+    descripcion: string;
+    montoEfectivo: number;
+    montoTransferencia: number;
+    tipoGastoId: number;
+  }) => {
     const { data } = await http.post<GastoAdmin>("/api/v1/gastos-admin", payload);
     return data;
   },
