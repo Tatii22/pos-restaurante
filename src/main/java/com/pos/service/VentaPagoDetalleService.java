@@ -1,10 +1,13 @@
 package com.pos.service;
 
 import com.pos.dto.venta.VentaPagoDetalleDTO;
-import jakarta.annotation.PostConstruct;
+import com.pos.entity.Venta;
+import com.pos.entity.VentaPagoDetalle;
+import com.pos.repository.VentaPagoDetalleRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -12,20 +15,10 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class VentaPagoDetalleService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final VentaPagoDetalleRepository ventaPagoDetalleRepository;
+    private final EntityManager entityManager;
 
-    @PostConstruct
-    void init() {
-        jdbcTemplate.execute("""
-                CREATE TABLE IF NOT EXISTS venta_pago_detalle (
-                  venta_id BIGINT NOT NULL PRIMARY KEY,
-                  pago_efectivo DECIMAL(12,2) NOT NULL DEFAULT 0,
-                  pago_transferencia DECIMAL(12,2) NOT NULL DEFAULT 0,
-                  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                )
-                """);
-    }
-
+    @Transactional
     public void guardar(Long ventaId, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
         if (ventaId == null) {
             return;
@@ -33,33 +26,28 @@ public class VentaPagoDetalleService {
         BigDecimal efectivo = nonNegative(pagoEfectivo);
         BigDecimal transferencia = nonNegative(pagoTransferencia);
 
-        jdbcTemplate.update(
-                """
-                        INSERT INTO venta_pago_detalle (venta_id, pago_efectivo, pago_transferencia)
-                        VALUES (?, ?, ?)
-                        ON DUPLICATE KEY UPDATE
-                          pago_efectivo = VALUES(pago_efectivo),
-                          pago_transferencia = VALUES(pago_transferencia)
-                        """,
-                ventaId, efectivo, transferencia
-        );
+        VentaPagoDetalle detalle = ventaPagoDetalleRepository.findById(ventaId)
+                .orElseGet(() -> VentaPagoDetalle.builder()
+                        .venta(entityManager.getReference(Venta.class, ventaId))
+                        .build());
+
+        detalle.setPagoEfectivo(efectivo);
+        detalle.setPagoTransferencia(transferencia);
+
+        ventaPagoDetalleRepository.save(detalle);
     }
 
+    @Transactional(readOnly = true)
     public VentaPagoDetalleDTO obtener(Long ventaId) {
         if (ventaId == null) {
             return null;
         }
-        return jdbcTemplate.query(
-                """
-                        SELECT pago_efectivo, pago_transferencia
-                          FROM venta_pago_detalle
-                         WHERE venta_id = ?
-                        """,
-                rs -> rs.next()
-                        ? new VentaPagoDetalleDTO(rs.getBigDecimal("pago_efectivo"), rs.getBigDecimal("pago_transferencia"))
-                        : null,
-                ventaId
-        );
+        return ventaPagoDetalleRepository.findById(ventaId)
+                .map(detalle -> new VentaPagoDetalleDTO(
+                        detalle.getPagoEfectivo(),
+                        detalle.getPagoTransferencia()
+                ))
+                .orElse(null);
     }
 
     private BigDecimal nonNegative(BigDecimal value) {

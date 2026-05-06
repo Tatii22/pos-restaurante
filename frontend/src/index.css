@@ -22,14 +22,14 @@
   }
 
   .btn-soft {
-    @apply btn bg-pos-accentSoft text-pos-text hover:bg-green-100;
+    @apply btn bg-pos-accentSoft text-pos-text hover:bg-pos-accentSoft hover:opacity-80;
   }
 
   .btn-ghost {
-    @apply btn border border-pos-border bg-white text-pos-text hover:bg-gray-50;
+    @apply btn border border-pos-border bg-white text-pos-text hover:bg-pos-bg;
   }
 
   .input {
-    @apply w-full rounded-xl border border-pos-border bg-white px-3 py-2 text-sm outline-none focus:border-green-400;
+    @apply w-full rounded-xl border border-pos-border bg-white px-3 py-2 text-sm outline-none focus:border-pos-mint;
   }
 }

@@ -34,7 +34,13 @@ export function LoginPage() {
   return (
     <div className="grid min-h-screen place-items-center p-4">
       <div className="card w-full max-w-md p-6">
-        <h1 className="mb-1 text-2xl font-bold">Restaurant POS</h1>
+        <div className="flex items-center justify-center gap-3 mb-1">
+          <img src="/images/logo.png" alt="MentaPOS" className="h-8 w-8" />
+          <h1 className="text-2xl font-bold">
+            <span className="text-pos-text">Menta</span>
+            <span className="text-pos-forest">POS</span>
+          </h1>
+        </div>
         <p className="mb-4 text-sm text-pos-muted">Inicia sesión con tu usuario</p>
         <form onSubmit={onSubmit} className="grid gap-3">
           <label className="text-sm">

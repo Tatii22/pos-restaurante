@@ -68,6 +68,9 @@ public class Venta {
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<VentaDetalle> detalles;
 
+    @OneToOne(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private VentaPagoDetalle pagoDetalle;
+
     @Column(nullable = false)
     private Boolean paraLlevar;
 

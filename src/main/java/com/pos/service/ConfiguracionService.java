@@ -12,7 +12,7 @@ public class ConfiguracionService {
 
     private static final int SINGLETON_ID = 1;
 
-    private static final String DEF_NEGOCIO_NOMBRE = "Restaurant POS";
+    private static final String DEF_NEGOCIO_NOMBRE = "MentaPOS";
     private static final String DEF_NEGOCIO_NIT = "";
     private static final String DEF_NEGOCIO_TELEFONO = "";
     private static final String DEF_NEGOCIO_DIRECCION = "";

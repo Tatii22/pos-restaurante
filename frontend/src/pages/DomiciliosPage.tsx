@@ -8,9 +8,9 @@ import { getErrorMessage, money } from "../shared/utils";
 
 function estadoClass(estado: string): string {
   if (estado === "EN_PROCESO") return "bg-yellow-100 text-yellow-800";
-  if (estado === "DESPACHADA") return "bg-green-100 text-green-800";
+  if (estado === "DESPACHADA") return "bg-pos-accentSoft text-pos-mint";
   if (estado === "ANULADA") return "bg-red-100 text-red-800";
-  return "bg-gray-100 text-gray-700";
+  return "bg-pos-bg text-pos-muted";
 }
 
 export function DomiciliosPage() {

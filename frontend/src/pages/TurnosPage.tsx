@@ -4,12 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
 import {
-  formatCurrencyInput,
   getErrorMessages,
   money,
-  normalizeCurrencyInput,
-  parseCurrencyInput
 } from "../shared/utils";
+import { useCurrencyInput } from "../shared/hooks";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { useAuthStore } from "../shared/store/authStore";
 import type { ReporteCierreTurno, Turno } from "../shared/types";
@@ -18,17 +16,15 @@ function summaryNumber(value: number | null | undefined) {
   return money.format(value || 0);
 }
 
+
 export function TurnosPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { clearAuth } = useAuthStore();
   const { turno, setTurno, clearTurno } = useTurnoStore();
-  const [montoInicial, setMontoInicial] = useState("");
-  const [montoInicialError, setMontoInicialError] = useState("");
-  const [efectivoContado, setEfectivoContado] = useState("");
-  const [efectivoContadoError, setEfectivoContadoError] = useState("");
-  const [montoFinal, setMontoFinal] = useState("");
-  const [montoFinalError, setMontoFinalError] = useState("");
+  const montoInicial = useCurrencyInput("", { maxDigits: 9, allowZero: false });
+  const efectivoContado = useCurrencyInput("", { maxDigits: 9, allowZero: false });
+  const montoFinal = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const [showSimModal, setShowSimModal] = useState(false);
   const [simResult, setSimResult] = useState<Turno | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -53,24 +49,8 @@ export function TurnosPage() {
     }
   }, [turnoActivoQ.data, setTurno]);
 
-  function handleMoneyChange(
-    value: string,
-    setValue: (next: string) => void,
-    setError: (next: string) => void
-  ) {
-    const result = normalizeCurrencyInput(value, { maxDigits: 9, allowZero: false });
-    setError(result.error);
-    if (result.value !== null) {
-      setValue(result.value);
-    }
-  }
-
-  const montoInicialValue = parseCurrencyInput(montoInicial);
-  const efectivoContadoValue = parseCurrencyInput(efectivoContado);
-  const montoFinalValue = parseCurrencyInput(montoFinal);
-
   const openM = useMutation({
-    mutationFn: () => posApi.abrirTurno(montoInicialValue),
+    mutationFn: () => posApi.abrirTurno(montoInicial.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
@@ -78,7 +58,7 @@ export function TurnosPage() {
     }
   });
   const simM = useMutation({
-    mutationFn: () => posApi.simularCierre(efectivoContadoValue),
+    mutationFn: () => posApi.simularCierre(efectivoContado.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       setSimResult(data);
@@ -88,7 +68,7 @@ export function TurnosPage() {
     }
   });
   const closeM = useMutation({
-    mutationFn: () => posApi.cerrarTurno(montoFinalValue),
+    mutationFn: () => posApi.cerrarTurno(montoFinal.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
@@ -100,9 +80,6 @@ export function TurnosPage() {
     }
   });
 
-  const montoInicialValido = montoInicialValue > 0 && !montoInicialError;
-  const efectivoContadoValido = efectivoContadoValue > 0 && !efectivoContadoError;
-  const montoFinalValido = montoFinalValue > 0 && !montoFinalError;
   const openErrors = openM.isError ? getErrorMessages(openM.error) : [];
   const closeErrors = simM.isError || closeM.isError ? getErrorMessages(simM.error || closeM.error) : [];
   const turnoBase = turnoActivoQ.data ?? turno;
@@ -133,18 +110,19 @@ export function TurnosPage() {
           <p className="mt-3 text-sm text-pos-muted">Debes abrir turno para habilitar ventas y gastos.</p>
           <div className="mt-5 grid gap-2">
             <input
+              ref={montoInicial.inputRef}
               className="input"
-              inputMode="numeric"
-              value={formatCurrencyInput(montoInicial)}
-              onChange={(e) => handleMoneyChange(e.target.value, setMontoInicial, setMontoInicialError)}
+              inputMode="decimal"
+              value={montoInicial.displayValue}
+              onChange={montoInicial.handleChange}
               placeholder="Monto inicial"
             />
-            {montoInicialError && <p className="text-xs text-orange-700">{montoInicialError}</p>}
-            {!montoInicialError && !montoInicialValido && <p className="text-xs text-orange-700">El monto inicial debe ser mayor a 0.</p>}
+            {montoInicial.error && <p className="text-xs text-orange-700">{montoInicial.error}</p>}
+            {!montoInicial.error && !montoInicial.isValid && <p className="text-xs text-orange-700">El monto inicial debe ser mayor a 0.</p>}
             <button
               className="btn-primary py-3 text-base"
               onClick={() => openM.mutate()}
-              disabled={openM.isPending || !montoInicialValido}
+              disabled={openM.isPending || !montoInicial.isValid}
             >
               {openM.isPending ? "Abriendo..." : "Abrir Turno"}
             </button>
@@ -220,28 +198,30 @@ export function TurnosPage() {
         <div className="card p-4">
           <h3 className="mb-2 font-semibold">Simular Cierre</h3>
           <input
+            ref={efectivoContado.inputRef}
             className="input mb-2"
-            inputMode="numeric"
-            value={formatCurrencyInput(efectivoContado)}
-            onChange={(e) => handleMoneyChange(e.target.value, setEfectivoContado, setEfectivoContadoError)}
+            inputMode="decimal"
+            value={efectivoContado.displayValue}
+            onChange={efectivoContado.handleChange}
             placeholder="Dinero contado"
           />
-          {efectivoContadoError && <p className="mb-2 text-xs text-orange-700">{efectivoContadoError}</p>}
-          <button className="btn-soft w-full" onClick={() => simM.mutate()} disabled={simM.isPending || !efectivoContadoValido}>
+          {efectivoContado.error && <p className="mb-2 text-xs text-orange-700">{efectivoContado.error}</p>}
+          <button className="btn-soft w-full" onClick={() => simM.mutate()} disabled={simM.isPending || !efectivoContado.isValid}>
             {simM.isPending ? "Simulando..." : "Simular Cierre"}
           </button>
         </div>
         <div className="card p-4">
           <h3 className="mb-2 font-semibold">Confirmar Cierre</h3>
           <input
+            ref={montoFinal.inputRef}
             className="input mb-2"
-            inputMode="numeric"
-            value={formatCurrencyInput(montoFinal)}
-            onChange={(e) => handleMoneyChange(e.target.value, setMontoFinal, setMontoFinalError)}
+            inputMode="decimal"
+            value={montoFinal.displayValue}
+            onChange={montoFinal.handleChange}
             placeholder="Monto final contado"
           />
-          {montoFinalError && <p className="mb-2 text-xs text-orange-700">{montoFinalError}</p>}
-          <button className="btn-primary w-full" onClick={() => closeM.mutate()} disabled={closeM.isPending || !montoFinalValido}>
+          {montoFinal.error && <p className="mb-2 text-xs text-orange-700">{montoFinal.error}</p>}
+          <button className="btn-primary w-full" onClick={() => closeM.mutate()} disabled={closeM.isPending || !montoFinal.isValid}>
             {closeM.isPending ? "Cerrando..." : "Cerrar Turno"}
           </button>
         </div>
@@ -272,7 +252,7 @@ export function TurnosPage() {
               <p>Monto inicial: <span className="font-semibold">{summaryNumber(simResult.montoInicial)}</span></p>
               <p>Esperado en caja: <span className="font-semibold">{summaryNumber(simResult.esperado)}</span></p>
               <p>Diferencia: <span className="font-semibold">{summaryNumber(Math.abs(simResult.faltante || 0))}</span></p>
-              <p>Dinero contado: <span className="font-semibold">{summaryNumber(efectivoContadoValue)}</span></p>
+              <p>Dinero contado: <span className="font-semibold">{summaryNumber(efectivoContado.numericValue)}</span></p>
             </div>
             <div className="mt-3">{renderResumenFinanciero(reporte)}</div>
             <div className="mt-3 flex justify-end">
@@ -309,7 +289,7 @@ export function TurnosPage() {
               <p>Total ventas: <span className="font-semibold text-green-700">{summaryNumber(closeResult.totalVentas)}</span></p>
               <p>Total gastos: <span className="font-semibold text-red-700">{summaryNumber(closeResult.totalGastos)}</span></p>
               <p>Esperado en caja: <span className="font-semibold">{summaryNumber(closeResult.esperado)}</span></p>
-              <p>Monto final contado: <span className="font-semibold">{summaryNumber(montoFinalValue)}</span></p>
+              <p>Monto final contado: <span className="font-semibold">{summaryNumber(montoFinal.numericValue)}</span></p>
               <p>Diferencia final: <span className="font-semibold">{summaryNumber(Math.abs(closeResult.faltante || 0))}</span></p>
             </div>
             <div className="mt-3">{renderResumenFinanciero(reporte)}</div>

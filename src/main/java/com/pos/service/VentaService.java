@@ -7,7 +7,6 @@ import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
 import com.pos.dto.venta.VentaItemResponseDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
-import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.InventarioDiarioRepository;
@@ -123,7 +122,7 @@ public class VentaService {
             int page,
             int size
     ) {
-        Specification<Venta> spec = Specification.where(null);
+        Specification<Venta> spec = Specification.unrestricted();
 
         if (estado != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));

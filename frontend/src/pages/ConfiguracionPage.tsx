@@ -5,7 +5,7 @@ import { getErrorMessage } from "../shared/utils";
 import type { AdminConfig } from "../shared/types";
 
 const defaults: AdminConfig = {
-  negocioNombre: "Restaurant POS",
+  negocioNombre: "MentaPOS",
   negocioNit: "",
   negocioTelefono: "",
   negocioDireccion: "",

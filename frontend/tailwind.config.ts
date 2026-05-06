@@ -6,13 +6,15 @@ export default {
     extend: {
       colors: {
         pos: {
-          bg: "#f4f5f7",
-          card: "#ffffff",
-          border: "#e5e7eb",
-          text: "#1f2937",
-          muted: "#6b7280",
-          accent: "#16a34a",
-          accentSoft: "#dcfce7"
+          bg: "#F4F7F5",
+          card: "#FFFFFF",
+          border: "#D8EDE4",
+          text: "#2E2E2E",
+          muted: "#8E918F",
+          accent: "#3EB489",
+          accentSoft: "#D8EDE4",
+          forest: "#2A7B5E",
+          mint: "#3EB489"
         }
       },
       boxShadow: {

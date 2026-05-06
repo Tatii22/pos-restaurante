@@ -206,7 +206,7 @@ export function MainLayout() {
 
   const turnoClass =
     turno?.estado === "ABIERTO"
-      ? "bg-green-100 text-green-700"
+      ? "bg-pos-accentSoft text-pos-mint"
       : turno?.estado === "SIMULADO"
         ? "bg-yellow-100 text-yellow-700"
         : "bg-red-100 text-red-700";
@@ -269,10 +269,10 @@ export function MainLayout() {
   const montoInicialValido = Number(montoInicial) > 0;
   const logoutButtonClass =
     resolvedRole === "DOMI"
-      ? "inline-flex w-full items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 md:hidden"
+      ? "inline-flex w-full items-center justify-center gap-1 rounded-xl border border-pos-forest bg-pos-accentSoft px-2 py-2 text-xs font-semibold text-pos-forest hover:bg-pos-mint hover:text-white md:hidden"
       : "btn-ghost w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm";
   const logoutButtonDesktopDomiClass =
-    "hidden items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 md:inline-flex";
+    "hidden items-center justify-center gap-1 rounded-xl border border-pos-forest bg-pos-accentSoft px-3 py-2 text-sm font-semibold text-pos-forest hover:bg-pos-mint hover:text-white md:inline-flex";
   const isDomiMobileNav = resolvedRole === "DOMI";
 
   return (
@@ -280,7 +280,13 @@ export function MainLayout() {
       <header className="sticky top-0 z-20 overflow-x-hidden border-b border-pos-border bg-white">
         <div className="grid grid-cols-1 gap-2 px-2 py-2 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3">
           <div className="grid min-w-0 grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_auto_auto] items-center gap-1 overflow-hidden text-[11px] sm:flex sm:items-center sm:gap-2 sm:text-sm">
-            <span className="min-w-0 truncate text-sm font-bold sm:shrink-0 sm:text-lg">Restaurant POS</span>
+            <div className="flex items-center gap-2 min-w-0 shrink-0">
+              <img src="/images/logo.png" alt="MentaPOS" className="h-7 w-7 sm:h-8 sm:w-8" />
+              <span className="text-sm font-bold sm:shrink-0 sm:text-lg">
+                <span className="text-pos-text">Menta</span>
+                <span className="text-pos-forest">POS</span>
+              </span>
+            </div>
             <span className="min-w-0 truncate text-right font-semibold sm:max-w-[220px] sm:text-left">{username}</span>
             {resolvedRole === "DOMI" && (
               <button className={logoutButtonClass} onClick={clearAuth}>
@@ -340,7 +346,7 @@ export function MainLayout() {
             <nav
               className={clsx(
                 "grid gap-2 px-2 py-2 sm:inline-flex sm:px-4",
-                isDomiMobileNav && "grid-cols-2 bg-gray-50/80"
+                isDomiMobileNav && "grid-cols-2 bg-pos-bg"
               )}
               style={{ gridTemplateColumns: `repeat(${Math.max(menu.length, 1)}, minmax(0, 1fr))` }}
             >
@@ -352,7 +358,7 @@ export function MainLayout() {
                     clsx(
                       "inline-flex min-w-0 items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs text-center sm:shrink-0 sm:gap-2 sm:px-3 sm:text-sm",
                       isDomiMobileNav && "min-h-[44px] gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold shadow-sm",
-                      isActive ? "border-pos-accent bg-pos-accentSoft text-pos-text" : "border-pos-border bg-white hover:bg-gray-50"
+                      isActive ? "border-pos-accent bg-pos-accentSoft text-pos-text" : "border-pos-border bg-white hover:bg-pos-bg"
                     )
                   }
                 >

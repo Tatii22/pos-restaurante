@@ -1,16 +1,32 @@
 import type { ApiError, Role } from "./types";
 
 export const TOKEN_KEY = "pos_token";
-export const money = new Intl.NumberFormat("es-CO");
+
+// Helper para formatear números con punto como separador de millar (formato colombiano)
+function formatNumberWithDots(num: number): string {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// money.format() compat - mantiene el nombre por compatibilidad
+export const money = {
+  format: (num: number) => formatNumberWithDots(num)
+};
 
 export function parseCurrencyInput(value: string): number {
   const normalized = value.replace(/[^\d]/g, "");
   return Number(normalized || "0");
 }
 
-export function formatCurrencyInput(value: string): string {
-  const parsed = parseCurrencyInput(value);
-  return parsed > 0 ? money.format(parsed) : "";
+export function formatCurrencyInput(value: string | number): string {
+  let parsed: number;
+  if (typeof value === "number") {
+    parsed = value;
+  } else {
+    parsed = parseCurrencyInput(value);
+  }
+  if (parsed === 0) return "";
+
+  return formatNumberWithDots(parsed);
 }
 
 export function normalizeCurrencyInput(
@@ -57,4 +73,57 @@ export function normalizeRole(roles: string[]): Role {
   if (normalized.includes("ADMIN")) return "ADMIN";
   if (normalized.includes("CAJA")) return "CAJA";
   return "DOMI";
+}
+
+export function calculateCurrencyInputCursorPosition(
+  oldCleanValue: string,
+  newCleanValue: string,
+  oldCursorPos: number,
+  oldDisplayValue: string
+): number {
+  if (!oldDisplayValue || oldCursorPos === 0) return 0;
+
+  const digitsBeforeCursor = oldDisplayValue
+    .substring(0, oldCursorPos)
+    .replace(/\D/g, "").length;
+
+  const newDisplayValue = formatCurrencyInput(newCleanValue);
+  let newCursorPos = 0;
+  let digitCount = 0;
+
+  for (let i = 0; i < newDisplayValue.length; i++) {
+    if (/\d/.test(newDisplayValue[i])) {
+      digitCount++;
+      if (digitCount === digitsBeforeCursor + 1) {
+        return i + 1;
+      }
+    }
+  }
+
+  return newDisplayValue.length;
+}
+
+export function handleCurrencyInput(
+  value: string,
+  options?: { maxDigits?: number; allowZero?: boolean }
+): { cleanValue: string; error: string } {
+  const maxDigits = options?.maxDigits ?? 9;
+  const allowZero = options?.allowZero ?? true;
+
+  const compact = value.replace(/\./g, "").replace(/\s/g, "");
+
+  if (!compact) {
+    return { cleanValue: "", error: "" };
+  }
+
+  if (!/^\d+$/.test(compact)) {
+    return { cleanValue: compact.replace(/\D/g, ""), error: "Solo se permiten números" };
+  }
+
+  const next = compact.slice(0, maxDigits);
+  if (!allowZero && Number(next || "0") === 0) {
+    return { cleanValue: next, error: "El valor debe ser mayor a 0" };
+  }
+
+  return { cleanValue: next, error: "" };
 }
