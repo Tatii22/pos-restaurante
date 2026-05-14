@@ -1,9 +1,16 @@
-﻿package com.pos.controller;
+package com.pos.controller;
 
+import com.pos.service.InventarioDiarioService;
+import lombok.RequiredArgsConstructor;
+import com.pos.entity.InventarioDiario;
 import com.pos.dto.inventario.*;
+import com.pos.mapper.InventarioMapper;
 
+import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 
 
@@ -51,6 +58,5 @@ public class InventarioDiarioController {
         return ResponseEntity.ok(InventarioMapper.toDTO(inv));
     }
 }
-
 
 

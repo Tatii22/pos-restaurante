@@ -1,4 +1,15 @@
-﻿package com.pos.service.report;
+package com.pos.service.report;
+import com.pos.dto.report.ReporteVentaDTO;
+import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.EstadoVenta;
+import com.pos.service.VentaService;
+import com.pos.repository.VentaRepository;
+import org.springframework.stereotype.Service;
+import com.pos.entity.Venta;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class ReporteVentaService {
@@ -86,4 +97,3 @@ public class ReporteVentaService {
         return ventaService.construirRespuesta(venta);
     }
 }
-

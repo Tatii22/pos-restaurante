@@ -1,7 +1,32 @@
-﻿package com.pos.service;
+package com.pos.service;
 
+import com.pos.dto.venta.VentaCocinaPreviewDTO;
+import com.pos.dto.venta.VentaCreateDTO;
+import com.pos.dto.venta.VentaDetalleResponseDTO;
+import com.pos.dto.venta.VentaDespachoDTO;
+import com.pos.dto.venta.VentaDetalleCreateDTO;
+import com.pos.dto.venta.VentaItemResponseDTO;
+import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.entity.*;
+import com.pos.exception.BadRequestException;
+import com.pos.repository.InventarioDiarioRepository;
+import com.pos.repository.MenuDiarioRepository;
+import com.pos.repository.ProductoRepository;
+import com.pos.repository.TurnoCajaRepository;
+import com.pos.repository.VentaRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -642,4 +667,3 @@ public class VentaService {
         return venta;
     }
 }
-

@@ -1,6 +1,15 @@
-﻿package com.pos.service;
+package com.pos.service;
 
+import com.pos.dto.venta.VentaPagoDetalleDTO;
+import com.pos.entity.Venta;
+import com.pos.entity.VentaPagoDetalle;
+import com.pos.repository.VentaPagoDetalleRepository;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -48,4 +57,3 @@ public class VentaPagoDetalleService {
         return value;
     }
 }
-

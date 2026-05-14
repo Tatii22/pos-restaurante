@@ -1,4 +1,6 @@
-﻿package com.pos.mapper;
+package com.pos.mapper;
+import com.pos.dto.menu.MenuDiarioResponseDTO;
+import com.pos.entity.MenuDiario;
 
 public class MenuDiarioMapper {
 
@@ -10,4 +12,3 @@ public class MenuDiarioMapper {
         );
     }
 }
-

@@ -1,5 +1,17 @@
-﻿package com.pos.service;
+package com.pos.service;
+import com.pos.dto.usuario.UsuarioCreateDTO;
+import com.pos.dto.usuario.UsuarioResponseDTO;
+import com.pos.dto.usuario.UsuarioUpdateDTO;
+import com.pos.entity.Rol;
+import com.pos.entity.Usuario;
+import com.pos.exception.BadRequestException;
+import com.pos.repository.RolRepository;
+import com.pos.repository.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -103,4 +115,3 @@ public class UsuarioService {
         usuarioRepository.delete(usuario);
     }
 }
-

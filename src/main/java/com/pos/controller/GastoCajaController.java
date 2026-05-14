@@ -1,7 +1,21 @@
-﻿package com.pos.controller;
+package com.pos.controller;
 
+import com.pos.dto.turno.GastoCajaCreateDTO;
+import com.pos.dto.turno.GastoCajaResponseDTO;
+import com.pos.entity.GastoCaja;
+import com.pos.entity.Usuario;
+import com.pos.repository.UsuarioRepository;
+import com.pos.service.GastoCajaService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/gastos-caja")
@@ -77,4 +91,3 @@ public class GastoCajaController {
         );
     }
 }
-

@@ -1,4 +1,19 @@
-﻿package com.pos.service.report;
+package com.pos.service.report;
+import com.pos.dto.report.ReporteCierreTurnoDTO;
+import com.pos.dto.turno.GastoCajaResponseDTO;
+import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.GastoCaja;
+import com.pos.entity.TurnoCaja;
+import com.pos.entity.Venta;
+import com.pos.repository.GastoCajaRepository;
+import com.pos.repository.TurnoCajaRepository;
+import com.pos.repository.VentaRepository;
+import com.pos.service.VentaService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.springframework.stereotype.Service;
+import com.pos.entity.EstadoVenta;
 
 
 @Service
@@ -118,5 +133,4 @@ public class ReporteTurnoService {
                 .toList();
     }
 }
-
 

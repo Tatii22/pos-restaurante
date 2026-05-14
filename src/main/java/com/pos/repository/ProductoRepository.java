@@ -1,7 +1,13 @@
-﻿package com.pos.repository;
+package com.pos.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import com.pos.entity.Producto;
+import com.pos.entity.TipoVentaProducto;
 
+import java.util.List;
 
 public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
@@ -23,4 +29,3 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     List<Producto> findByTipoVentaAndActivoTrue(TipoVentaProducto tipo);
 
 }
-

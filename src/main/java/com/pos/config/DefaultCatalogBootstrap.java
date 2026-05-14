@@ -1,6 +1,20 @@
-﻿package com.pos.config;
+package com.pos.config;
 
+import com.pos.entity.Categoria;
+import com.pos.entity.Rol;
+import com.pos.entity.TipoGasto;
+import com.pos.repository.CategoriaRepository;
+import com.pos.repository.RolRepository;
+import com.pos.repository.TipoGastoRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 
 @Component
 @Order(1)
@@ -83,4 +97,3 @@ public class DefaultCatalogBootstrap implements CommandLineRunner {
     private record CategoriaSeed(String nombre, String descripcion) {
     }
 }
-

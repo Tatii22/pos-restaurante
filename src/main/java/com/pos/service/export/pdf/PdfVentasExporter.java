@@ -1,6 +1,19 @@
-﻿package com.pos.service.export.pdf;
+package com.pos.service.export.pdf;
 
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.dto.report.ReporteVentaDTO;
+import org.springframework.stereotype.Service;
+import java.io.ByteArrayOutputStream;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class PdfVentasExporter {
@@ -73,4 +86,3 @@ public class PdfVentasExporter {
         }
     }
 }
-

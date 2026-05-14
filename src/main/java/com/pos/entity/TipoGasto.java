@@ -1,4 +1,4 @@
-﻿package com.pos.entity;
+package com.pos.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,8 +12,11 @@ import lombok.*;
 @Builder
 public class TipoGasto {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String nombre;
 }
-
-
 

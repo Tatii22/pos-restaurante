@@ -1,8 +1,19 @@
-﻿package com.pos.repository;
+package com.pos.repository;
+
+import com.pos.entity.InventarioDiario;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import com.pos.entity.Producto;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import com.pos.entity.MenuDiario;
 
 
-
-
+import java.util.Optional;
+import java.time.LocalDate;
 
 public interface InventarioDiarioRepository
         extends JpaRepository<InventarioDiario, Long> {
@@ -53,5 +64,4 @@ public interface InventarioDiarioRepository
 
     void deleteByFecha(LocalDate fecha);
 }
-
 

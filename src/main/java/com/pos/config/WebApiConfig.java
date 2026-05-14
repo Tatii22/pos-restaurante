@@ -1,6 +1,14 @@
-﻿package com.pos.config;
+package com.pos.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.HandlerTypePredicate;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.List;
+import java.util.Objects;
 
 @Configuration
 public class WebApiConfig implements WebMvcConfigurer {
@@ -35,4 +43,3 @@ public class WebApiConfig implements WebMvcConfigurer {
         }
     }
 }
-

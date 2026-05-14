@@ -1,6 +1,27 @@
-﻿package com.pos.service;
+package com.pos.service;
 
+import com.pos.dto.configuracion.AdminConfigDTO;
+import com.pos.dto.venta.VentaPagoDetalleDTO;
+import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.TipoVenta;
+import com.pos.entity.Venta;
+import com.pos.entity.VentaDetalle;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+import javax.print.Doc;
+import javax.print.DocFlavor;
+import javax.print.DocPrintJob;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.SimpleDoc;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @RequiredArgsConstructor
@@ -310,4 +331,3 @@ public class ImpresoraTtermicaService {
         }
     }
 }
-

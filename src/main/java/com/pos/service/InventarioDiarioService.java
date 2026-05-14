@@ -1,12 +1,18 @@
-﻿package com.pos.service;
+package com.pos.service;
 
 
 import com.pos.entity.*;
+import com.pos.exception.BadRequestException;
 import com.pos.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 
 
-
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -81,7 +87,6 @@ public class InventarioDiarioService {
         return inventarioRepository.save(inv);
     }
 }
-
 
 
 

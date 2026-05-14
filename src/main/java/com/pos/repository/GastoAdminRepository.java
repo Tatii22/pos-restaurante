@@ -1,6 +1,10 @@
-﻿package com.pos.repository;
+package com.pos.repository;
 
+import com.pos.entity.GastoAdmin;
+import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
+import java.util.List;
 
 public interface GastoAdminRepository extends JpaRepository<GastoAdmin, Long> {
 
@@ -13,4 +17,3 @@ public interface GastoAdminRepository extends JpaRepository<GastoAdmin, Long> {
             LocalDate fechaFin
     );
 }
-
