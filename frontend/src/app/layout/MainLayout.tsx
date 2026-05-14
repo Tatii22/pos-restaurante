@@ -22,6 +22,7 @@ import type { Role } from "../../shared/types";
 import { useTurnoStore } from "../../shared/store/turnoStore";
 import { posApi } from "../../shared/api/posApi";
 import { getErrorMessage, money, normalizeRole } from "../../shared/utils";
+import { useCurrencyInput } from "../../shared/hooks";
 
 type MenuItem = {
   to: string;
@@ -50,7 +51,7 @@ export function MainLayout() {
   const { turno, setTurno, clearTurno } = useTurnoStore();
   const [showAlerts, setShowAlerts] = useState(false);
 
-  const [montoInicial, setMontoInicial] = useState("");
+  const montoInicial = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const [productoId, setProductoId] = useState<number | "">("");
   const [stockInicial, setStockInicial] = useState("10");
   const [menuSetupLocked, setMenuSetupLocked] = useState(false);
@@ -106,7 +107,7 @@ export function MainLayout() {
   });
 
   const openTurnoM = useMutation({
-    mutationFn: () => posApi.abrirTurno(Number(montoInicial)),
+    mutationFn: () => posApi.abrirTurno(montoInicial.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       setMenuSetupLocked(true);
@@ -266,7 +267,7 @@ export function MainLayout() {
       (p) => p.activo && p.tipoVenta === "MENU_DIARIO" && !inventarioProductoIds.has(p.id)
     );
   }, [productosQ.data, inventarioQ.data]);
-  const montoInicialValido = Number(montoInicial) > 0;
+  const montoInicialValido = montoInicial.isValid;
   const logoutButtonClass =
     resolvedRole === "DOMI"
       ? "inline-flex w-full items-center justify-center gap-1 rounded-xl border border-pos-forest bg-pos-accentSoft px-2 py-2 text-xs font-semibold text-pos-forest hover:bg-pos-mint hover:text-white md:hidden"
@@ -450,9 +451,10 @@ export function MainLayout() {
               <div className="mt-4 grid gap-2">
                 <input
                   className="input"
-                  value={montoInicial}
-                  onChange={(e) => setMontoInicial(e.target.value)}
-                  inputMode="decimal"
+                  ref={montoInicial.inputRef}
+                  value={montoInicial.displayValue}
+                  onChange={montoInicial.handleChange}
+                  inputMode="numeric"
                   placeholder="Monto inicial"
                 />
                 {!montoInicialValido && (
