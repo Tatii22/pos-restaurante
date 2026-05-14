@@ -93,10 +93,9 @@ public class ReporteRentabilidadService {
     }
 
     private BigDecimal calcularTotalVentas(List<Venta> ventas) {
+        // Venta.getTotal() ya representa el neto final. Sumarlo directamente.
         return ventas.stream()
-                .map(v -> v.getTotal().subtract(
-                        v.getDescuentoValor() != null ? v.getDescuentoValor() : BigDecimal.ZERO
-                ))
+                .map(Venta::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

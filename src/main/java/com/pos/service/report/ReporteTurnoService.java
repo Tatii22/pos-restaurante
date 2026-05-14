@@ -68,7 +68,8 @@ public class ReporteTurnoService {
         BigDecimal totalGastosTransferencia = BigDecimal.ZERO;
 
         for (Venta venta : ventas) {
-            BigDecimal totalFinal = venta.getTotal().subtract(obtenerDescuento(venta));
+            BigDecimal descuento = obtenerDescuento(venta);
+            BigDecimal totalFinal = venta.getTotal(); // total ya es neto
             VentaResponseDTO ventaDTO = ventaService.construirRespuesta(venta);
             totalVentas = totalVentas.add(totalFinal);
             totalEfectivo = totalEfectivo.add(

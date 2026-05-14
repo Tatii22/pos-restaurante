@@ -51,10 +51,10 @@ public class ReporteVentaService {
             }
 
             BigDecimal descuento = obtenerDescuento(venta);
-            BigDecimal totalFinal = venta.getTotal().subtract(descuento);
+            BigDecimal totalFinal = venta.getTotal(); // total ya es neto
             VentaResponseDTO ventaDTO = mapToVentaResponse(venta);
 
-            totalBruto = totalBruto.add(venta.getTotal());
+            totalBruto = totalBruto.add(venta.getTotal().add(descuento));
             totalDescuentos = totalDescuentos.add(descuento);
             totalNeto = totalNeto.add(totalFinal);
             totalEfectivo = totalEfectivo.add(
