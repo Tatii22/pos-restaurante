@@ -1,17 +1,8 @@
-package com.pos.controller;
+﻿package com.pos.controller;
 
 import com.pos.dto.producto.*;
-import com.pos.entity.Categoria;
-import com.pos.entity.Producto;
-import com.pos.service.CategoriaService;
-import com.pos.service.ProductoService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/productos")
@@ -109,3 +100,4 @@ public class ProductoController {
         return ResponseEntity.noContent().build();
     }
 }
+

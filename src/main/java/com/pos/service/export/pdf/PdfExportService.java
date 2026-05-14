@@ -1,8 +1,4 @@
-package com.pos.service.export.pdf;
-import com.pos.dto.report.ReporteCierreTurnoDTO;
-import com.pos.dto.report.ReporteRentabilidadDTO;
-import com.pos.dto.report.ReporteVentaDTO;
-import org.springframework.stereotype.Service;
+﻿package com.pos.service.export.pdf;
 
 @Service
 public class PdfExportService {
@@ -36,3 +32,4 @@ public class PdfExportService {
         return turnoExporter.exportar(reporte);
     }
 }
+

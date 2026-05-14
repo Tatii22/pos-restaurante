@@ -1,7 +1,5 @@
-package com.pos.mapper;
+﻿package com.pos.mapper;
 
-import com.pos.dto.inventario.InventarioResponseDTO;
-import com.pos.entity.InventarioDiario;
 
 public class InventarioMapper {
 
@@ -18,3 +16,4 @@ public class InventarioMapper {
         );
     }
 }
+

@@ -1,22 +1,6 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.entity.EstadoTurno;
-import com.pos.entity.EstadoVenta;
-import com.pos.entity.TipoVenta;
-import com.pos.entity.TurnoCaja;
-import com.pos.entity.Usuario;
-import com.pos.exception.BadRequestException;
-import com.pos.repository.TurnoCajaRepository;
-import com.pos.repository.UsuarioRepository;
-import com.pos.repository.VentaRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -142,3 +126,4 @@ public class TurnoCajaService {
         return turnoCajaRepository.findByFechaAperturaBetweenOrderByFechaAperturaDesc(inicio, fin);
     }
 }
+

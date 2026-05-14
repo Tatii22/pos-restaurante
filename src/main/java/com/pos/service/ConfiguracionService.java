@@ -1,10 +1,5 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.dto.configuracion.AdminConfigDTO;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -191,3 +186,4 @@ public class ConfiguracionService {
         return value.substring(0, maxLen);
     }
 }
+

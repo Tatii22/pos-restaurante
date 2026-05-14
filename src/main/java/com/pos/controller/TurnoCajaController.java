@@ -1,22 +1,6 @@
-package com.pos.controller;
+﻿package com.pos.controller;
 
-import com.pos.dto.turno.TurnoCajaAperturaDTO;
-import com.pos.dto.turno.TurnoCajaResponseDTO;
-import com.pos.dto.turno.TurnoCierreDTO;
-import com.pos.dto.turno.TurnoSimulacroDTO;
-import com.pos.entity.TurnoCaja;
-import com.pos.entity.Usuario;
-import com.pos.mapper.TurnoCajaMapper;
-import com.pos.service.TurnoCajaService;
-import com.pos.service.UsuarioService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/turnos")
@@ -88,3 +72,4 @@ public class TurnoCajaController {
 
 
 }
+

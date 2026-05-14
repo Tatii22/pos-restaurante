@@ -1,21 +1,4 @@
-package com.pos.service.export.pdf;
-import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
-import com.pos.dto.report.ReporteCierreTurnoDTO;
-import com.pos.dto.turno.GastoCajaResponseDTO;
-import com.pos.dto.venta.VentaResponseDTO;
-import org.springframework.stereotype.Service;
-import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
+﻿package com.pos.service.export.pdf;
 
 @Service
 public class PdfTurnoExporter {
@@ -131,3 +114,4 @@ public class PdfTurnoExporter {
         return table;
     }
 }
+

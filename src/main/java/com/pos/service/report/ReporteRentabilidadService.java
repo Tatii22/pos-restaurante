@@ -1,22 +1,4 @@
-package com.pos.service.report;
-import com.pos.dto.report.ReporteRentabilidadDTO;
-import com.pos.dto.turno.GastoCajaResponseDTO;
-import com.pos.dto.venta.VentaResponseDTO;
-import com.pos.dto.gasto.GastoResponseDTO;
-import com.pos.entity.EstadoVenta;
-import com.pos.entity.GastoAdmin;
-import com.pos.entity.GastoCaja;
-import com.pos.entity.Venta;
-import com.pos.repository.GastoAdminRepository;
-import com.pos.repository.GastoCajaRepository;
-import com.pos.repository.VentaRepository;
-import com.pos.service.VentaService;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import org.springframework.stereotype.Service;
+﻿package com.pos.service.report;
 
 @Service
 public class ReporteRentabilidadService {
@@ -147,3 +129,4 @@ public class ReporteRentabilidadService {
         return lista;
     }
 }
+

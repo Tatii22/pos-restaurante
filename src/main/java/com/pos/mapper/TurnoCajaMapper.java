@@ -1,7 +1,5 @@
-package com.pos.mapper;
+﻿package com.pos.mapper;
 
-import com.pos.dto.turno.TurnoCajaResponseDTO;
-import com.pos.entity.TurnoCaja;
 
 public class TurnoCajaMapper {
 
@@ -20,3 +18,4 @@ public class TurnoCajaMapper {
         );
     }
 }
+

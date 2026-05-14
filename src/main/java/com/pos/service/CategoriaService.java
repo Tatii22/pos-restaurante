@@ -1,13 +1,6 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.entity.Categoria;
-import com.pos.repository.CategoriaRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import com.pos.exception.ResourceNotFoundException;
-import com.pos.exception.BadRequestException;
 
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -48,3 +41,4 @@ public class CategoriaService {
         categoriaRepository.deleteById(id);
     }
 }
+

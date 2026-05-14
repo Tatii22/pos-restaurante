@@ -1,17 +1,5 @@
-package com.pos.config;
+﻿package com.pos.config;
 
-import com.pos.entity.Rol;
-import com.pos.entity.Usuario;
-import com.pos.repository.RolRepository;
-import com.pos.repository.UsuarioRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -63,3 +51,4 @@ public class DefaultAdminBootstrap implements CommandLineRunner {
         log.info("Usuario administrador por defecto creado: {}", adminUsername);
     }
 }
+

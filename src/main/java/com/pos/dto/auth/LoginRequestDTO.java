@@ -1,6 +1,5 @@
-package com.pos.dto.auth;
+﻿package com.pos.dto.auth;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Getter
@@ -8,8 +7,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginRequestDTO {
-    @NotBlank(message = "El usuario es obligatorio")
-    private String username;
-    @NotBlank(message = "La contrasena es obligatoria")
-    private String password;
 }
+
+

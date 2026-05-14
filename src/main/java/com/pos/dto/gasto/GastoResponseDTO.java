@@ -1,9 +1,5 @@
-package com.pos.dto.gasto;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+﻿package com.pos.dto.gasto;
 
-import lombok.Getter;
-import lombok.Setter;
 @Getter
 @Setter
 public class GastoResponseDTO {
@@ -30,4 +26,5 @@ public class GastoResponseDTO {
 
     // getters y setters
 }
+
 

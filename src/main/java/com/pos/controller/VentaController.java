@@ -1,37 +1,5 @@
-package com.pos.controller;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import com.pos.dto.venta.VentaCreateDTO;
-import com.pos.dto.venta.VentaCocinaPreviewDTO;
-import com.pos.dto.venta.AnularVentaDTO;
-import com.pos.dto.venta.VentaDetalleResponseDTO;
-import com.pos.dto.venta.VentaDespachoDTO;
-import com.pos.dto.venta.VentaResponseDTO;
-import com.pos.dto.venta.VentaValorDomicilioDTO;
-import com.pos.entity.Usuario;
-import com.pos.service.VentaService;
-import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.pos.entity.Venta;
-import lombok.RequiredArgsConstructor;
-import com.pos.repository.UsuarioRepository;
-import jakarta.validation.Valid;
-import com.pos.entity.EstadoVenta;
-import com.pos.entity.TipoVenta;
+﻿package com.pos.controller;
 
-import java.time.LocalDate;
 @RestController
 @RequestMapping("/ventas")
 @RequiredArgsConstructor
@@ -204,3 +172,4 @@ public class VentaController {
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 }
+

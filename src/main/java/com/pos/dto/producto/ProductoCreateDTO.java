@@ -1,12 +1,6 @@
-package com.pos.dto.producto;
+﻿package com.pos.dto.producto;
 
-import java.math.BigDecimal;
 
-import com.pos.entity.TipoVentaProducto;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import lombok.Data;
 
 @Data
 public class ProductoCreateDTO {
@@ -21,9 +15,7 @@ public class ProductoCreateDTO {
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean activo;
 
-    @NotNull(message = "La categoría es obligatoria")
-    private Long categoriaId;
 
-    @NotNull(message = "El tipo de venta es obligatorio")
-    private TipoVentaProducto tipoVenta;
 }
+
+

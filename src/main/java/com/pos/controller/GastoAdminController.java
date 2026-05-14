@@ -1,20 +1,7 @@
-package com.pos.controller;
+﻿package com.pos.controller;
 
-import com.pos.dto.gastoAdmin.GastoAdminCreateDTO;
-import com.pos.dto.gastoAdmin.GastoAdminResponseDTO;
-import com.pos.entity.GastoAdmin;
-import com.pos.entity.Usuario;
-import com.pos.service.GastoAdminService;
-import com.pos.service.UsuarioService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/gastos-admin")
@@ -83,3 +70,4 @@ public class GastoAdminController {
         );
     }
 }
+

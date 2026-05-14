@@ -1,17 +1,6 @@
-package com.pos.repository;
+﻿package com.pos.repository;
 
-import com.pos.entity.EstadoVenta;
-import com.pos.entity.TipoVenta;
-import com.pos.entity.TurnoCaja;
-import com.pos.entity.Venta;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
 
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
@@ -54,3 +43,4 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             EstadoVenta estado
     );
 }
+

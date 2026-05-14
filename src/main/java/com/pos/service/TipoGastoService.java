@@ -1,12 +1,6 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.entity.TipoGasto;
-import com.pos.exception.BadRequestException;
-import com.pos.repository.TipoGastoRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
 
 
 @Service
@@ -34,4 +28,5 @@ public class TipoGastoService {
         return tipoGastoRepository.findAll();
     }
 }
+
 

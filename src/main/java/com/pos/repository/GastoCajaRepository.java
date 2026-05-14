@@ -1,11 +1,6 @@
-package com.pos.repository;
+﻿package com.pos.repository;
 
-import com.pos.entity.GastoCaja;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import com.pos.entity.TurnoCaja;
 
 public interface GastoCajaRepository extends JpaRepository<GastoCaja, Long> {
 
@@ -18,4 +13,5 @@ public interface GastoCajaRepository extends JpaRepository<GastoCaja, Long> {
     List<GastoCaja> findByFechaBetween(LocalDateTime inicio, LocalDateTime fin);
 
 }
+
 

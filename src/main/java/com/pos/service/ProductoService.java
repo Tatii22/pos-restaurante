@@ -1,21 +1,6 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.dto.producto.ProductoVentaDTO;
-import com.pos.dto.producto.ProductosVentaHoyDTO;
-import com.pos.entity.InventarioDiario;
-import com.pos.entity.MenuDiario;
-import com.pos.entity.Producto;
-import com.pos.entity.TipoVentaProducto;
-import com.pos.repository.InventarioDiarioRepository;
-import com.pos.repository.ProductoRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import com.pos.exception.ResourceNotFoundException;
-import com.pos.exception.BadRequestException;
-import com.pos.repository.MenuDiarioRepository;
 
-import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -115,3 +100,4 @@ public class ProductoService {
 
     
 }
+

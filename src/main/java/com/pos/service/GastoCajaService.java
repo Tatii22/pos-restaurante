@@ -1,24 +1,6 @@
-package com.pos.service;
+﻿package com.pos.service;
 
-import com.pos.dto.turno.GastoCajaCreateDTO;
-import com.pos.dto.turno.GastoCajaResponseDTO;
-import com.pos.entity.EstadoTurno;
-import com.pos.entity.GastoCaja;
-import com.pos.entity.TipoGasto;
-import com.pos.entity.TurnoCaja;
-import com.pos.entity.Usuario;
-import com.pos.exception.BadRequestException;
-import com.pos.repository.GastoCajaRepository;
-import com.pos.repository.TipoGastoRepository;
-import com.pos.repository.TurnoCajaRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -160,3 +142,4 @@ public class GastoCajaService {
         return value;
     }
 }
+
