@@ -29,6 +29,9 @@ export type Venta = {
   formaPago: "EFECTIVO" | "TRANSFERENCIA";
   pagoEfectivo?: number | null;
   pagoTransferencia?: number | null;
+  condicionPago?: "CONTADO" | "FIADO";
+  saldoPendiente?: number | null;
+  deudorId?: number | null;
 };
 
 export type VentaDetalleItem = {
@@ -43,9 +46,42 @@ export type VentaDetalleItem = {
 export type VentaDetalle = Venta & {
   pagoEfectivo: number;
   pagoTransferencia: number;
+  condicionPago: "CONTADO" | "FIADO";
+  saldoPendiente: number;
+  deudorId?: number | null;
   fechaAnulacion: string | null;
   motivoAnulacion: string | null;
   detalles: VentaDetalleItem[];
+};
+
+export type Deudor = {
+  id: number;
+  nombre: string;
+  telefono: string;
+  activo: boolean;
+  deudaTotal: number;
+  ventasPendientes: number;
+};
+
+export type AbonoFiado = {
+  id: number;
+  fecha: string;
+  monto: number;
+  montoEfectivo: number;
+  montoTransferencia: number;
+  formaPago: "EFECTIVO" | "TRANSFERENCIA";
+  observacion: string | null;
+  usuario: string;
+  turnoId: number | null;
+};
+
+export type DeudorDetalle = {
+  id: number;
+  nombre: string;
+  telefono: string;
+  deudaTotal: number;
+  ventasPendientes: Venta[];
+  abonos: AbonoFiado[];
 };
 
 export type PageResponse<T> = {

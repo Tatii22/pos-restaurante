@@ -15,6 +15,9 @@ import type {
   TipoGasto,
   Turno,
   Usuario,
+  Deudor,
+  DeudorDetalle,
+  AbonoFiado,
   Venta,
   VentaDetalle
 } from "../types";
@@ -72,6 +75,29 @@ export const posApi = {
   },
   actualizarValorDomicilio: async (id: number, valorDomicilio: number) => {
     const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/valor-domicilio`, { valorDomicilio });
+    return data;
+  },
+  getDeudores: async (soloConDeuda = false) => {
+    const { data } = await http.get<Deudor[]>("/api/v1/fiados/deudores", {
+      params: { soloConDeuda }
+    });
+    return data;
+  },
+  getDeudorById: async (id: number) => {
+    const { data } = await http.get<DeudorDetalle>(`/api/v1/fiados/deudores/${id}`);
+    return data;
+  },
+  crearDeudor: async (payload: { nombre: string; telefono: string }) => {
+    const { data } = await http.post<Deudor>("/api/v1/fiados/deudores", payload);
+    return data;
+  },
+  registrarAbonoFiado: async (payload: {
+    deudorId: number;
+    montoEfectivo: number;
+    montoTransferencia: number;
+    observacion?: string;
+  }) => {
+    const { data } = await http.post<AbonoFiado>("/api/v1/fiados/abonos", payload);
     return data;
   },
   catalogoHoy: async () => {

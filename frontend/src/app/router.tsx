@@ -16,6 +16,7 @@ import { ConfiguracionPage } from "../pages/ConfiguracionPage";
 import { GastosPage } from "../pages/GastosPage";
 import { HistorialVentasPage } from "../pages/HistorialVentasPage";
 import { CategoriasPage } from "../pages/CategoriasPage";
+import { DeudoresPage } from "../pages/DeudoresPage";
 
 function Protected({ children, roles }: { children: JSX.Element; roles?: Role[] }) {
   const { token, role } = useAuthStore();
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       { path: "gastos", element: <Protected roles={["CAJA", "ADMIN"]}><GastosPage /></Protected> },
       { path: "productos", element: <Protected roles={["ADMIN"]}><ProductosPage /></Protected> },
       { path: "categorias", element: <Protected roles={["ADMIN"]}><CategoriasPage /></Protected> },
+      { path: "deudores", element: <Protected roles={["ADMIN"]}><DeudoresPage /></Protected> },
       { path: "menu-dia", element: <Protected roles={["ADMIN"]}><MenuDiaPage /></Protected> },
       { path: "usuarios", element: <Protected roles={["ADMIN"]}><UsuariosPage /></Protected> },
       { path: "configuracion", element: <Protected roles={["ADMIN"]}><ConfiguracionPage /></Protected> }

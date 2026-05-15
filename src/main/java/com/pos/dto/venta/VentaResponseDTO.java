@@ -3,6 +3,7 @@ package com.pos.dto.venta;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.FormaPago;
 import com.pos.entity.TipoVenta;
+import com.pos.entity.CondicionPago;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -21,5 +22,8 @@ public record VentaResponseDTO(
         BigDecimal total,
         FormaPago formaPago,
         BigDecimal pagoEfectivo,
-        BigDecimal pagoTransferencia
+        BigDecimal pagoTransferencia,
+        CondicionPago condicionPago,
+        BigDecimal saldoPendiente,
+        Long deudorId
 ) {}

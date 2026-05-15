@@ -61,10 +61,7 @@ public class TurnoCajaService {
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
 
-        BigDecimal totalVentas = ventaRepository
-                .sumarTotalPorTurnoPorEstado(turno.getId(), EstadoVenta.DESPACHADA);
-
-        turno.setTotalVentas(totalVentas);
+        BigDecimal totalVentas = turno.getTotalVentas() != null ? turno.getTotalVentas() : BigDecimal.ZERO;
 
         BigDecimal esperado = turno.getMontoInicial()
                 .add(totalVentas)
@@ -97,10 +94,7 @@ public class TurnoCajaService {
             throw new BadRequestException("No puedes cerrar turno: hay domicilios del turno pendientes por despachar");
         }
 
-        BigDecimal totalVentas = ventaRepository
-                .sumarTotalPorTurnoPorEstado(turno.getId(), EstadoVenta.DESPACHADA);
-
-        turno.setTotalVentas(totalVentas);
+        BigDecimal totalVentas = turno.getTotalVentas() != null ? turno.getTotalVentas() : BigDecimal.ZERO;
 
         BigDecimal esperado = turno.getMontoInicial()
                 .add(totalVentas)

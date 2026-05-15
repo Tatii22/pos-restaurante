@@ -5,6 +5,8 @@ import { posApi } from "../shared/api/posApi";
 import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
+import { useFiadoStore } from "../shared/store/fiadoStore";
+import { HandCoins } from "lucide-react";
 
 type CartItem = { id: number; nombre: string; precio: number; cantidad: number; observacion: string };
 
@@ -116,9 +118,36 @@ export function VentasPage() {
     retry: false
   });
 
+  const { modoFiado, selectedDeudor, activarModoFiado, salirModoFiado, setSelectedDeudor } = useFiadoStore();
+  const deudoresQ = useQuery({
+    queryKey: ["ventas-page-deudores", modoFiado],
+    queryFn: () => posApi.getDeudores(false),
+    enabled: modoFiado
+  });
+  const [showDeudorSelector, setShowDeudorSelector] = useState(false);
+  const [showNuevoDeudorForm, setShowNuevoDeudorForm] = useState(false);
+  const [deudorSearch, setDeudorSearch] = useState("");
+  const [nuevoDeudorNombre, setNuevoDeudorNombre] = useState("");
+  const [nuevoDeudorTelefono, setNuevoDeudorTelefono] = useState("");
+  const crearDeudorM = useMutation({
+    mutationFn: () =>
+      posApi.crearDeudor({
+        nombre: nuevoDeudorNombre.trim(),
+        telefono: nuevoDeudorTelefono.replace(/[^\d]/g, "")
+      }),
+    onSuccess: (data) => {
+      setSelectedDeudor(data);
+      setShowDeudorSelector(false);
+      setShowNuevoDeudorForm(false);
+      setNuevoDeudorNombre("");
+      setNuevoDeudorTelefono("");
+    }
+  });
+
   const createSale = useMutation({
     mutationFn: (payload: unknown) => posApi.crearVenta(payload),
     onSuccess: () => {
+      const wasFiado = modoFiado;
       setCart([]);
       setDescuento(0);
       setDescuentoInput("0");
@@ -141,6 +170,9 @@ export function VentasPage() {
       qc.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
       qc.refetchQueries({ queryKey: ["catalogo-hoy"], type: "active" });
       qc.refetchQueries({ queryKey: ["inventario-ventas"], type: "active" });
+      if (wasFiado) {
+        salirModoFiado();
+      }
       if (role === "CAJA") {
         posApi.getTurnoActivo().then((t) => setTurno(t)).catch(() => {});
       }
@@ -291,8 +323,8 @@ export function VentasPage() {
     return cashValue >= transferValue ? "EFECTIVO" : "TRANSFERENCIA";
   }
 
-  function buildSalePayload(transferValue: number, cashValue: number) {
-    return {
+function buildSalePayload(transferValue: number, cashValue: number) {
+    const payload: Record<string, unknown> = {
       tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
       formaPago: resolveFormaPagoFrom(transferValue, cashValue),
       pagoEfectivo: cashValue,
@@ -305,6 +337,11 @@ export function VentasPage() {
       descuentoPorcentaje: esDomi ? 0 : descuento,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
     };
+    if (modoFiado && selectedDeudor) {
+      payload.fiado = true;
+      payload.deudorId = selectedDeudor.id;
+    }
+    return payload;
   }
 
   function pushCalcValue(token: string) {
@@ -345,8 +382,15 @@ export function VentasPage() {
 
   async function registerSale() {
     if (bloqueado || cart.length === 0) return;
+    if (modoFiado) {
+      if (!selectedDeudor) {
+        setValidationWarns(["Debes seleccionar un deudor para registrar una venta fiada"]);
+        return;
+      }
+      await createSale.mutateAsync(buildSalePayload(0, 0));
+      return;
+    }
     if (remaining > 0) return;
-
     await createSale.mutateAsync(buildSalePayload(transfer, cash));
   }
 
@@ -575,6 +619,110 @@ export function VentasPage() {
         </div>
 
         <div className="mt-4 grid gap-2">
+          {modoFiado && (
+            <div className="rounded-xl border border-orange-300 bg-orange-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 font-semibold text-orange-700">
+                  <HandCoins size={16} />
+                  Modo fiado activo
+                </div>
+                <button className="btn-ghost text-xs text-orange-700" onClick={salirModoFiado}>
+                  Salir
+                </button>
+              </div>
+              {selectedDeudor ? (
+                <div className="rounded-lg border border-orange-200 bg-white p-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">{selectedDeudor.nombre}</p>
+                      <p className="text-xs text-pos-muted">{selectedDeudor.telefono}</p>
+                    </div>
+                    <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedDeudor(null)}>
+                      Cambiar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    className="input"
+                    placeholder="Buscar deudor por nombre o teléfono..."
+                    value={deudorSearch}
+                    onChange={(e) => {
+                      setDeudorSearch(e.target.value);
+                      setShowDeudorSelector(e.target.value.length > 0);
+                    }}
+                  />
+                  {(showDeudorSelector || deudorSearch.length > 0) && deudoresQ.data && deudoresQ.data.filter(d => 
+                    d.nombre.toLowerCase().includes(deudorSearch.toLowerCase()) || 
+                    d.telefono.includes(deudorSearch)
+                  ).length > 0 && (
+                    <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-pos-border bg-white">
+                      {deudoresQ.data.filter(d => 
+                        d.nombre.toLowerCase().includes(deudorSearch.toLowerCase()) || 
+                        d.telefono.includes(deudorSearch)
+                      ).map((d) => (
+                        <button
+                          key={d.id}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-50"
+                          onClick={() => {
+                            setSelectedDeudor(d);
+                            setShowDeudorSelector(false);
+                            setDeudorSearch("");
+                          }}
+                        >
+                          <p className="font-semibold">{d.nombre}</p>
+                          <p className="text-xs text-pos-muted">{d.telefono}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    className="btn-ghost mt-2 w-full text-xs"
+                    onClick={() => {
+                      setShowNuevoDeudorForm(true);
+                      setShowDeudorSelector(false);
+                    }}
+                  >
+                    + Crear nuevo deudor
+                  </button>
+                </div>
+              )}
+              {showNuevoDeudorForm && (
+                <div className="mt-2 rounded-lg border border-pos-border bg-gray-50 p-3">
+                  <p className="mb-2 text-sm font-semibold">Nuevo deudor</p>
+                  <input
+                    className="input mb-2 w-full"
+                    placeholder="Nombre"
+                    value={nuevoDeudorNombre}
+                    onChange={(e) => setNuevoDeudorNombre(e.target.value)}
+                  />
+                  <input
+                    className="input mb-2 w-full"
+                    placeholder="Teléfono"
+                    value={nuevoDeudorTelefono}
+                    onChange={(e) => setNuevoDeudorTelefono(e.target.value)}
+                    inputMode="numeric"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="btn-ghost flex-1 text-xs"
+                      onClick={() => setShowNuevoDeudorForm(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      className="btn-primary flex-1 text-xs"
+                      disabled={!nuevoDeudorNombre.trim() || !nuevoDeudorTelefono.trim() || crearDeudorM.isPending}
+                      onClick={() => crearDeudorM.mutate()}
+                    >
+                      Crear
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {esDomi ? (
             <button
               className="btn-primary bg-green-600 hover:bg-green-700"
@@ -597,15 +745,17 @@ export function VentasPage() {
                 disabled={createSale.isPending || printKitchenPreviewM.isPending}
                 onClick={() => startCajaCheckout("SALON")}
               >
-                COBRAR
+                {modoFiado ? "REGISTRAR FIADO" : "COBRAR"}
               </button>
-              <button
-                className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                disabled={createSale.isPending || printKitchenPreviewM.isPending}
-                onClick={() => startCajaCheckout("LLEVAR")}
-              >
-                  COBRAR PARA LLEVAR
-              </button>
+              {!modoFiado && (
+                <button
+                  className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                  disabled={createSale.isPending || printKitchenPreviewM.isPending}
+                  onClick={() => startCajaCheckout("LLEVAR")}
+                >
+                    COBRAR PARA LLEVAR
+                </button>
+              )}
             </>
           )}
           
@@ -716,20 +866,27 @@ export function VentasPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-lg p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h4 className="font-semibold">Cobro de la venta</h4>
+              <h4 className="font-semibold">{modoFiado ? "Confirmar venta fiada" : "Cobro de la venta"}</h4>
               <button className="btn-ghost p-1" onClick={() => setShowPayModal(false)}>
                 <BsXLg size={14} />
               </button>
             </div>
 
+            {modoFiado && selectedDeudor && (
+              <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedDeudor.nombre}</p>
+                <p className="text-xs text-pos-muted">{selectedDeudor.telefono}</p>
+                <p className="text-sm text-pos-muted">Total: {money.format(total)} (pendiente de pago)</p>
+              </div>
+            )}
             <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
-              <p>Total: <span className="font-semibold">{money.format(total)}</span></p>
-              <p>Pagado: <span className="font-semibold">{money.format(paid)}</span></p>
-              <p>Falta: <span className="font-semibold text-orange-700">{money.format(remaining)}</span></p>
-              <p>Vueltos: <span className="font-semibold text-green-700">{money.format(change)}</span></p>
-            </div>
+                  <p>Total: <span className="font-semibold">{money.format(total)}</span></p>
+                  <p>Pagado: <span className="font-semibold">{money.format(paid)}</span></p>
+                  <p>Falta: <span className="font-semibold text-orange-700">{money.format(remaining)}</span></p>
+                  <p>Vueltos: <span className="font-semibold text-green-700">{money.format(change)}</span></p>
+                </div>
 
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
               <div>
                 <button
                   className={activeCalcField === "TRANSFERENCIA" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
@@ -782,10 +939,10 @@ export function VentasPage() {
               </button>
               <button
                 className="btn-primary flex-1"
-                disabled={remaining > 0 || createSale.isPending || (esDomi && !datosDomicilioValidos)}
+                disabled={(remaining > 0 && !modoFiado) || createSale.isPending || (esDomi && !datosDomicilioValidos)}
                 onClick={registerSale}
               >
-                Confirmar cobro
+                {modoFiado ? "Confirmar fiado" : "Confirmar cobro"}
               </button>
             </div>
             {remaining > 0 && (

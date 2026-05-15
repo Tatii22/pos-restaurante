@@ -23,6 +23,10 @@ public record VentaCreateDTO(
         String clienteNombre,
         String telefono,
         String direccion,
+        Boolean fiado,
+        Long deudorId,
+        String deudorNombre,
+        String deudorTelefono,
 
         // Opcional
         @DecimalMin(value = "0.0", inclusive = true, message = "El descuento no puede ser negativo")

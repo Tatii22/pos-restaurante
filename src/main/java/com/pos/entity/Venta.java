@@ -59,6 +59,16 @@ public class Venta {
     @Column(nullable = false)
     private FormaPago formaPago;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CondicionPago condicionPago;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal saldoPendiente;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Deudor deudor;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Usuario usuario;
 
