@@ -43,6 +43,7 @@ public class VentaService {
     private final ConfiguracionService configuracionService;
     private final VentaPagoDetalleService ventaPagoDetalleService;
     private final FechaOperativaService fechaOperativaService;
+    private final FiadoService fiadoService;
 
     public Venta obtenerPorId(Long ventaId) {
         Venta venta = ventaRepository.findByIdWithDetalles(ventaId)
@@ -70,6 +71,9 @@ public class VentaService {
                 venta.getFormaPago(),
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
+                venta.getCondicionPago(),
+                venta.getSaldoPendiente(),
+                venta.getDeudor() != null ? venta.getDeudor().getId() : null,
                 venta.getFechaAnulacion(),
                 venta.getMotivoAnulacion(),
                 venta.getDetalles() == null
@@ -108,7 +112,10 @@ public class VentaService {
                 reconciliada.getTotal(),
                 reconciliada.getFormaPago(),
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
-                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
+                reconciliada.getCondicionPago(),
+                reconciliada.getSaldoPendiente(),
+                reconciliada.getDeudor() != null ? reconciliada.getDeudor().getId() : null
         );
     }
 
@@ -192,7 +199,7 @@ public class VentaService {
         }
 
         if (dto.tipoVenta() == TipoVenta.DOMICILIO) {
-            if (dto.telefono() == null || dto.telefono().isBlank()) {
+            if (!Boolean.TRUE.equals(dto.fiado()) && (dto.telefono() == null || dto.telefono().isBlank())) {
                 throw new BadRequestException("El telefono es obligatorio");
             }
             if (dto.direccion() == null || dto.direccion().isBlank()) {
@@ -206,13 +213,25 @@ public class VentaService {
 
         BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
         BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
+        boolean esFiado = Boolean.TRUE.equals(dto.fiado());
+        Deudor deudor = fiadoService.resolverDeudorVenta(esFiado, dto.deudorId(), dto.deudorNombre(), dto.deudorTelefono());
 
         venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
+        venta.setCondicionPago(esFiado ? CondicionPago.FIADO : CondicionPago.CONTADO);
         venta.setUsuario(usuario);
         venta.setTurno(turno);
         venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
-        venta.setClienteNombre(dto.clienteNombre());
-        venta.setTelefono(dto.telefono());
+        venta.setDeudor(deudor);
+        venta.setClienteNombre(
+                deudor != null
+                        ? deudor.getNombre()
+                        : dto.clienteNombre()
+        );
+        venta.setTelefono(
+                deudor != null
+                        ? deudor.getTelefono()
+                        : dto.telefono()
+        );
         venta.setDireccion(dto.direccion());
         venta.setValorDomicilio(dto.valorDomicilio());
         venta.setParaLlevar(dto.tipoVenta() == TipoVenta.LOCAL && Boolean.TRUE.equals(dto.paraLlevar()));
@@ -284,21 +303,28 @@ public class VentaService {
         venta.setDescuentoPorcentaje(dto.descuentoPorcentaje());
         venta.setDescuentoValor(descuentoValor);
         venta.setTotal(total);
+        venta.setSaldoPendiente(esFiado ? total : BigDecimal.ZERO);
         venta.setDetalles(detalles);
 
         if (dto.tipoVenta() == TipoVenta.LOCAL) {
-            validarPagoSuficiente(
-                    total,
-                    pagoEfectivo,
-                    pagoTransferencia,
-                    "El pago es insuficiente para registrar la venta"
-            );
-            turno.setTotalVentas(turno.getTotalVentas().add(total));
-            turnoCajaRepository.save(turno);
+            if (!esFiado) {
+                validarPagoSuficiente(
+                        total,
+                        pagoEfectivo,
+                        pagoTransferencia,
+                        "El pago es insuficiente para registrar la venta"
+                );
+                turno.setTotalVentas(turno.getTotalVentas().add(total));
+                turnoCajaRepository.save(turno);
+            }
         }
 
         Venta ventaGuardada = ventaRepository.save(venta);
-        ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
+        ventaPagoDetalleService.guardar(
+                ventaGuardada.getId(),
+                esFiado ? BigDecimal.ZERO : pagoEfectivo,
+                esFiado ? BigDecimal.ZERO : pagoTransferencia
+        );
 
         if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
             imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
@@ -375,22 +401,32 @@ public class VentaService {
         BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
         BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
 
-        validarPagoSuficiente(
-                venta.getTotal(),
-                pagoEfectivo,
-                pagoTransferencia,
-                "El pago es insuficiente para despachar la venta"
-        );
+        boolean esFiado = venta.getCondicionPago() == CondicionPago.FIADO;
+        if (!esFiado) {
+            validarPagoSuficiente(
+                    venta.getTotal(),
+                    pagoEfectivo,
+                    pagoTransferencia,
+                    "El pago es insuficiente para despachar la venta"
+            );
+        }
 
         venta.setEstado(EstadoVenta.DESPACHADA);
         venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
-        turno.setTotalVentas(turno.getTotalVentas().add(venta.getTotal()));
+        venta.setSaldoPendiente(esFiado ? venta.getTotal() : BigDecimal.ZERO);
+        if (!esFiado) {
+            turno.setTotalVentas(turno.getTotalVentas().add(venta.getTotal()));
+        }
 
         turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
-        ventaPagoDetalleService.guardar(ventaGuardada.getId(), pagoEfectivo, pagoTransferencia);
+        ventaPagoDetalleService.guardar(
+                ventaGuardada.getId(),
+                esFiado ? BigDecimal.ZERO : pagoEfectivo,
+                esFiado ? BigDecimal.ZERO : pagoTransferencia
+        );
 
-        if (isFacturaAutoEnabled()) {
+        if (isFacturaAutoEnabled() && !esFiado) {
             imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
         }
 
@@ -439,14 +475,23 @@ public class VentaService {
             throw new BadRequestException("Solo CAJA puede anular ventas");
         }
 
+        if (venta.getCondicionPago() == CondicionPago.FIADO
+                && venta.getSaldoPendiente() != null
+                && venta.getSaldoPendiente().compareTo(venta.getTotal()) < 0) {
+            throw new BadRequestException("No puedes anular una venta fiada que ya tiene abonos registrados");
+        }
+
         TurnoCaja turno = venta.getTurno();
-        turno.setTotalVentas(turno.getTotalVentas().subtract(venta.getTotal()));
+        if (venta.getCondicionPago() != CondicionPago.FIADO) {
+            turno.setTotalVentas(turno.getTotalVentas().subtract(venta.getTotal()));
+        }
 
         devolverInventario(venta);
 
         venta.setEstado(EstadoVenta.ANULADA);
         venta.setFechaAnulacion(LocalDateTime.now());
         venta.setMotivoAnulacion(normalizeMotivoAnulacion(motivo));
+        venta.setSaldoPendiente(BigDecimal.ZERO);
 
         turnoCajaRepository.save(turno);
         return ventaRepository.save(venta);

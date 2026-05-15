@@ -1,6 +1,8 @@
 package com.pos.repository;
 
 import com.pos.entity.EstadoVenta;
+import com.pos.entity.CondicionPago;
+import com.pos.entity.Deudor;
 import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
@@ -52,5 +54,27 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             TurnoCaja turno,
             TipoVenta tipoVenta,
             EstadoVenta estado
+    );
+
+    List<Venta> findByDeudorAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(
+            Deudor deudor,
+            EstadoVenta estado,
+            BigDecimal saldoPendiente
+    );
+
+    List<Venta> findByDeudorOrderByFechaDesc(Deudor deudor);
+
+    @Query("""
+        SELECT COALESCE(SUM(v.saldoPendiente), 0)
+        FROM Venta v
+        WHERE v.deudor = :deudor
+          AND v.condicionPago = :condicionPago
+          AND v.estado = :estado
+          AND v.saldoPendiente > 0
+    """)
+    BigDecimal sumarSaldoPendientePorDeudor(
+            @Param("deudor") Deudor deudor,
+            @Param("condicionPago") CondicionPago condicionPago,
+            @Param("estado") EstadoVenta estado
     );
 }

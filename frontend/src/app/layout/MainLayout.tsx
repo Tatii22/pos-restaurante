@@ -1,6 +1,7 @@
 import {
   Bell,
   Boxes,
+  HandCoins,
   History,
   LayoutDashboard,
   LogOut,
@@ -21,7 +22,8 @@ import { useAuthStore } from "../../shared/store/authStore";
 import type { Role } from "../../shared/types";
 import { useTurnoStore } from "../../shared/store/turnoStore";
 import { posApi } from "../../shared/api/posApi";
-import { getErrorMessage, money, normalizeRole } from "../../shared/utils";
+import { formatCurrencyInput, getErrorMessage, money, normalizeRole, parseCurrencyInput } from "../../shared/utils";
+import { useFiadoStore } from "../../shared/store/fiadoStore";
 
 type MenuItem = {
   to: string;
@@ -37,6 +39,7 @@ const items: MenuItem[] = [
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
   { to: "/gastos", label: "Gastos", roles: ["CAJA", "ADMIN"], icon: <Wallet size={16} /> },
   { to: "/reportes", label: "Reportes", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
+  { to: "/deudores", label: "Deudores", roles: ["ADMIN"], icon: <HandCoins size={16} /> },
   { to: "/categorias", label: "Categorias", roles: ["ADMIN"], icon: <Boxes size={16} /> },
   { to: "/productos", label: "Productos", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/usuarios", label: "Usuarios", roles: ["ADMIN"], icon: <Users size={16} /> },
@@ -48,7 +51,15 @@ export function MainLayout() {
   const queryClient = useQueryClient();
   const { token, role, username, setAuth, clearAuth } = useAuthStore();
   const { turno, setTurno, clearTurno } = useTurnoStore();
+  const { activarModoFiado, salirModoFiado } = useFiadoStore();
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showFiadosMenu, setShowFiadosMenu] = useState(false);
+  const [showPagoDeuda, setShowPagoDeuda] = useState(false);
+  const [selectedDeudorId, setSelectedDeudorId] = useState<number | null>(null);
+  const [abonoEfectivo, setAbonoEfectivo] = useState("0");
+  const [abonoTransferencia, setAbonoTransferencia] = useState("0");
+  const [abonoObservacion, setAbonoObservacion] = useState("");
+  const [activeDebtField, setActiveDebtField] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
 
   const [montoInicial, setMontoInicial] = useState("");
   const [productoId, setProductoId] = useState<number | "">("");
@@ -84,6 +95,7 @@ export function MainLayout() {
   }, [token, sessionQ.isError, clearTurno, clearAuth, navigate]);
 
   const menu = items.filter((i) => resolvedRole && i.roles.includes(resolvedRole));
+  const fiadosEnabled = resolvedRole === "CAJA" || resolvedRole === "DOMI";
 
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-layout", resolvedRole],
@@ -267,6 +279,39 @@ export function MainLayout() {
     );
   }, [productosQ.data, inventarioQ.data]);
   const montoInicialValido = Number(montoInicial) > 0;
+  const deudoresQ = useQuery({
+    queryKey: ["fiados-deudores-menu", fiadosEnabled, showPagoDeuda],
+    queryFn: () => posApi.getDeudores(true),
+    enabled: fiadosEnabled && (showFiadosMenu || showPagoDeuda)
+  });
+  const deudorDetalleQ = useQuery({
+    queryKey: ["fiado-deudor-detalle-layout", selectedDeudorId],
+    queryFn: () => posApi.getDeudorById(selectedDeudorId as number),
+    enabled: showPagoDeuda && !!selectedDeudorId
+  });
+  const abonoM = useMutation({
+    mutationFn: () =>
+      posApi.registrarAbonoFiado({
+        deudorId: selectedDeudorId as number,
+        montoEfectivo: parseCurrencyInput(abonoEfectivo),
+        montoTransferencia: parseCurrencyInput(abonoTransferencia),
+        observacion: abonoObservacion.trim() || undefined
+      }),
+    onSuccess: async () => {
+      setShowPagoDeuda(false);
+      setSelectedDeudorId(null);
+      setAbonoEfectivo("0");
+      setAbonoTransferencia("0");
+      setAbonoObservacion("");
+      await queryClient.invalidateQueries({ queryKey: ["fiados-deudores-menu"] });
+      await queryClient.invalidateQueries({ queryKey: ["fiado-deudor-detalle-layout"] });
+      await queryClient.invalidateQueries({ queryKey: ["turno-activo-layout"] });
+      await queryClient.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
+      if (resolvedRole === "CAJA") {
+        posApi.getTurnoActivo().then((t) => setTurno(t)).catch(() => {});
+      }
+    }
+  });
   const logoutButtonClass =
     resolvedRole === "DOMI"
       ? "inline-flex w-full items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 md:hidden"
@@ -274,6 +319,38 @@ export function MainLayout() {
   const logoutButtonDesktopDomiClass =
     "hidden items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 md:inline-flex";
   const isDomiMobileNav = resolvedRole === "DOMI";
+  const totalAbono = parseCurrencyInput(abonoEfectivo) + parseCurrencyInput(abonoTransferencia);
+  const deudaActual = deudorDetalleQ.data?.deudaTotal ?? 0;
+  const restanteDeuda = Math.max(0, deudaActual - totalAbono);
+
+  function pushDebtCalcValue(token: string) {
+    const update = (curr: string) => {
+      if (token === "C") return "0";
+      if (token === "<") return curr.length <= 1 ? "0" : curr.slice(0, -1);
+      if (curr === "0") return token;
+      return curr + token;
+    };
+    if (activeDebtField === "TRANSFERENCIA") {
+      setAbonoTransferencia((prev) => update(prev));
+    } else {
+      setAbonoEfectivo((prev) => update(prev));
+    }
+  }
+
+  function resetPagoDeudaState() {
+    setShowPagoDeuda(false);
+    setSelectedDeudorId(null);
+    setAbonoEfectivo("0");
+    setAbonoTransferencia("0");
+    setAbonoObservacion("");
+    setActiveDebtField("EFECTIVO");
+  }
+
+  function openFiadoMode() {
+    activarModoFiado();
+    setShowFiadosMenu(false);
+    navigate("/ventas");
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -307,13 +384,16 @@ export function MainLayout() {
           <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {resolvedRole === "CAJA" && (
               <>
-                <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowAlerts((v) => !v)}>
+<button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowAlerts((v) => !v)}>
                   <Bell size={14} />
                   {lowStockAlerts.length > 0 && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                       {lowStockAlerts.length}
                     </span>
                   )}
+                </button>
+                <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowFiadosMenu((v) => !v)}>
+                  <HandCoins size={14} />
                 </button>
                 <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
                   {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
@@ -430,6 +510,166 @@ export function MainLayout() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showFiadosMenu && fiadosEnabled && (
+        <div className="fixed right-4 top-20 z-40 w-[300px] max-w-[95vw] rounded-2xl border border-pos-border bg-white p-4 shadow-pos">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-semibold">Fiados</h4>
+            <button className="btn-ghost p-1" onClick={() => setShowFiadosMenu(false)}>
+              <X size={14} />
+            </button>
+          </div>
+          <div className="grid gap-2">
+            <button
+              className="btn-soft w-full justify-start gap-2 px-3 py-3 text-left"
+              onClick={() => {
+                activarModoFiado();
+                setShowFiadosMenu(false);
+                navigate("/ventas");
+              }}
+            >
+              <HandCoins size={18} />
+              <div>
+                <div className="font-semibold">Registrar venta fiada</div>
+                <div className="text-xs text-pos-muted">Crear una venta a crédito</div>
+              </div>
+            </button>
+            <button
+              className="btn-soft w-full justify-start gap-2 px-3 py-3 text-left"
+              onClick={() => {
+                setShowFiadosMenu(false);
+                setShowPagoDeuda(true);
+              }}
+            >
+              <Wallet size={18} />
+              <div>
+                <div className="font-semibold">Pagar deuda</div>
+                <div className="text-xs text-pos-muted">Registrar abono de cliente</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPagoDeuda && fiadosEnabled && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-lg p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="font-semibold">Pagar deuda</h4>
+              <button className="btn-ghost p-1" onClick={() => { setShowPagoDeuda(false); setSelectedDeudorId(null); }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {!selectedDeudorId ? (
+              <div className="max-h-[60vh] overflow-auto">
+                {deudoresQ.isLoading && <p className="text-center text-pos-muted">Cargando...</p>}
+                {deudoresQ.data && deudoresQ.data.length === 0 && (
+                  <p className="text-center text-pos-muted">No hay deudores con deuda</p>
+                )}
+                {deudoresQ.data?.map((deudor) => (
+                  <button
+                    key={deudor.id}
+                    className="w-full rounded-lg border border-pos-border p-3 text-left hover:bg-gray-50"
+                    onClick={() => setSelectedDeudorId(deudor.id)}
+                  >
+                    <p className="font-semibold">{deudor.nombre}</p>
+                    <p className="text-xs text-pos-muted">{deudor.telefono}</p>
+                    <p className="text-sm font-bold text-red-600">{money.format(deudor.deudaTotal)}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                {deudorDetalleQ.isLoading && <p className="text-center text-pos-muted">Cargando detalle...</p>}
+                {deudorDetalleQ.data && (
+                  <>
+                    <div className="mb-3 rounded-lg border border-pos-border bg-gray-50 p-3">
+                      <p className="font-semibold">{deudorDetalleQ.data.nombre}</p>
+                      <p className="text-xs text-pos-muted">{deudorDetalleQ.data.telefono}</p>
+                      <p className="mt-2 text-xl font-bold text-red-600">
+                        Deuda: {money.format(deudorDetalleQ.data.deudaTotal)}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <div>
+                        <button
+                          className={activeDebtField === "EFECTIVO" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
+                          onClick={() => setActiveDebtField("EFECTIVO")}
+                        >
+                          Efectivo
+                        </button>
+                        <input
+                          className="input mt-1"
+                          value={formatCurrencyInput(abonoEfectivo)}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^\d]/g, "");
+                            setAbonoEfectivo(cleaned || "0");
+                          }}
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <button
+                          className={activeDebtField === "TRANSFERENCIA" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
+                          onClick={() => setActiveDebtField("TRANSFERENCIA")}
+                        >
+                          Transferencia
+                        </button>
+                        <input
+                          className="input mt-1"
+                          value={formatCurrencyInput(abonoTransferencia)}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^\d]/g, "");
+                            setAbonoTransferencia(cleaned || "0");
+                          }}
+                          inputMode="numeric"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-3 gap-1">
+                      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "<"].map((k) => (
+                        <button key={k} className="btn-ghost text-sm" onClick={() => pushDebtCalcValue(k)}>
+                          {k}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-2">
+                      <input
+                        className="input w-full"
+                        placeholder="Observación (opcional)"
+                        value={abonoObservacion}
+                        onChange={(e) => setAbonoObservacion(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 p-2">
+                      <span className="text-sm text-pos-muted">Total abono:</span>
+                      <span className="font-semibold text-green-700">{money.format(totalAbono)}</span>
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <button className="btn-ghost flex-1" onClick={() => setSelectedDeudorId(null)}>
+                        Atrás
+                      </button>
+                      <button
+                        className="btn-primary flex-1"
+                        disabled={totalAbono <= 0 || abonoM.isPending}
+                        onClick={() => abonoM.mutate()}
+                      >
+                        Registrar abono
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
