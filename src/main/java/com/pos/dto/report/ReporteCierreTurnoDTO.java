@@ -16,8 +16,7 @@ public class ReporteCierreTurnoDTO {
     private Long turnoId;
     private LocalDateTime apertura;
     private LocalDateTime cierre;
-
-    private BigDecimal totalVentas;
+    private BigDecimal totalVentas;
     private BigDecimal totalEfectivo;
     private BigDecimal totalTransferencia;
     private BigDecimal totalGastos;
@@ -25,9 +24,10 @@ public class ReporteCierreTurnoDTO {
     private BigDecimal totalGastosTransferencia;
     private BigDecimal gananciaEfectivo;
     private BigDecimal gananciaTransferencia;
-
-    private BigDecimal netoEnCaja;
-
-    private List<VentaResponseDTO> ventas;
+    private BigDecimal netoEnCaja;
+    private BigDecimal totalAbonos;
+    private BigDecimal totalAbonosEfectivo;
+    private BigDecimal totalAbonosTransferencia;
+    private List<VentaResponseDTO> ventas;
     private List<GastoCajaResponseDTO> gastos;
 }

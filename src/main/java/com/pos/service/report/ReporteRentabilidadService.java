@@ -63,20 +63,30 @@ public class ReporteRentabilidadService {
                 gastoAdminRepository.findByFechaBetween(fechaInicio, fechaFin);
 
         BigDecimal totalVentas = calcularTotalVentas(ventas);
+        // Separar por forma de pago (excluyendo saldo pendiente en FIADO)
+        BigDecimal totalVentasEfectivo = calcularTotalVentasPorForma(ventas, com.pos.entity.FormaPago.EFECTIVO);
+        BigDecimal totalVentasTransferencia = calcularTotalVentasPorForma(ventas, com.pos.entity.FormaPago.TRANSFERENCIA);
+
         BigDecimal totalGastosCaja = sumarGastosCaja(gastosCaja);
         BigDecimal totalGastosAdmin = sumarGastosAdmin(gastosAdmin);
-
-        BigDecimal totalGastos = totalGastosCaja.add(totalGastosAdmin);
-
-        // ================== DTO ==================
+        // Separar gastos por medio (si aplica)
+        BigDecimal totalGastosEfectivo = sumarGastosCajaPorTipo(gastosCaja, true);
+        BigDecimal totalGastosTransferencia = sumarGastosCajaPorTipo(gastosCaja, false);
+        BigDecimal totalGastos = totalGastosCaja.add(totalGastosAdmin);
+        // ================== DTO ==================
         ReporteRentabilidadDTO reporte = new ReporteRentabilidadDTO();
         reporte.setFechaInicio(fechaInicio);
         reporte.setFechaFin(fechaFin);
         reporte.setTotalVentas(totalVentas);
+        reporte.setTotalVentasEfectivo(totalVentasEfectivo);
+        reporte.setTotalVentasTransferencia(totalVentasTransferencia);
         reporte.setTotalGastos(totalGastos);
+        reporte.setTotalGastosEfectivo(totalGastosEfectivo);
+        reporte.setTotalGastosTransferencia(totalGastosTransferencia);
         reporte.setGananciaNeta(totalVentas.subtract(totalGastos));
         reporte.setVentas(mapVentas(ventas));
         reporte.setGastos(mapGastos(gastosCaja, gastosAdmin));
+
 
         return reporte;
     }
@@ -93,9 +103,38 @@ public class ReporteRentabilidadService {
     }
 
     private BigDecimal calcularTotalVentas(List<Venta> ventas) {
-        // Venta.getTotal() ya representa el neto final. Sumarlo directamente.
+        // Contar solo lo efectivamente cobrado: total - saldoPendiente por venta.
         return ventas.stream()
-                .map(Venta::getTotal)
+                .map(v -> {
+                    BigDecimal total = v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO;
+                    BigDecimal saldo = v.getSaldoPendiente() != null ? v.getSaldoPendiente() : BigDecimal.ZERO;
+                    return total.subtract(saldo);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal calcularTotalVentasPorForma(List<Venta> ventas, com.pos.entity.FormaPago forma) {
+        return ventas.stream()
+                .filter(v -> v.getCondicionPago() != com.pos.entity.CondicionPago.FIADO) // excluir fiado (saldo pendiente)
+                .map(v -> {
+                    // sumar solo si la forma calculada coincide con la forma solicitada
+                    var dto = ventaService.construirRespuesta(v);
+                    com.pos.entity.FormaPago f = dto.formaPago();
+                    BigDecimal efectivo = dto.pagoEfectivo() != null ? dto.pagoEfectivo() : BigDecimal.ZERO;
+                    BigDecimal transferencia = dto.pagoTransferencia() != null ? dto.pagoTransferencia() : BigDecimal.ZERO;
+                    if (forma == com.pos.entity.FormaPago.EFECTIVO) {
+                        return efectivo;
+                    } else {
+                        return transferencia;
+                    }
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal sumarGastosCajaPorTipo(List<com.pos.entity.GastoCaja> gastos, boolean efectivo) {
+        return gastos.stream()
+                .map(g -> efectivo ? (g.getMontoEfectivo() != null ? g.getMontoEfectivo() : BigDecimal.ZERO)
+                        : (g.getMontoTransferencia() != null ? g.getMontoTransferencia() : BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

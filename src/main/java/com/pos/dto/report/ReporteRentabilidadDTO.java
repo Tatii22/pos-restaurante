@@ -18,7 +18,13 @@ public class ReporteRentabilidadDTO {
     private LocalDate fechaFin;
 
     private BigDecimal totalVentas = BigDecimal.ZERO;
+    private BigDecimal totalVentasEfectivo = BigDecimal.ZERO;
+    private BigDecimal totalVentasTransferencia = BigDecimal.ZERO;
+
     private BigDecimal totalGastos = BigDecimal.ZERO;
+    private BigDecimal totalGastosEfectivo = BigDecimal.ZERO;
+    private BigDecimal totalGastosTransferencia = BigDecimal.ZERO;
+
     private BigDecimal gananciaNeta = BigDecimal.ZERO;
 
     private List<VentaResponseDTO> ventas;

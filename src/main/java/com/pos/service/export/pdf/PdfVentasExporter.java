@@ -11,6 +11,7 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.dto.report.ReporteVentaDTO;
+import com.pos.entity.CondicionPago;
 import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
@@ -44,8 +45,12 @@ public class PdfVentasExporter {
             document.add(new Paragraph("Total Bruto: $" + reporte.getTotalBruto()));
             document.add(new Paragraph("Total Descuentos: $" + reporte.getTotalDescuentos()));
             document.add(new Paragraph("Total Neto: $" + reporte.getTotalNeto()));
-            document.add(new Paragraph("Efectivo: $" + reporte.getTotalEfectivo()));
-            document.add(new Paragraph("Transferencia: $" + reporte.getTotalTransferencia()));
+            // Mostrar efectivo/transferencia excluyendo ventas FIADO y sumar abonos
+            document.add(new Paragraph("Efectivo (ventas): $" + reporte.getTotalEfectivo()));
+            document.add(new Paragraph("Transferencia (ventas): $" + reporte.getTotalTransferencia()));
+            document.add(new Paragraph("Abonos totales: $" + reporte.getTotalAbonos()));
+            document.add(new Paragraph("Abonos efectivo: $" + reporte.getTotalAbonosEfectivo()));
+            document.add(new Paragraph("Abonos transferencia: $" + reporte.getTotalAbonosTransferencia()));
             document.add(new Paragraph("\n"));
 
             Table tabla = new Table(UnitValue.createPercentArray(
@@ -73,7 +78,12 @@ public class PdfVentasExporter {
                 tabla.addCell(v.estado().name());
                 tabla.addCell(v.clienteNombre() != null ? v.clienteNombre() : "-");
                 tabla.addCell("$" + v.total());
-                tabla.addCell(v.formaPago().name());
+                // Si es FIADO mostrar "FIADO" y no mostrar pago hasta abono
+                if (v.condicionPago() == CondicionPago.FIADO) {
+                    tabla.addCell("FIADO");
+                } else {
+                    tabla.addCell(v.formaPago().name());
+                }
             }
 
             document.add(tabla);

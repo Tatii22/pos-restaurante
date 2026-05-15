@@ -29,8 +29,10 @@ public class ReporteVentaDTO {
 
     private BigDecimal totalEfectivo;
     private BigDecimal totalTransferencia;
-
-    private List<VentaResponseDTO> ventas;
+    private BigDecimal totalAbonos;
+    private BigDecimal totalAbonosEfectivo;
+    private BigDecimal totalAbonosTransferencia;
+    private List<VentaResponseDTO> ventas;
 
     
 }

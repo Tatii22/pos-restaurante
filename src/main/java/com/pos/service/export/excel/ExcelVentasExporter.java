@@ -48,10 +48,16 @@ public class ExcelVentasExporter {
                     reporte.getTotalDescuentos(), moneda);
             fila = crearFila(sheet, fila, "Total Neto",
                     reporte.getTotalNeto(), moneda);
-            fila = crearFila(sheet, fila, "Efectivo",
+            fila = crearFila(sheet, fila, "Efectivo (ventas)",
                     reporte.getTotalEfectivo(), moneda);
-            fila = crearFila(sheet, fila, "Transferencia",
+            fila = crearFila(sheet, fila, "Transferencia (ventas)",
                     reporte.getTotalTransferencia(), moneda);
+            fila = crearFila(sheet, fila, "Abonos totales",
+                    reporte.getTotalAbonos(), moneda);
+            fila = crearFila(sheet, fila, "Abonos efectivo",
+                    reporte.getTotalAbonosEfectivo(), moneda);
+            fila = crearFila(sheet, fila, "Abonos transferencia",
+                    reporte.getTotalAbonosTransferencia(), moneda);
 
             fila++;
 
@@ -79,7 +85,12 @@ public class ExcelVentasExporter {
                 totalCell.setCellValue(v.total().doubleValue());
                 totalCell.setCellStyle(moneda);
 
-                row.createCell(6).setCellValue(v.formaPago().name());
+                // Si es FIADO mostrar "FIADO" en forma de pago
+                if (v.condicionPago() == com.pos.entity.CondicionPago.FIADO) {
+                    row.createCell(6).setCellValue("FIADO");
+                } else {
+                    row.createCell(6).setCellValue(v.formaPago().name());
+                }
             }
 
             for (int i = 0; i < columnas.length; i++) {
