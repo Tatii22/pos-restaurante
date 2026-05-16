@@ -38,3 +38,8 @@ frontend/dist/
 
 # Runtime logs
 spring-run*.log
+
+# application config (secrets)
+**/application*.yaml
+**/application*.properties
+
