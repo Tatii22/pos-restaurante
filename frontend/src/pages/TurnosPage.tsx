@@ -86,7 +86,6 @@ export function TurnosPage() {
   const reporte = reporteQ.data;
   const turnoResumen =
     closeResult?.id === turnoBase?.id ? closeResult : simResult?.id === turnoBase?.id ? simResult : turnoBase;
-  const esperado = (turnoResumen?.montoInicial || 0) + (turnoResumen?.totalVentas || 0) - (turnoResumen?.totalGastos || 0);
 
   function renderResumenFinanciero(data: ReporteCierreTurno | undefined) {
     return (
@@ -140,6 +139,13 @@ export function TurnosPage() {
   }
 
   const turnoActual = turnoResumen ?? turno;
+  const esperado = (turnoActual.montoInicial || 0) + (turnoActual.totalVentas || 0) - (turnoActual.totalGastos || 0);
+
+  useEffect(() => {
+    if (turno && turno.estado !== "CERRADO") {
+      montoFinal.setValue(String(Math.round(esperado)));
+    }
+  }, [turno?.id, esperado, montoFinal.setValue]);
 
   return (
     <div className="grid gap-4">
@@ -182,7 +188,7 @@ export function TurnosPage() {
         </div>
         <div>
           <p className="text-sm text-pos-muted">Esperado en caja</p>
-          <p className="text-2xl font-bold">{summaryNumber(turnoActual.esperado ?? esperado)}</p>
+          <p className="text-2xl font-bold">{summaryNumber(esperado)}</p>
           <p className="mt-1 text-xs text-pos-muted">Gan. efec. {summaryNumber(reporte?.gananciaEfectivo)}</p>
           <p className="mt-1 text-xs text-pos-muted">Base + ventas - gastos</p>
         </div>

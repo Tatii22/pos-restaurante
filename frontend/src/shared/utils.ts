@@ -75,34 +75,6 @@ export function normalizeRole(roles: string[]): Role {
   return "DOMI";
 }
 
-export function calculateCurrencyInputCursorPosition(
-  oldCleanValue: string,
-  newCleanValue: string,
-  oldCursorPos: number,
-  oldDisplayValue: string
-): number {
-  if (!oldDisplayValue || oldCursorPos === 0) return 0;
-
-  const digitsBeforeCursor = oldDisplayValue
-    .substring(0, oldCursorPos)
-    .replace(/\D/g, "").length;
-
-  const newDisplayValue = formatCurrencyInput(newCleanValue);
-  let newCursorPos = 0;
-  let digitCount = 0;
-
-  for (let i = 0; i < newDisplayValue.length; i++) {
-    if (/\d/.test(newDisplayValue[i])) {
-      digitCount++;
-      if (digitCount === digitsBeforeCursor + 1) {
-        return i + 1;
-      }
-    }
-  }
-
-  return newDisplayValue.length;
-}
-
 export function handleCurrencyInput(
   value: string,
   options?: { maxDigits?: number; allowZero?: boolean }
