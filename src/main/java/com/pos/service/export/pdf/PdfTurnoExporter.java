@@ -1,21 +1,21 @@
 package com.pos.service.export.pdf;
-import com.itextpdf.kernel.colors.ColorConstants;
+
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
 import com.pos.dto.report.ReporteCierreTurnoDTO;
 import com.pos.dto.turno.GastoCajaResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PdfTurnoExporter {
@@ -24,47 +24,87 @@ public class PdfTurnoExporter {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public byte[] exportar(ReporteCierreTurnoDTO reporte) {
-
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdf = new PdfDocument(writer);
             Document document = new Document(pdf);
+            document.setMargins(36, 36, 36, 36);
 
-            // ===== TÍTULO =====
-            document.add(new Paragraph("Reporte de Cierre de Turno")
-                    .setBold()
-                    .setFontSize(18)
-                    .setTextAlignment(TextAlignment.CENTER));
+            String titulo = "REPORTE DE CIERRE DE TURNO #" + reporte.getTurnoId();
+            String rango = "Apertura: " + reporte.getApertura() + "  |  Cierre: " + reporte.getCierre();
+            PdfReportHelper.addProfessionalHeader(document, titulo, rango, "Cajero: " + (reporte.getCierre() != null ? "Sistema" : ""));
 
-            document.add(new Paragraph(
-                    "Turno ID: " + reporte.getTurnoId()
-                            + " | Apertura: " + reporte.getApertura()
-                            + " | Cierre: " + reporte.getCierre()
-            ).setTextAlignment(TextAlignment.CENTER));
+            // === RESUMEN OPERATIVO (sin base) ===
+            Map<String, BigDecimal> resumen = new LinkedHashMap<>();
+            resumen.put("Ventas realizadas", reporte.getTotalVentas());
+            resumen.put("Ingresos recibidos", reporte.getGananciaEfectivo() != null && reporte.getGananciaTransferencia() != null 
+                    ? reporte.getGananciaEfectivo().add(reporte.getGananciaTransferencia()) : BigDecimal.ZERO);
+            resumen.put("Gastos registrados", reporte.getTotalGastos());
+            BigDecimal balanceTurno = (reporte.getGananciaEfectivo() != null && reporte.getGananciaTransferencia() != null)
+                    ? reporte.getGananciaEfectivo().add(reporte.getGananciaTransferencia()).subtract(reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO)
+                    : BigDecimal.ZERO;
+            resumen.put("Balance final del turno", balanceTurno);
+            PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
 
-            document.add(new Paragraph("\n"));
+            // === ARQUEO (con base) - tabla simple de 2 columnas ===
+            Paragraph arqueoTitle = new Paragraph("DETALLE DE ARQUEO Y CIERRE DUAL")
+                    .setFontSize(12).setBold().setMarginTop(10).setMarginBottom(4);
+            document.add(arqueoTitle);
 
-            // ===== TOTALES =====
-            Table totales = new Table(UnitValue.createPercentArray(2))
-                    .useAllAvailableWidth();
+            Table arqueo = new Table(new float[]{50, 50}).useAllAvailableWidth();
+            arqueo.addCell(PdfReportHelper.createDataCell("Base de caja (inicial)", false, false, false));
+            arqueo.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(reporte.getCajaFisicaEsperada() != null && reporte.getGananciaEfectivo() != null ?
+                    reporte.getCajaFisicaEsperada().subtract(reporte.getGananciaEfectivo()) : BigDecimal.ZERO), true, false, true));
 
-            agregarTotal(totales, "Total Ventas", reporte.getTotalVentas());
-            agregarTotal(totales, "Total Efectivo", reporte.getTotalEfectivo());
-            agregarTotal(totales, "Total Transferencia", reporte.getTotalTransferencia());
-            agregarTotal(totales, "Total Gastos", reporte.getTotalGastos());
-            agregarTotal(totales, "Neto en Caja", reporte.getNetoEnCaja());
+            arqueo.addCell(PdfReportHelper.createDataCell("Efectivo Contado", false, true, false));
+            arqueo.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(reporte.getEfectivoContado()), true, true, true));
 
-            document.add(totales);
-            document.add(new Paragraph("\n"));
+            arqueo.addCell(PdfReportHelper.createDataCell("Transferencias Verificadas", false, false, false));
+            arqueo.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(reporte.getTransferenciasVerificadas()), true, false, true));
 
-            // ===== TABLA VENTAS =====
-            document.add(crearTablaVentas(reporte.getVentas()));
+            arqueo.addCell(PdfReportHelper.createDataCell("TOTAL VERIFICADO", false, true, false));
+            arqueo.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(reporte.getTotalVerificado()), true, true, true));
 
-            document.add(new Paragraph("\n"));
+            arqueo.addCell(PdfReportHelper.createDataCell("DIFERENCIA TOTAL", false, false, false));
+            arqueo.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(reporte.getDiferenciaTotal()), true, false, true));
 
-            // ===== TABLA GASTOS =====
-            document.add(crearTablaGastos(reporte.getGastos()));
+            document.add(arqueo);
+
+            // === TABLAS DETALLE ===
+            document.add(new Paragraph("DETALLE DE VENTAS").setFontSize(11).setBold().setMarginTop(12));
+            float[] wV = {8, 18, 12, 12, 22, 14, 14};
+            Table tVentas = PdfReportHelper.createStyledTable(wV);
+            PdfReportHelper.addTableHeader(tVentas, new String[]{"#", "Fecha", "Tipo", "Estado", "Cliente", "Total", "Pago"});
+            int i = 1;
+            boolean z = false;
+            for (VentaResponseDTO v : reporte.getVentas()) {
+                tVentas.addCell(PdfReportHelper.createDataCell(String.valueOf(i++), false, z, false));
+                tVentas.addCell(PdfReportHelper.createDataCell(v.fecha().format(FECHA_FORMATO), false, z, false));
+                tVentas.addCell(PdfReportHelper.createDataCell(v.tipoVenta().name(), false, z, false));
+                tVentas.addCell(PdfReportHelper.createDataCell(v.estado().name(), false, z, false));
+                tVentas.addCell(PdfReportHelper.createDataCell(v.clienteNombre() != null ? v.clienteNombre() : "-", false, z, false));
+                tVentas.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(v.total()), true, z, true));
+                tVentas.addCell(PdfReportHelper.createDataCell(v.formaPago().name(), false, z, false));
+                z = !z;
+            }
+            document.add(tVentas);
+
+            document.add(new Paragraph("DETALLE DE GASTOS").setFontSize(11).setBold().setMarginTop(10));
+            float[] wG = {8, 18, 50, 14};
+            Table tGastos = PdfReportHelper.createStyledTable(wG);
+            PdfReportHelper.addTableHeader(tGastos, new String[]{"#", "Fecha", "Descripción", "Valor"});
+            i = 1; z = false;
+            for (GastoCajaResponseDTO g : reporte.getGastos()) {
+                tGastos.addCell(PdfReportHelper.createDataCell(String.valueOf(i++), false, z, false));
+                tGastos.addCell(PdfReportHelper.createDataCell(g.getFecha().format(FECHA_FORMATO), false, z, false));
+                tGastos.addCell(PdfReportHelper.createDataCell(g.getDescripcion(), false, z, false));
+                tGastos.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(g.getValor()), true, z, true));
+                z = !z;
+            }
+            document.add(tGastos);
+
+            PdfReportHelper.addFooter(document, "POS Restaurante • Cierre de Turno");
 
             document.close();
             return baos.toByteArray();
@@ -72,62 +112,5 @@ public class PdfTurnoExporter {
         } catch (Exception e) {
             throw new RuntimeException("Error generando PDF de Turno", e);
         }
-    }
-
-    // ---------- helpers ----------
-    private void agregarTotal(Table table, String label, BigDecimal valor) {
-        table.addCell(new Cell().add(new Paragraph(label).setBold()));
-        table.addCell(new Cell().add(
-                new Paragraph(String.format("$%,.2f", valor)).setBold()
-        ));
-    }
-
-    private Table crearTablaVentas(List<VentaResponseDTO> ventas) {
-        Table table = new Table(UnitValue.createPercentArray(
-                new float[]{40, 80, 80, 60, 80, 60, 60}))
-                .useAllAvailableWidth();
-
-        String[] headers = {"ID", "Fecha", "Tipo", "Estado", "Cliente", "Total", "Forma Pago"};
-        for (String h : headers) {
-            table.addHeaderCell(new Cell()
-                    .add(new Paragraph(h))
-                    .setBold()
-                    .setBackgroundColor(ColorConstants.LIGHT_GRAY));
-        }
-        int index = 1;
-        for (VentaResponseDTO v : ventas) {
-            table.addCell(String.valueOf(index++));
-            table.addCell(v.fecha().format(FECHA_FORMATO));
-            table.addCell(v.tipoVenta().name());
-            table.addCell(v.estado().name());
-            table.addCell(v.clienteNombre() != null ? v.clienteNombre() : "-");
-            table.addCell(String.format("$%,.2f", v.total()));
-            table.addCell(v.formaPago().name());
-        }
-
-        return table;
-    }
-
-    private Table crearTablaGastos(List<GastoCajaResponseDTO> gastos) {
-        Table table = new Table(UnitValue.createPercentArray(
-                new float[]{40, 80, 200, 60}))
-                .useAllAvailableWidth();
-
-        String[] headers = {"ID", "Fecha", "Descripción", "Valor"};
-        for (String h : headers) {
-            table.addHeaderCell(new Cell()
-                    .add(new Paragraph(h))
-                    .setBold()
-                    .setBackgroundColor(ColorConstants.LIGHT_GRAY));
-        }
-        int index = 1;
-        for (GastoCajaResponseDTO g : gastos) {
-            table.addCell(String.valueOf(index++));
-            table.addCell(g.getFecha().format(FECHA_FORMATO));
-            table.addCell(g.getDescripcion());
-            table.addCell(String.format("$%,.2f", g.getValor()));
-        }
-
-        return table;
     }
 }

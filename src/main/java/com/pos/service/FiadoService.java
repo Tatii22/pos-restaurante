@@ -36,6 +36,8 @@ public class FiadoService {
     private final AbonoFiadoRepository abonoFiadoRepository;
     private final TurnoCajaRepository turnoCajaRepository;
     private final VentaPagoDetalleService ventaPagoDetalleService;
+    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AuditService auditService;
 
     public List<DeudorResponseDTO> listarDeudores(boolean soloConDeuda) {
         return deudorRepository.findAllByOrderByNombreAsc().stream()
@@ -116,11 +118,13 @@ public class FiadoService {
             throw new BadRequestException("El deudor no tiene saldo pendiente");
         }
 
-        TurnoCaja turno = turnoCajaRepository.findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+        PagoAbono pago = calcularPagoAbono(deudaActual, montoEfectivo, montoTransferencia);
+
+        TurnoCaja turno = turnoCajaRepository.findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo para registrar el abono"));
 
-        BigDecimal restante = monto;
-        List<Venta> ventasPendientes = ventaRepository.findByDeudorAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(
+        BigDecimal restante = pago.totalAplicado();
+        List<Venta> ventasPendientes = ventaRepository.findPendientesByDeudorForUpdate(
                 deudor,
                 EstadoVenta.DESPACHADA,
                 BigDecimal.ZERO
@@ -135,19 +139,18 @@ public class FiadoService {
             restante = restante.subtract(aplicado);
         }
 
-        BigDecimal aplicadoTotal = monto.subtract(restante);
+        BigDecimal aplicadoTotal = pago.totalAplicado().subtract(restante);
         if (aplicadoTotal.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("No fue posible aplicar el abono");
         }
 
-        FormaPago formaPago = resolverFormaPago(montoEfectivo, montoTransferencia);
         AbonoFiado abono = abonoFiadoRepository.save(
                 AbonoFiado.builder()
                         .fecha(LocalDateTime.now())
                         .monto(aplicadoTotal)
-                        .montoEfectivo(montoEfectivo.min(aplicadoTotal))
-                        .montoTransferencia(aplicadoTotal.subtract(montoEfectivo.min(aplicadoTotal)))
-                        .formaPago(formaPago)
+                        .montoEfectivo(pago.efectivoAplicado())
+                        .montoTransferencia(pago.transferenciaAplicada())
+                        .formaPago(resolverFormaPago(pago.efectivoAplicado(), pago.transferenciaAplicada()))
                         .observacion(normalizarObservacion(dto.observacion()))
                         .deudor(deudor)
                         .usuario(usuario)
@@ -157,6 +160,20 @@ public class FiadoService {
 
         turno.setTotalVentas(turno.getTotalVentas().add(aplicadoTotal));
         turnoCajaRepository.save(turno);
+        movimientoFinancieroService.registrarAbono(abono);
+        auditService.record(
+                "ABONO_FIADO_REGISTRADO",
+                "AbonoFiado",
+                abono.getId(),
+                usuario,
+                turno,
+                abono.getObservacion(),
+                auditService.change("deudorId", null, deudor.getId()),
+                auditService.change("monto", null, aplicadoTotal),
+                auditService.change("efectivoAplicado", null, pago.efectivoAplicado()),
+                auditService.change("transferenciaAplicada", null, pago.transferenciaAplicada()),
+                auditService.change("cambioEfectivo", null, pago.cambioEfectivo())
+        );
 
         return toAbonoDto(abono);
     }
@@ -243,6 +260,37 @@ public class FiadoService {
             return FormaPago.TRANSFERENCIA;
         }
         return FormaPago.EFECTIVO;
+    }
+
+    private PagoAbono calcularPagoAbono(BigDecimal deudaActual, BigDecimal montoEfectivo, BigDecimal montoTransferencia) {
+        BigDecimal deuda = deudaActual == null ? BigDecimal.ZERO : deudaActual;
+        BigDecimal efectivoRecibido = nonNegative(montoEfectivo);
+        BigDecimal transferenciaRecibida = nonNegative(montoTransferencia);
+
+        if (transferenciaRecibida.compareTo(deuda) > 0) {
+            throw new BadRequestException("La transferencia no puede superar la deuda pendiente");
+        }
+        BigDecimal faltanteDespuesTransferencia = deuda.subtract(transferenciaRecibida);
+        BigDecimal efectivoAplicado = efectivoRecibido.min(faltanteDespuesTransferencia);
+        BigDecimal totalAplicado = efectivoAplicado.add(transferenciaRecibida);
+        if (totalAplicado.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("No fue posible aplicar el abono");
+        }
+        BigDecimal cambio = efectivoRecibido.subtract(efectivoAplicado);
+        if (cambio.compareTo(deuda.max(BigDecimal.valueOf(100000))) > 0) {
+            throw new BadRequestException("El efectivo recibido supera un cambio razonable para el abono");
+        }
+        return new PagoAbono(efectivoAplicado, transferenciaRecibida, cambio);
+    }
+
+    private record PagoAbono(
+            BigDecimal efectivoAplicado,
+            BigDecimal transferenciaAplicada,
+            BigDecimal cambioEfectivo
+    ) {
+        BigDecimal totalAplicado() {
+            return efectivoAplicado.add(transferenciaAplicada);
+        }
     }
 
     private String normalizarNombre(String value) {

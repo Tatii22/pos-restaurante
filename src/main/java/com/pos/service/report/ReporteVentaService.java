@@ -1,14 +1,19 @@
 package com.pos.service.report;
+
 import com.pos.dto.report.ReporteVentaDTO;
 import com.pos.dto.venta.VentaResponseDTO;
-import com.pos.entity.EstadoVenta;
-import com.pos.entity.CondicionPago;
-import com.pos.service.VentaService;
-import com.pos.repository.VentaRepository;
-import com.pos.repository.AbonoFiadoRepository;
 import com.pos.entity.AbonoFiado;
-import org.springframework.stereotype.Service;
+import com.pos.entity.CondicionPago;
+import com.pos.entity.EstadoVenta;
+import com.pos.entity.MedioFinanciero;
+import com.pos.entity.MovimientoFinancieroTipo;
 import com.pos.entity.Venta;
+import com.pos.repository.AbonoFiadoRepository;
+import com.pos.repository.VentaRepository;
+import com.pos.service.MovimientoFinancieroService;
+import com.pos.service.VentaService;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,71 +25,75 @@ public class ReporteVentaService {
     private final VentaRepository ventaRepository;
     private final AbonoFiadoRepository abonoFiadoRepository;
     private final VentaService ventaService;
-    public ReporteVentaService(VentaRepository ventaRepository, AbonoFiadoRepository abonoFiadoRepository, VentaService ventaService) {
+    private final MovimientoFinancieroService movimientoFinancieroService;
+
+    public ReporteVentaService(
+            VentaRepository ventaRepository,
+            AbonoFiadoRepository abonoFiadoRepository,
+            VentaService ventaService,
+            MovimientoFinancieroService movimientoFinancieroService
+    ) {
         this.ventaRepository = ventaRepository;
         this.abonoFiadoRepository = abonoFiadoRepository;
         this.ventaService = ventaService;
+        this.movimientoFinancieroService = movimientoFinancieroService;
     }
 
-
-    public ReporteVentaDTO generarReporteVentas(
-            LocalDate fechaInicio,
-            LocalDate fechaFin
-    ) {
-
+    public ReporteVentaDTO generarReporteVentas(LocalDate fechaInicio, LocalDate fechaFin) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
         List<Venta> ventas = ventaRepository.findByFechaBetweenAndEstadoIn(
                 inicio,
                 fin,
-                List.of(EstadoVenta.DESPACHADA, EstadoVenta.ANULADA)
+                List.of(EstadoVenta.DESPACHADA)
         );
-        ventas = ventas.stream()
-                .filter(v -> v.getEstado() == EstadoVenta.DESPACHADA)
-                .toList();
 
         BigDecimal totalBruto = BigDecimal.ZERO;
         BigDecimal totalDescuentos = BigDecimal.ZERO;
         BigDecimal totalNeto = BigDecimal.ZERO;
-        BigDecimal totalEfectivo = BigDecimal.ZERO;
-        BigDecimal totalTransferencia = BigDecimal.ZERO;
+        BigDecimal totalMontoContado = BigDecimal.ZERO;
+        BigDecimal totalMontoFiado = BigDecimal.ZERO;
+        BigDecimal carteraPendiente = BigDecimal.ZERO;
+        long totalVentasContado = 0;
+        long totalVentasFiadas = 0;
         BigDecimal totalAbonos = BigDecimal.ZERO;
         BigDecimal totalAbonosEfectivo = BigDecimal.ZERO;
         BigDecimal totalAbonosTransferencia = BigDecimal.ZERO;
 
         for (Venta venta : ventas) {
-            if (venta.getEstado() == EstadoVenta.ANULADA) {
-                continue;
-            }
-
             BigDecimal descuento = obtenerDescuento(venta);
-            BigDecimal totalFinal = venta.getTotal(); // total ya es neto
-            VentaResponseDTO ventaDTO = mapToVentaResponse(venta);
-
-            totalBruto = totalBruto.add(venta.getTotal().add(descuento));
+            BigDecimal totalFinal = venta.getTotal() != null ? venta.getTotal() : BigDecimal.ZERO;
+            totalBruto = totalBruto.add(totalFinal.add(descuento));
             totalDescuentos = totalDescuentos.add(descuento);
             totalNeto = totalNeto.add(totalFinal);
-            // No sumar pagos de ventas FIADO (se reportan como abonos por separado)
-            if (venta.getCondicionPago() != com.pos.entity.CondicionPago.FIADO) {
-                totalEfectivo = totalEfectivo.add(
-                        ventaDTO.pagoEfectivo() != null ? ventaDTO.pagoEfectivo() : BigDecimal.ZERO
-                );
-                totalTransferencia = totalTransferencia.add(
-                        ventaDTO.pagoTransferencia() != null ? ventaDTO.pagoTransferencia() : BigDecimal.ZERO
-                );
+            if (venta.getCondicionPago() == CondicionPago.FIADO) {
+                totalVentasFiadas++;
+                totalMontoFiado = totalMontoFiado.add(totalFinal);
+                carteraPendiente = carteraPendiente.add(venta.getSaldoPendiente() != null ? venta.getSaldoPendiente() : BigDecimal.ZERO);
+            } else {
+                totalVentasContado++;
+                totalMontoContado = totalMontoContado.add(totalFinal);
             }
         }
 
+        BigDecimal totalEfectivo = movimientoFinancieroService.sumarPeriodoMedioTipos(
+                inicio,
+                fin,
+                MedioFinanciero.EFECTIVO,
+                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+        );
+        BigDecimal totalTransferencia = movimientoFinancieroService.sumarPeriodoMedioTipos(
+                inicio,
+                fin,
+                MedioFinanciero.TRANSFERENCIA,
+                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+        );
 
         List<VentaResponseDTO> ventasDTO = ventas.stream()
-                .map(this::mapToVentaResponse)
+                .map(ventaService::construirRespuesta)
                 .toList();
 
-        long totalVentas = ventas.stream()
-                .filter(v -> v.getEstado() == EstadoVenta.DESPACHADA)
-                .count();
-        // Sumar abonos en el periodo indicado
         List<AbonoFiado> abonosPeriodo = abonoFiadoRepository.findByFechaBetweenOrderByFechaAsc(inicio, fin);
         for (AbonoFiado a : abonosPeriodo) {
             BigDecimal monto = a.getMonto() != null ? a.getMonto() : BigDecimal.ZERO;
@@ -94,10 +103,11 @@ public class ReporteVentaService {
             totalAbonosEfectivo = totalAbonosEfectivo.add(montoE);
             totalAbonosTransferencia = totalAbonosTransferencia.add(montoT);
         }
-        ReporteVentaDTO reporte = new ReporteVentaDTO();
+
+        ReporteVentaDTO reporte = new ReporteVentaDTO();
         reporte.setFechaInicio(fechaInicio);
         reporte.setFechaFin(fechaFin);
-        reporte.setTotalVentas(totalVentas);
+        reporte.setTotalVentas((long) ventas.size());
         reporte.setTotalBruto(totalBruto);
         reporte.setTotalDescuentos(totalDescuentos);
         reporte.setTotalNeto(totalNeto);
@@ -106,17 +116,19 @@ public class ReporteVentaService {
         reporte.setTotalAbonos(totalAbonos);
         reporte.setTotalAbonosEfectivo(totalAbonosEfectivo);
         reporte.setTotalAbonosTransferencia(totalAbonosTransferencia);
+        reporte.setTotalVentasContado(totalVentasContado);
+        reporte.setTotalVentasFiadas(totalVentasFiadas);
+        reporte.setTotalMontoContado(totalMontoContado);
+        reporte.setTotalMontoFiado(totalMontoFiado);
+        reporte.setCarteraGenerada(totalMontoFiado);
+        reporte.setCarteraPendiente(carteraPendiente);
+        reporte.setRecaudoReal(totalEfectivo.add(totalTransferencia).add(totalAbonos));
         reporte.setVentas(ventasDTO);
-        return reporte;
+
+        return reporte;
     }
 
     private BigDecimal obtenerDescuento(Venta venta) {
-        return venta.getDescuentoValor() != null
-                ? venta.getDescuentoValor()
-                : BigDecimal.ZERO;
-    }
-
-    private VentaResponseDTO mapToVentaResponse(Venta venta) {
-        return ventaService.construirRespuesta(venta);
+        return venta.getDescuentoValor() != null ? venta.getDescuentoValor() : BigDecimal.ZERO;
     }
 }

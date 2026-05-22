@@ -23,6 +23,9 @@ public class InventarioDiario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     // 📅 FECHA DEL INVENTARIO
     @Column(nullable = false)
     private LocalDate fecha;

@@ -1,16 +1,14 @@
 package com.pos.service.export.excel;
+
 import com.pos.dto.report.ReporteVentaDTO;
 import com.pos.dto.venta.VentaResponseDTO;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.DataFormat;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.io.ByteArrayOutputStream;
 
 @Service
 public class ExcelVentasExporter {
@@ -25,77 +23,48 @@ public class ExcelVentasExporter {
             Sheet sheet = workbook.createSheet("Reporte Ventas");
             int fila = 0;
 
-            Row titulo = sheet.createRow(fila++);
-            titulo.createCell(0).setCellValue("Reporte de Ventas");
-
-            Row fechas = sheet.createRow(fila++);
-            fechas.createCell(0).setCellValue(
-                    "Desde: " + reporte.getFechaInicio() +
-                    " Hasta: " + reporte.getFechaFin()
-            );
+            ExcelReportHelper.addTitle(sheet, fila++, "REPORTE DE VENTAS");
+            ExcelReportHelper.addSubtitle(sheet, fila++,
+                    "Período: " + reporte.getFechaInicio() + " → " + reporte.getFechaFin());
 
             fila++;
 
-            CellStyle moneda = workbook.createCellStyle();
-            DataFormat format = workbook.createDataFormat();
-            moneda.setDataFormat(format.getFormat("$#,##0.00"));
+            CellStyle money = ExcelReportHelper.createMoneyStyle(workbook);
+            CellStyle headerStyle = ExcelReportHelper.createHeaderStyle(workbook);
 
-            fila = crearFila(sheet, fila, "Total Ventas",
-                    BigDecimal.valueOf(reporte.getTotalVentas()), moneda);
-            fila = crearFila(sheet, fila, "Total Bruto",
-                    reporte.getTotalBruto(), moneda);
-            fila = crearFila(sheet, fila, "Total Descuentos",
-                    reporte.getTotalDescuentos(), moneda);
-            fila = crearFila(sheet, fila, "Total Neto",
-                    reporte.getTotalNeto(), moneda);
-            fila = crearFila(sheet, fila, "Efectivo (ventas)",
-                    reporte.getTotalEfectivo(), moneda);
-            fila = crearFila(sheet, fila, "Transferencia (ventas)",
-                    reporte.getTotalTransferencia(), moneda);
-            fila = crearFila(sheet, fila, "Abonos totales",
-                    reporte.getTotalAbonos(), moneda);
-            fila = crearFila(sheet, fila, "Abonos efectivo",
-                    reporte.getTotalAbonosEfectivo(), moneda);
-            fila = crearFila(sheet, fila, "Abonos transferencia",
-                    reporte.getTotalAbonosTransferencia(), moneda);
+            // KPIs - lenguaje humano y premium
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ventas realizadas",
+                    BigDecimal.valueOf(reporte.getTotalVentas()), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ingresos recibidos", reporte.getRecaudoReal(), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos() != null ? new BigDecimal(reporte.getTotalGastos()) : BigDecimal.ZERO, money);
+            BigDecimal balV = (reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null) 
+                    ? reporte.getRecaudoReal().subtract(new BigDecimal(reporte.getTotalGastos())) : BigDecimal.ZERO;
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", balV, money, true); // destacado
 
             fila++;
 
-            String[] columnas = {
-                    "ID", "Fecha", "Tipo", "Estado",
-                    "Cliente", "Total", "Forma Pago"
-            };
+            // Tabla detalle
+            String[] cols = {"#", "Fecha", "Tipo", "Estado", "Cliente", "Total", "Forma Pago"};
+            ExcelReportHelper.addTableHeader(sheet, fila++, cols, headerStyle);
 
-            Row header = sheet.createRow(fila++);
-            for (int i = 0; i < columnas.length; i++) {
-                header.createCell(i).setCellValue(columnas[i]);
-            }
-            int index = 1;
+            int idx = 1;
             for (VentaResponseDTO v : reporte.getVentas()) {
                 Row row = sheet.createRow(fila++);
-                row.createCell(0).setCellValue(index++);
+                row.createCell(0).setCellValue(idx++);
                 row.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
                 row.createCell(2).setCellValue(v.tipoVenta().name());
                 row.createCell(3).setCellValue(v.estado().name());
-                row.createCell(4).setCellValue(
-                        v.clienteNombre() != null ? v.clienteNombre() : "-"
-                );
+                row.createCell(4).setCellValue(v.clienteNombre() != null ? v.clienteNombre() : "-");
 
-                org.apache.poi.ss.usermodel.Cell totalCell = row.createCell(5);
-                totalCell.setCellValue(v.total().doubleValue());
-                totalCell.setCellStyle(moneda);
+                Cell totalCell = row.createCell(5);
+                ExcelReportHelper.applyMoneyToCell(totalCell, v.total(), money);
 
-                // Si es FIADO mostrar "FIADO" en forma de pago
-                if (v.condicionPago() == com.pos.entity.CondicionPago.FIADO) {
-                    row.createCell(6).setCellValue("FIADO");
-                } else {
-                    row.createCell(6).setCellValue(v.formaPago().name());
-                }
+                String pago = (v.condicionPago() == com.pos.entity.CondicionPago.FIADO) ? "FIADO" : v.formaPago().name();
+                row.createCell(6).setCellValue(pago);
             }
 
-            for (int i = 0; i < columnas.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            ExcelReportHelper.autoSizeAll(sheet, 7);
+            ExcelReportHelper.addFooter(sheet, fila + 2, "POS Restaurante");
 
             workbook.write(baos);
             return baos.toByteArray();
@@ -103,23 +72,6 @@ public class ExcelVentasExporter {
         } catch (Exception e) {
             throw new RuntimeException("Error generando Excel de ventas", e);
         }
-    }
-
-    private int crearFila(
-            Sheet sheet,
-            int fila,
-            String etiqueta,
-            BigDecimal valor,
-            CellStyle estilo
-    ) {
-        Row row = sheet.createRow(fila++);
-        row.createCell(0).setCellValue(etiqueta);
-
-        org.apache.poi.ss.usermodel.Cell cell = row.createCell(1);
-        cell.setCellValue(valor.doubleValue());
-        cell.setCellStyle(estilo);
-
-        return fila;
     }
 }
 

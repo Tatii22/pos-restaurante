@@ -20,6 +20,8 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
+    private final ActorResolver actorResolver;
 
     public UsuarioResponseDTO crearUsuario(UsuarioCreateDTO dto) {
 
@@ -42,6 +44,16 @@ public class UsuarioService {
                 .build();
 
         usuarioRepository.save(usuario);
+        auditService.record(
+                "USUARIO_CREADO",
+                "Usuario",
+                usuario.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("username", null, usuario.getUsername()),
+                auditService.change("rol", null, rol.getNombre())
+        );
 
         return new UsuarioResponseDTO(
                 usuario.getId(),
@@ -88,6 +100,10 @@ public class UsuarioService {
             throw new BadRequestException("No se puede cambiar el rol de un usuario ADMIN");
         }
 
+        String usernameAnterior = usuario.getUsername();
+        String rolAnterior = usuario.getRol() != null ? usuario.getRol().getNombre() : null;
+        Boolean activoAnterior = usuario.getActivo();
+
         usuario.setUsername(nuevoUsername);
         usuario.setRol(rol);
         usuario.setActivo(dto.getActivo() == null || dto.getActivo());
@@ -97,6 +113,18 @@ public class UsuarioService {
         }
 
         usuarioRepository.save(usuario);
+        auditService.record(
+                "USUARIO_ACTUALIZADO",
+                "Usuario",
+                usuario.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("username", usernameAnterior, usuario.getUsername()),
+                auditService.change("rol", rolAnterior, usuario.getRol().getNombre()),
+                auditService.change("activo", activoAnterior, usuario.getActivo()),
+                auditService.change("password", null, dto.getPassword() != null && !dto.getPassword().isBlank() ? "UPDATED" : "UNCHANGED")
+        );
 
         return new UsuarioResponseDTO(
                 usuario.getId(),
@@ -112,6 +140,16 @@ public class UsuarioService {
         if (usuario.getRol() != null && "ADMIN".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("No se puede eliminar un usuario ADMIN");
         }
+        auditService.record(
+                "USUARIO_ELIMINADO",
+                "Usuario",
+                usuario.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("username", usuario.getUsername(), null),
+                auditService.change("rol", usuario.getRol() != null ? usuario.getRol().getNombre() : null, null)
+        );
         usuarioRepository.delete(usuario);
     }
 }

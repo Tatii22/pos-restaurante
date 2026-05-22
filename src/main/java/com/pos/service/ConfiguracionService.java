@@ -23,6 +23,8 @@ public class ConfiguracionService {
     private static final String DEF_TAMANO_FUENTE = "NORMAL";
 
     private final JdbcTemplate jdbcTemplate;
+    private final AuditService auditService;
+    private final ActorResolver actorResolver;
 
     @PostConstruct
     void init() {
@@ -75,6 +77,7 @@ public class ConfiguracionService {
     }
 
     public AdminConfigDTO guardar(AdminConfigDTO input) {
+        AdminConfigDTO anterior = obtener();
         AdminConfigDTO cfg = sanitize(input);
         jdbcTemplate.update(
                 """
@@ -104,6 +107,18 @@ public class ConfiguracionService {
                 cfg.imprimirFacturaAuto(),
                 cfg.imprimirCocinaAuto(),
                 cfg.tamanoFuenteTicket()
+        );
+        auditService.record(
+                "CONFIGURACION_ACTUALIZADA",
+                "AdminConfig",
+                SINGLETON_ID,
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("negocioNombre", anterior.negocioNombre(), cfg.negocioNombre()),
+                auditService.change("imprimirFacturaAuto", anterior.imprimirFacturaAuto(), cfg.imprimirFacturaAuto()),
+                auditService.change("imprimirCocinaAuto", anterior.imprimirCocinaAuto(), cfg.imprimirCocinaAuto()),
+                auditService.change("tamanoFuenteTicket", anterior.tamanoFuenteTicket(), cfg.tamanoFuenteTicket())
         );
         return cfg;
     }

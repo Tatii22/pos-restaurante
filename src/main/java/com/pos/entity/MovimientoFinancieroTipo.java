@@ -1,0 +1,14 @@
+package com.pos.entity;
+
+public enum MovimientoFinancieroTipo {
+    VENTA_CONTADO,
+    VENTA_FIADA,
+    ABONO_FIADO,
+    GASTO_CAJA,
+    GASTO_ADMIN,
+    ANULACION_VENTA,
+    CANCELACION_VENTA,
+    ELIMINACION_GASTO_CAJA,
+    ELIMINACION_GASTO_ADMIN,
+    AJUSTE_INVENTARIO
+}

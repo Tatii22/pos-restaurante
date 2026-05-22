@@ -27,6 +27,8 @@ public class GastoCajaService {
     private final GastoCajaRepository gastoCajaRepository;
     private final TurnoCajaRepository turnoCajaRepository;
     private final TipoGastoRepository tipoGastoRepository;
+    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AuditService auditService;
 
     @Transactional
     public GastoCaja registrar(
@@ -63,7 +65,20 @@ public class GastoCajaService {
         turno.setTotalGastos(turno.getTotalGastos().add(montoTotal));
         turnoCajaRepository.save(turno);
 
-        return gastoCajaRepository.save(gasto);
+        GastoCaja guardado = gastoCajaRepository.save(gasto);
+        movimientoFinancieroService.registrarGastoCaja(guardado);
+        auditService.record(
+                "GASTO_CAJA_REGISTRADO",
+                "GastoCaja",
+                guardado.getId(),
+                usuario,
+                turno,
+                guardado.getDescripcion(),
+                auditService.change("monto", null, guardado.getMonto()),
+                auditService.change("montoEfectivo", null, guardado.getMontoEfectivo()),
+                auditService.change("montoTransferencia", null, guardado.getMontoTransferencia())
+        );
+        return guardado;
     }
 
     public List<GastoCajaResponseDTO> listarTurnoActivo(Usuario usuario) {
@@ -122,6 +137,18 @@ public class GastoCajaService {
             turnoCajaRepository.save(turno);
         }
 
+        auditService.record(
+                "GASTO_CAJA_ELIMINADO",
+                "GastoCaja",
+                gasto.getId(),
+                usuario,
+                turno,
+                gasto.getDescripcion(),
+                auditService.change("monto", gasto.getMonto(), null),
+                auditService.change("montoEfectivo", gasto.getMontoEfectivo(), null),
+                auditService.change("montoTransferencia", gasto.getMontoTransferencia(), null)
+        );
+        movimientoFinancieroService.registrarEliminacionGastoCaja(gasto, usuario);
         gastoCajaRepository.delete(gasto);
     }
 

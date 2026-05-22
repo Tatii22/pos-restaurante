@@ -100,8 +100,8 @@ export function DashboardPage() {
           <p className="text-2xl font-bold">{resumen?.totalVentas ?? 0}</p>
         </div>
         <div className="card p-4">
-          <p className="text-sm text-pos-muted">Total neto del mes</p>
-          <p className="text-2xl font-bold">{money.format(resumen?.totalNeto ?? 0)}</p>
+          <p className="text-sm text-pos-muted">Recaudo real del mes</p>
+          <p className="text-2xl font-bold">{money.format(resumen?.recaudoReal ?? rent?.recaudoReal ?? 0)}</p>
         </div>
         <div className="card p-4">
           <p className="text-sm text-pos-muted">Efectivo</p>
@@ -134,6 +134,8 @@ export function DashboardPage() {
             <p className="flex justify-between"><span className="text-pos-muted">Bruto</span><span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span></p>
             <p className="flex justify-between"><span className="text-pos-muted">Descuentos</span><span className="font-semibold">{money.format(resumen?.totalDescuentos ?? 0)}</span></p>
             <p className="flex justify-between"><span className="text-pos-muted">Neto</span><span className="font-semibold">{money.format(resumen?.totalNeto ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Fiado generado</span><span className="font-semibold">{money.format(resumen?.carteraGenerada ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Recaudo real</span><span className="font-semibold">{money.format(resumen?.recaudoReal ?? rent?.recaudoReal ?? 0)}</span></p>
             <p className="flex justify-between"><span className="text-pos-muted">Gastos globales</span><span className="font-semibold">{money.format(rent?.totalGastos ?? 0)}</span></p>
             <p className="flex justify-between"><span className="text-pos-muted">Ganancia neta</span><span className="font-semibold">{money.format(rent?.gananciaNeta ?? 0)}</span></p>
           </div>

@@ -174,4 +174,16 @@ class TurnoCatalogoInventarioIntegrationTest {
                 .andExpect(jsonPath("$.menuDiario[0].id").value(productoMenuId.intValue()))
                 .andExpect(jsonPath("$.menuDiario[0].nombre").value("Almuerzo ejecutivo"));
     }
+
+    @Test
+    void turnoResponseDebeIncluirMetricasFinancierasNuevas() throws Exception {
+        mockMvc.perform(post("/api/v1/turnos/abrir")
+                        .with(user(usernameCaja).roles("CAJA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"montoInicial\": 50000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transferenciasNetas").exists())
+                .andExpect(jsonPath("$.totalOperativoTurno").exists())
+                .andExpect(jsonPath("$.esperado").exists());
+    }
 }

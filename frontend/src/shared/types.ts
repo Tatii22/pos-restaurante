@@ -173,8 +173,25 @@ export type Turno = {
   montoInicial: number;
   totalVentas: number;
   totalGastos: number;
-  esperado: number | null;
-  faltante: number | null;
+  // Valores calculados por ledger (para columnas Efectivo / Transferencias / Total en histórico)
+  esperado: number | null;            // Efectivo físico final real
+  faltante: number | null;            // legacy: dif. físico (diferenciaEfectivo)
+  transferenciasNetas?: number | null; // Transferencias netas reales
+  totalOperativoTurno?: number | null; // Total = efectivo + transferencias (con base, legacy)
+
+  // Métricas operativas puras (sin baseCaja) - usar en tabla principal de reportes históricos
+  efectivoOperativo?: number | null;      // = esperado - montoInicial
+  transferenciasOperativas?: number | null;
+  totalOperativoNeto?: number | null;     // Efectivo operativo + Transferencias operativas
+
+  // Conciliación dual (arqueo y cierre) - NO en tabla principal
+  efectivoContado?: number | null;
+  transferenciasVerificadas?: number | null;
+  diferenciaEfectivo?: number | null;
+  diferenciaTransferencias?: number | null;
+  totalVerificado?: number | null;
+  diferenciaTotal?: number | null;
+
   estado: "ABIERTO" | "SIMULADO" | "CERRADO";
   usuario: string;
 };
@@ -188,6 +205,16 @@ export type ReporteVentas = {
   totalNeto: number;
   totalEfectivo: number;
   totalTransferencia: number;
+  totalAbonos?: number;
+  totalAbonosEfectivo?: number;
+  totalAbonosTransferencia?: number;
+  totalVentasContado?: number;
+  totalVentasFiadas?: number;
+  totalMontoContado?: number;
+  totalMontoFiado?: number;
+  carteraGenerada?: number;
+  carteraPendiente?: number;
+  recaudoReal?: number;
   ventas: Venta[];
 };
 
@@ -203,6 +230,11 @@ export type ReporteRentabilidad = {
   fechaInicio: string;
   fechaFin: string;
   totalVentas: number;
+  totalVentasComerciales?: number;
+  ventasContado?: number;
+  ventasFiadas?: number;
+  carteraGenerada?: number;
+  recaudoReal?: number;
   totalGastos: number;
   gananciaNeta: number;
   ventas: Venta[];
@@ -222,6 +254,15 @@ export type ReporteCierreTurno = {
   gananciaEfectivo: number;
   gananciaTransferencia: number;
   netoEnCaja: number;
+  // Valores calculados por ledger (Efectivo = cajaFisicaEsperada, etc.)
+  cajaFisicaEsperada?: number;   // Efectivo físico final
+  transferenciasNetas?: number;  // Transferencias netas
+  totalOperativoTurno?: number;  // Total = E + T
+  cajaContada?: number | null;   // legacy
+  diferenciaCaja?: number | null; // legacy
+  totalAbonos?: number;
+  totalAbonosEfectivo?: number;
+  totalAbonosTransferencia?: number;
   ventas: Venta[];
   gastos: GastoCaja[];
 };

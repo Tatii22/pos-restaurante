@@ -25,12 +25,25 @@ public class ProductoService {
     private final InventarioDiarioRepository inventarioDiarioRepository;
     private final MenuDiarioRepository menuDiarioRepository;
     private final FechaOperativaService fechaOperativaService;
+    private final AuditService auditService;
+    private final ActorResolver actorResolver;
 
     public Producto crear(Producto producto) {
         if (producto == null) {
             throw new BadRequestException("Producto no puede ser nulo");
         }
-        return productoRepository.save(producto);
+        Producto guardado = productoRepository.save(producto);
+        auditService.record(
+                "PRODUCTO_CREADO",
+                "Producto",
+                guardado.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("nombre", null, guardado.getNombre()),
+                auditService.change("precio", null, guardado.getPrecio())
+        );
+        return guardado;
     }
 
     public List<Producto> listar() {
@@ -48,18 +61,44 @@ public class ProductoService {
 
     public Producto actualizar(Long id, Producto producto) {
         Producto existente = obtenerPorId(id);
+        var actor = actorResolver.currentActorOrNull();
+        var precioAnterior = existente.getPrecio();
+        var nombreAnterior = existente.getNombre();
         existente.setNombre(producto.getNombre());
         existente.setPrecio(producto.getPrecio());
         existente.setActivo(producto.getActivo());
         existente.setCategoria(producto.getCategoria());
         existente.setTipoVenta(producto.getTipoVenta());
-        return productoRepository.save(existente);
+        Producto guardado = productoRepository.save(existente);
+        auditService.record(
+                "PRODUCTO_ACTUALIZADO",
+                "Producto",
+                guardado.getId(),
+                actor,
+                null,
+                null,
+                auditService.change("nombre", nombreAnterior, guardado.getNombre()),
+                auditService.change("precio", precioAnterior, guardado.getPrecio()),
+                auditService.change("activo", null, guardado.getActivo())
+        );
+        return guardado;
     }
 
     public void eliminar(Long id) {
         if (id == null) {
             throw new BadRequestException("ID no puede ser nulo");
         }
+        Producto producto = obtenerPorId(id);
+        auditService.record(
+                "PRODUCTO_ELIMINADO",
+                "Producto",
+                producto.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("nombre", producto.getNombre(), null),
+                auditService.change("precio", producto.getPrecio(), null)
+        );
         productoRepository.deleteById(id);
     }
 

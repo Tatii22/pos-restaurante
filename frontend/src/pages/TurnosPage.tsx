@@ -24,6 +24,7 @@ export function TurnosPage() {
   const { turno, setTurno, clearTurno } = useTurnoStore();
   const montoInicial = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const efectivoContado = useCurrencyInput("", { maxDigits: 9, allowZero: false });
+  const transferenciasVerificadas = useCurrencyInput("", { maxDigits: 9, allowZero: true });
   const montoFinal = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const [showSimModal, setShowSimModal] = useState(false);
   const [simResult, setSimResult] = useState<Turno | null>(null);
@@ -58,7 +59,7 @@ export function TurnosPage() {
     }
   });
   const simM = useMutation({
-    mutationFn: () => posApi.simularCierre(efectivoContado.numericValue),
+    mutationFn: () => posApi.simularCierre(efectivoContado.numericValue, transferenciasVerificadas.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       setSimResult(data);
@@ -68,7 +69,7 @@ export function TurnosPage() {
     }
   });
   const closeM = useMutation({
-    mutationFn: () => posApi.cerrarTurno(montoFinal.numericValue),
+    mutationFn: () => posApi.cerrarTurno(efectivoContado.numericValue, transferenciasVerificadas.numericValue),
     onSuccess: (data) => {
       setTurno(data);
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
@@ -94,8 +95,10 @@ export function TurnosPage() {
         <p>Ventas transferencia: <span className="font-semibold text-green-700">{summaryNumber(data?.totalTransferencia)}</span></p>
         <p>Gastos efectivo: <span className="font-semibold text-red-700">{summaryNumber(data?.totalGastosEfectivo)}</span></p>
         <p>Gastos transferencia: <span className="font-semibold text-red-700">{summaryNumber(data?.totalGastosTransferencia)}</span></p>
-        <p>Ganancia efectivo: <span className="font-semibold">{summaryNumber(data?.gananciaEfectivo)}</span></p>
-        <p>Ganancia transferencia: <span className="font-semibold">{summaryNumber(data?.gananciaTransferencia)}</span></p>
+        <p>Ventas realizadas (efectivo): <span className="font-semibold">{summaryNumber(data?.totalEfectivo)}</span></p>
+        <p>Ingresos recibidos (efectivo): <span className="font-semibold">{summaryNumber(data?.gananciaEfectivo)}</span></p>
+        <p>Gastos registrados (efectivo): <span className="font-semibold">{summaryNumber(data?.totalGastosEfectivo)}</span></p>
+        <p>Balance final del turno (efectivo): <span className="font-semibold text-emerald-700">{summaryNumber(data?.gananciaEfectivo)}</span></p>
       </div>
     );
   }
@@ -139,97 +142,234 @@ export function TurnosPage() {
   }
 
   const turnoActual = turnoResumen ?? turno;
-  const esperado = (turnoActual.montoInicial || 0) + (turnoActual.totalVentas || 0) - (turnoActual.totalGastos || 0);
+  const esperado = reporte?.cajaFisicaEsperada ?? turnoActual.esperado ?? (turnoActual.montoInicial || 0);
 
   useEffect(() => {
     if (turno && turno.estado !== "CERRADO") {
-      montoFinal.setValue(String(Math.round(esperado)));
+      const fisico = String(Math.round(esperado));
+      efectivoContado.setValue(fisico);
+      montoFinal.setValue(fisico);
+
+      // Prefill transferencias con lo que el sistema espera (puede ser 0)
+      const transEsperadas = Number(reporte?.transferenciasNetas ?? turnoActual.transferenciasNetas ?? 0);
+      transferenciasVerificadas.setValue(String(Math.round(transEsperadas)));
     }
-  }, [turno?.id, esperado, montoFinal.setValue]);
+  }, [turno?.id, esperado, reporte?.transferenciasNetas, transferenciasVerificadas.setValue, efectivoContado.setValue, montoFinal.setValue]);
+
+  // Cálculos en vivo para el Resumen Total (se actualizan mientras se escribe)
+  const fisicoContado = Number(efectivoContado.numericValue) || 0;
+  const transVerificadas = Number(transferenciasVerificadas.numericValue) || 0;
+  const totalVerificado = fisicoContado + transVerificadas;
+  const totalOperativoEsperado = Number(reporte?.totalOperativoTurno ?? turnoActual.totalOperativoTurno ?? 0);
+  const diferenciaTotal = totalVerificado - totalOperativoEsperado;
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-2xl font-semibold">Turno de Caja</h2>
-      <div className="card grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <p className="text-sm text-pos-muted">Turno</p>
-          <p className="text-xl font-semibold">#{turnoActual.id}</p>
-          <p className="mt-1 text-xs text-pos-muted">Apertura: {new Date(turnoActual.fechaApertura).toLocaleDateString()}</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Estado</p>
-          <p className="text-xl font-semibold">{turnoActual.estado}</p>
-          <p className="mt-1 text-xs text-pos-muted">Reporte: {reporteQ.isFetching ? "actualizando..." : "al dia"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Hora apertura</p>
-          <p className="text-xl font-semibold">{new Date(turnoActual.fechaApertura).toLocaleTimeString()}</p>
-          <p className="mt-1 text-xs text-pos-muted">Cierre: {turnoActual.fechaCierre ? new Date(turnoActual.fechaCierre).toLocaleTimeString() : "-"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Usuario</p>
-          <p className="text-xl font-semibold">{turnoActual.usuario}</p>
-          <p className="mt-1 text-xs text-pos-muted">Base: {summaryNumber(turnoActual.montoInicial)}</p>
+      <h2 className="text-2xl font-semibold tracking-tight">Turno de Caja</h2>
+
+      {/* === CUADRO GENERAL DE LA CAJA - Premium Financial Summary === */}
+      <div className="card rounded-2xl p-7 shadow-sm border border-pos-border/60 bg-white dark:bg-neutral-950 transition-all hover:border-pos-border/80">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-14 lg:divide-x divide-pos-border/30">
+
+          {/* COLUMNA 1 — IDENTIDAD DEL TURNO */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[11px] uppercase tracking-[1.5px] text-pos-muted font-medium">TURNO</span>
+                <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-wide
+                  {turnoActual.estado === 'ABIERTO' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                   turnoActual.estado === 'CERRADO' ? 'bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400' :
+                   'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}">
+                  {turnoActual.estado}
+                </span>
+              </div>
+               <div className="text-[52px] font-medium tracking-tighter text-neutral-900 dark:text-white mt-1">
+                 #{turnoActual.id}
+               </div>
+            </div>
+
+            <div className="space-y-1.5 text-sm">
+              <div>
+                <span className="text-[11px] text-pos-muted">Apertura</span>
+                <div className="font-medium">{new Date(turnoActual.fechaApertura).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+              </div>
+              <div>
+                <span className="text-[11px] text-pos-muted">Cajero</span>
+                <div className="font-medium">{turnoActual.usuario}</div>
+              </div>
+              <div>
+                <span className="text-[11px] text-pos-muted">Base de caja</span>
+                <div className="font-semibold text-lg tabular-nums">{summaryNumber(turnoActual.montoInicial)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* COLUMNA 2 — FLUJO OPERATIVO (Ventas / Gastos) */}
+          <div className="space-y-6 lg:pl-8 lg:pr-6">
+            {/* VENTAS */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-[1.5px] text-emerald-600/90 dark:text-emerald-400 font-semibold">VENTAS</span>
+              </div>
+                <div className="text-[32px] font-medium text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight">
+                  {summaryNumber(turnoActual.totalVentas)}
+                </div>
+              <div className="mt-1.5 text-xs text-pos-muted space-x-3">
+                <span>Efec: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalEfectivo)}</span></span>
+                <span>Transf: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalTransferencia)}</span></span>
+              </div>
+            </div>
+
+            {/* GASTOS */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-[1.5px] text-rose-600/90 dark:text-rose-400 font-semibold">GASTOS</span>
+                <span className="text-[10px] text-pos-muted">{reporte?.gastos?.length || 0} mov.</span>
+              </div>
+               <div className="text-[32px] font-medium text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">
+                 {summaryNumber(turnoActual.totalGastos)}
+               </div>
+              <div className="mt-1.5 text-xs text-pos-muted space-x-3">
+                <span>Efec: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalGastosEfectivo)}</span></span>
+                <span>Transf: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalGastosTransferencia)}</span></span>
+              </div>
+            </div>
+          </div>
+
+           {/* COLUMNA 3 — BALANCE NETO / TOTAL OPERATIVO */}
+           <div className="lg:pl-4">
+            <div className="mb-2">
+              <span className="text-[11px] uppercase tracking-[1.5px] text-neutral-500 dark:text-neutral-400 font-semibold">BALANCE NETO DEL TURNO</span>
+            </div>
+
+            <div>
+              <div className="text-[11px] text-pos-muted">Total (efectivo + transferencias)</div>
+              <div className="text-[32px] font-medium tabular-nums tracking-[-1px] text-neutral-900 dark:text-white">
+                {summaryNumber(reporte?.totalOperativoTurno ?? turnoActual.totalOperativoTurno)}
+              </div>
+              <div className="text-xs text-pos-muted mt-1">Ventas − Gastos (efectivo + transferencias)</div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-pos-border/60 text-xs text-pos-muted">
+              Resumen general del turno.<br />
+              Incluye efectivo y transferencias.
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div className="card grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <p className="text-sm text-pos-muted">Total ventas</p>
-          <p className="text-2xl font-bold text-green-700">{summaryNumber(turnoActual.totalVentas)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Efec. {summaryNumber(reporte?.totalEfectivo)} / Transf. {summaryNumber(reporte?.totalTransferencia)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Neto en caja: {summaryNumber(reporte?.netoEnCaja)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Total gastos</p>
-          <p className="text-2xl font-bold text-red-700">{summaryNumber(turnoActual.totalGastos)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Efec. {summaryNumber(reporte?.totalGastosEfectivo)} / Transf. {summaryNumber(reporte?.totalGastosTransferencia)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Movimientos: {reporte?.gastos?.length || 0}</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Esperado en caja</p>
-          <p className="text-2xl font-bold">{summaryNumber(esperado)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Gan. efec. {summaryNumber(reporte?.gananciaEfectivo)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Base + ventas - gastos</p>
-        </div>
-        <div>
-          <p className="text-sm text-pos-muted">Diferencia</p>
-          <p className="text-2xl font-bold">{summaryNumber(Math.abs(turnoActual.faltante || 0))}</p>
-          <p className="mt-1 text-xs text-pos-muted">Gan. transf. {summaryNumber(reporte?.gananciaTransferencia)}</p>
-          <p className="mt-1 text-xs text-pos-muted">Contado vs esperado</p>
-        </div>
-      </div>
+      {/* === CONCILIACIÓN DUAL === */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* CAJA FÍSICA */}
+        <div className="card p-4 shadow-sm">
+          <div className="mb-3">
+            <h3 className="font-semibold text-lg">Caja Física (Efectivo)</h3>
+            <p className="text-xs text-pos-muted mt-1">Cuenta únicamente el dinero físico real en la caja.</p>
+          </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="card p-4">
-          <h3 className="mb-2 font-semibold">Simular Cierre</h3>
-          <input
-            ref={efectivoContado.inputRef}
-            className="input mb-2"
-            inputMode="decimal"
-            value={efectivoContado.displayValue}
-            onChange={efectivoContado.handleChange}
-            placeholder="Dinero contado"
-          />
-          {efectivoContado.error && <p className="mb-2 text-xs text-orange-700">{efectivoContado.error}</p>}
-          <button className="btn-soft w-full" onClick={() => simM.mutate()} disabled={simM.isPending || !efectivoContado.isValid}>
-            {simM.isPending ? "Simulando..." : "Simular Cierre"}
-          </button>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-pos-muted">Efectivo (sistema)</p>
+              <p className="text-2xl font-semibold">{summaryNumber(esperado)}</p>
+            </div>
+
+            <div>
+              <label className="text-sm text-pos-muted block mb-1">Efectivo físico contado</label>
+              <input
+                ref={efectivoContado.inputRef}
+                className="input transition-colors"
+                inputMode="decimal"
+                value={efectivoContado.displayValue}
+                onChange={efectivoContado.handleChange}
+                placeholder="Ej: 178000"
+              />
+              {efectivoContado.error && <p className="mt-1 text-xs text-orange-700">{efectivoContado.error}</p>}
+            </div>
+
+            <div className="pt-2 border-t">
+              <p className="text-sm text-pos-muted">Diferencia efectivo</p>
+              <p className="text-lg font-medium">
+                {summaryNumber(efectivoContado.numericValue - esperado)}
+              </p>
+            </div>
+          </div>
         </div>
+
+        {/* CAJA VIRTUAL / TRANSFERENCIAS */}
         <div className="card p-4">
-          <h3 className="mb-2 font-semibold">Confirmar Cierre</h3>
-          <input
-            ref={montoFinal.inputRef}
-            className="input mb-2"
-            inputMode="decimal"
-            value={montoFinal.displayValue}
-            onChange={montoFinal.handleChange}
-            placeholder="Monto final contado"
-          />
-          {montoFinal.error && <p className="mb-2 text-xs text-orange-700">{montoFinal.error}</p>}
-          <button className="btn-primary w-full" onClick={() => closeM.mutate()} disabled={closeM.isPending || !montoFinal.isValid}>
-            {closeM.isPending ? "Cerrando..." : "Cerrar Turno"}
-          </button>
+          <div className="mb-2.5">
+            <h3 className="font-semibold text-base">Caja Virtual (Transferencias)</h3>
+            <p className="text-[11px] text-pos-muted mt-0.5 leading-tight">Cuenta únicamente las transferencias verificadas.</p>
+          </div>
+
+          <div className="space-y-2.5">
+            <div>
+              <p className="text-sm text-pos-muted">Transferencias (sistema)</p>
+              <p className="text-2xl font-semibold">{summaryNumber(reporte?.transferenciasNetas ?? turnoActual.transferenciasNetas)}</p>
+            </div>
+
+            <div>
+              <label className="text-sm text-pos-muted block mb-1">Transferencias verificadas</label>
+              <input
+                ref={transferenciasVerificadas.inputRef}
+                className="input transition-colors"
+                inputMode="decimal"
+                value={transferenciasVerificadas.displayValue}
+                onChange={transferenciasVerificadas.handleChange}
+                placeholder="Ej: 60000"
+              />
+              {transferenciasVerificadas.error && <p className="mt-1 text-xs text-orange-700">{transferenciasVerificadas.error}</p>}
+            </div>
+
+            <div className="pt-2 border-t">
+              <p className="text-sm text-pos-muted">Diferencia transferencias</p>
+              <p className="text-lg font-medium">
+                {summaryNumber(transferenciasVerificadas.numericValue - Number(reporte?.transferenciasNetas ?? turnoActual.transferenciasNetas ?? 0))}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* RESUMEN TOTAL */}
+        <div className="card p-4 border border-pos-border/50 bg-neutral-50/60 dark:bg-neutral-900/40">
+          <h3 className="font-semibold text-base mb-2.5 text-neutral-700 dark:text-neutral-300">Resumen Total del Turno</h3>
+
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Total (sistema)</span>
+              <span className="font-semibold">{summaryNumber(reporte?.totalOperativoTurno ?? turnoActual.totalOperativoTurno)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Total verificado</span>
+              <span className="font-semibold">
+                 {summaryNumber(totalVerificado)}
+              </span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
+              <span className="font-semibold">Diferencia total</span>
+               <span className="font-bold text-lg">
+                 {summaryNumber(diferenciaTotal)}
+               </span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              className="btn-soft"
+              onClick={() => simM.mutate()}
+              disabled={simM.isPending || !efectivoContado.isValid}
+            >
+              {simM.isPending ? "Simulando..." : "Simular Cierre"}
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => closeM.mutate()}
+              disabled={closeM.isPending || !efectivoContado.isValid}
+            >
+              {closeM.isPending ? "Cerrando..." : "Cerrar Turno"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -253,12 +393,20 @@ export function TurnosPage() {
             <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
               <p>Turno: <span className="font-semibold">#{simResult.id}</span></p>
               <p>Estado: <span className="font-semibold">{simResult.estado}</span></p>
-              <p>Total ventas: <span className="font-semibold text-green-700">{summaryNumber(simResult.totalVentas)}</span></p>
-              <p>Total gastos: <span className="font-semibold text-red-700">{summaryNumber(simResult.totalGastos)}</span></p>
-              <p>Monto inicial: <span className="font-semibold">{summaryNumber(simResult.montoInicial)}</span></p>
-              <p>Esperado en caja: <span className="font-semibold">{summaryNumber(simResult.esperado)}</span></p>
-              <p>Diferencia: <span className="font-semibold">{summaryNumber(Math.abs(simResult.faltante || 0))}</span></p>
-              <p>Dinero contado: <span className="font-semibold">{summaryNumber(efectivoContado.numericValue)}</span></p>
+
+              <div className="mt-2">
+                <p className="font-semibold">Caja Física</p>
+                <p>Sistema: {summaryNumber(simResult.esperado)} | Contado: {summaryNumber(simResult.efectivoContado)} | Dif: {summaryNumber(simResult.diferenciaEfectivo)}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Caja Virtual</p>
+                <p>Sistema: {summaryNumber(simResult.transferenciasNetas)} | Verificado: {summaryNumber(simResult.transferenciasVerificadas)} | Dif: {summaryNumber(simResult.diferenciaTransferencias)}</p>
+              </div>
+              <div className="border-t pt-2">
+                <p>Total (sistema): <span className="font-semibold">{summaryNumber(simResult.totalOperativoTurno)}</span></p>
+                <p>Total verificado: <span className="font-semibold">{summaryNumber(simResult.totalVerificado)}</span></p>
+                <p className="font-bold">Diferencia total: {summaryNumber(simResult.diferenciaTotal)}</p>
+              </div>
             </div>
             <div className="mt-3">{renderResumenFinanciero(reporte)}</div>
             <div className="mt-3 flex justify-end">
@@ -291,12 +439,20 @@ export function TurnosPage() {
               <p>Turno: <span className="font-semibold">#{closeResult.id}</span></p>
               <p>Estado final: <span className="font-semibold">{closeResult.estado}</span></p>
               <p>Fecha cierre: <span className="font-semibold">{closeResult.fechaCierre ? new Date(closeResult.fechaCierre).toLocaleString() : "-"}</span></p>
-              <p>Monto inicial: <span className="font-semibold">{summaryNumber(closeResult.montoInicial)}</span></p>
-              <p>Total ventas: <span className="font-semibold text-green-700">{summaryNumber(closeResult.totalVentas)}</span></p>
-              <p>Total gastos: <span className="font-semibold text-red-700">{summaryNumber(closeResult.totalGastos)}</span></p>
-              <p>Esperado en caja: <span className="font-semibold">{summaryNumber(closeResult.esperado)}</span></p>
-              <p>Monto final contado: <span className="font-semibold">{summaryNumber(montoFinal.numericValue)}</span></p>
-              <p>Diferencia final: <span className="font-semibold">{summaryNumber(Math.abs(closeResult.faltante || 0))}</span></p>
+
+              <div className="mt-2">
+                <p className="font-semibold">Caja Física</p>
+                <p>Sistema: {summaryNumber(closeResult.esperado)} | Contado: {summaryNumber(closeResult.efectivoContado)} | Dif: {summaryNumber(closeResult.diferenciaEfectivo)}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Caja Virtual</p>
+                <p>Sistema: {summaryNumber(closeResult.transferenciasNetas)} | Verificado: {summaryNumber(closeResult.transferenciasVerificadas)} | Dif: {summaryNumber(closeResult.diferenciaTransferencias)}</p>
+              </div>
+              <div className="border-t pt-2">
+                <p>Total (sistema): <span className="font-semibold">{summaryNumber(closeResult.totalOperativoTurno)}</span></p>
+                <p>Total verificado: <span className="font-semibold">{summaryNumber(closeResult.totalVerificado)}</span></p>
+                <p className="font-bold">Diferencia total del cierre: {summaryNumber(closeResult.diferenciaTotal)}</p>
+              </div>
             </div>
             <div className="mt-3">{renderResumenFinanciero(reporte)}</div>
             <div className="mt-3 flex justify-end">

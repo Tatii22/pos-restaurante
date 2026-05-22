@@ -20,6 +20,18 @@ public class VentaPagoDetalleService {
 
     @Transactional
     public void guardar(Long ventaId, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+        guardar(ventaId, pagoEfectivo, pagoTransferencia, pagoEfectivo, pagoTransferencia, BigDecimal.ZERO);
+    }
+
+    @Transactional
+    public void guardar(
+            Long ventaId,
+            BigDecimal pagoEfectivo,
+            BigDecimal pagoTransferencia,
+            BigDecimal recibidoEfectivo,
+            BigDecimal recibidoTransferencia,
+            BigDecimal cambioEfectivo
+    ) {
         if (ventaId == null) {
             return;
         }
@@ -33,6 +45,9 @@ public class VentaPagoDetalleService {
 
         detalle.setPagoEfectivo(efectivo);
         detalle.setPagoTransferencia(transferencia);
+        detalle.setRecibidoEfectivo(nonNegative(recibidoEfectivo));
+        detalle.setRecibidoTransferencia(nonNegative(recibidoTransferencia));
+        detalle.setCambioEfectivo(nonNegative(cambioEfectivo));
 
         ventaPagoDetalleRepository.save(detalle);
     }

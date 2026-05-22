@@ -1,22 +1,26 @@
 package com.pos.service.report;
+
 import com.pos.dto.report.ReporteCierreTurnoDTO;
 import com.pos.dto.turno.GastoCajaResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.AbonoFiado;
+import com.pos.entity.EstadoVenta;
 import com.pos.entity.GastoCaja;
+import com.pos.entity.MedioFinanciero;
+import com.pos.entity.MovimientoFinancieroTipo;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
+import com.pos.repository.AbonoFiadoRepository;
 import com.pos.repository.GastoCajaRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.VentaRepository;
-import com.pos.repository.AbonoFiadoRepository;
-import com.pos.entity.AbonoFiado;
+import com.pos.service.MovimientoFinancieroService;
 import com.pos.service.VentaService;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.stereotype.Service;
-import com.pos.entity.EstadoVenta;
-
 
 @Service
 public class ReporteTurnoService {
@@ -26,23 +30,25 @@ public class ReporteTurnoService {
     private final GastoCajaRepository gastoCajaRepository;
     private final AbonoFiadoRepository abonoFiadoRepository;
     private final VentaService ventaService;
+    private final MovimientoFinancieroService movimientoFinancieroService;
 
     public ReporteTurnoService(
             TurnoCajaRepository turnoCajaRepository,
             VentaRepository ventaRepository,
             GastoCajaRepository gastoCajaRepository,
             AbonoFiadoRepository abonoFiadoRepository,
-            VentaService ventaService
+            VentaService ventaService,
+            MovimientoFinancieroService movimientoFinancieroService
     ) {
         this.turnoCajaRepository = turnoCajaRepository;
         this.ventaRepository = ventaRepository;
         this.gastoCajaRepository = gastoCajaRepository;
         this.abonoFiadoRepository = abonoFiadoRepository;
         this.ventaService = ventaService;
+        this.movimientoFinancieroService = movimientoFinancieroService;
     }
 
     public ReporteCierreTurnoDTO generarReporteTurno(Long turnoId) {
-
         if (turnoId == null) {
             throw new IllegalArgumentException("Turno ID no puede ser nulo");
         }
@@ -51,9 +57,7 @@ public class ReporteTurnoService {
                 .orElseThrow(() -> new RuntimeException("Turno no encontrado: " + turnoId));
 
         LocalDateTime inicio = turno.getFechaApertura();
-        LocalDateTime fin = turno.getFechaCierre() != null
-                ? turno.getFechaCierre()
-                : LocalDateTime.now();
+        LocalDateTime fin = turno.getFechaCierre() != null ? turno.getFechaCierre() : LocalDateTime.now();
 
         List<Venta> ventas = ventaRepository.findByTurnoAndEstadoAndFechaBetween(
                 turno,
@@ -62,46 +66,37 @@ public class ReporteTurnoService {
                 fin
         );
 
-        List<GastoCaja> gastos =
-                gastoCajaRepository.findByTurnoAndFechaBetween(turno, inicio, fin);
+        List<GastoCaja> gastos = gastoCajaRepository.findByTurnoAndFechaBetween(turno, inicio, fin);
 
-        BigDecimal totalVentas = BigDecimal.ZERO;
-        BigDecimal totalEfectivo = BigDecimal.ZERO;
-        BigDecimal totalTransferencia = BigDecimal.ZERO;
-        BigDecimal totalGastos = BigDecimal.ZERO;
-        BigDecimal totalGastosEfectivo = BigDecimal.ZERO;
-        BigDecimal totalGastosTransferencia = BigDecimal.ZERO;
+        BigDecimal totalVentas = ventas.stream()
+                .map(v -> v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.EFECTIVO,
+                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+        );
+        BigDecimal totalTransferencia = movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.TRANSFERENCIA,
+                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+        );
+        BigDecimal totalGastosEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.EFECTIVO,
+                List.of(MovimientoFinancieroTipo.GASTO_CAJA, MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA)
+        ).abs();
+        BigDecimal totalGastosTransferencia = movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.TRANSFERENCIA,
+                List.of(MovimientoFinancieroTipo.GASTO_CAJA, MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA)
+        ).abs();
+        BigDecimal totalGastos = totalGastosEfectivo.add(totalGastosTransferencia);
+
         BigDecimal totalAbonos = BigDecimal.ZERO;
         BigDecimal totalAbonosEfectivo = BigDecimal.ZERO;
         BigDecimal totalAbonosTransferencia = BigDecimal.ZERO;
-
-        for (Venta venta : ventas) {
-            BigDecimal descuento = obtenerDescuento(venta);
-            BigDecimal totalFinal = venta.getTotal(); // total ya es neto
-            VentaResponseDTO ventaDTO = ventaService.construirRespuesta(venta);
-            totalVentas = totalVentas.add(totalFinal);
-            // No sumar pagos de ventas FIADO (se cuentan como abonos en el turno/periodo)
-            if (venta.getCondicionPago() != com.pos.entity.CondicionPago.FIADO) {
-                totalEfectivo = totalEfectivo.add(
-                        ventaDTO.pagoEfectivo() != null ? ventaDTO.pagoEfectivo() : BigDecimal.ZERO
-                );
-                totalTransferencia = totalTransferencia.add(
-                        ventaDTO.pagoTransferencia() != null ? ventaDTO.pagoTransferencia() : BigDecimal.ZERO
-                );
-            }
-        }
-
-        for (GastoCaja gasto : gastos) {
-            totalGastos = totalGastos.add(gasto.getMonto());
-            totalGastosEfectivo = totalGastosEfectivo.add(
-                    gasto.getMontoEfectivo() != null ? gasto.getMontoEfectivo() : BigDecimal.ZERO
-            );
-            totalGastosTransferencia = totalGastosTransferencia.add(
-                    gasto.getMontoTransferencia() != null ? gasto.getMontoTransferencia() : BigDecimal.ZERO
-            );
-        }
-
-        // Sumar abonos registrados en el turno
         List<AbonoFiado> abonosTurno = abonoFiadoRepository.findByTurnoOrderByFechaAsc(turno);
         for (AbonoFiado a : abonosTurno) {
             BigDecimal monto = a.getMonto() != null ? a.getMonto() : BigDecimal.ZERO;
@@ -125,28 +120,42 @@ public class ReporteTurnoService {
         reporte.setTotalAbonos(totalAbonos);
         reporte.setTotalAbonosEfectivo(totalAbonosEfectivo);
         reporte.setTotalAbonosTransferencia(totalAbonosTransferencia);
-        reporte.setGananciaEfectivo(totalEfectivo.subtract(totalGastosEfectivo));
-        reporte.setGananciaTransferencia(totalTransferencia.subtract(totalGastosTransferencia));
-        // Ajustar neto en caja: incluir abonos en efectivo y restar gastos en efectivo
-        // Excluir saldos pendientes (ventas fiadas no cobradas) del total de ventas en este cálculo
-        // totalEfectivo ya excluye ventas FIADO; totalAbonosEfectivo incluye abonos cobrados en el turno
-        reporte.setNetoEnCaja(totalEfectivo.add(totalAbonosEfectivo).subtract(totalGastos));
+        BigDecimal cajaFisicaEsperada = turno.getMontoInicial()
+                .add(totalEfectivo)
+                .add(totalAbonosEfectivo)
+                .subtract(totalGastosEfectivo);
+        BigDecimal transferenciasNetas = totalTransferencia
+                .add(totalAbonosTransferencia)
+                .subtract(totalGastosTransferencia);
+        BigDecimal totalOperativoTurno = cajaFisicaEsperada.add(transferenciasNetas);
+        BigDecimal cajaContada = turno.getMontoFinal();
+        BigDecimal diferenciaCaja = cajaContada != null ? cajaFisicaEsperada.subtract(cajaContada) : turno.getFaltante();
+
+        reporte.setGananciaEfectivo(cajaFisicaEsperada.subtract(turno.getMontoInicial()));
+        reporte.setGananciaTransferencia(transferenciasNetas);
+        reporte.setNetoEnCaja(cajaFisicaEsperada);
+        reporte.setCajaFisicaEsperada(cajaFisicaEsperada);
+        reporte.setTransferenciasNetas(transferenciasNetas);
+        reporte.setTotalOperativoTurno(totalOperativoTurno);
+        reporte.setCajaContada(cajaContada);
+        reporte.setDiferenciaCaja(diferenciaCaja);
+
+        // Conciliación dual (si ya se cerró el turno)
+        reporte.setEfectivoContado(turno.getEfectivoContado());
+        reporte.setTransferenciasVerificadas(turno.getTransferenciasVerificadas());
+        reporte.setDiferenciaEfectivo(turno.getDiferenciaEfectivo());
+        reporte.setDiferenciaTransferencias(turno.getDiferenciaTransferencias());
+        reporte.setTotalVerificado(turno.getTotalVerificado());
+        reporte.setDiferenciaTotal(turno.getDiferenciaTotal());
+
         reporte.setVentas(mapVentas(ventas));
         reporte.setGastos(mapGastos(gastos));
 
         return reporte;
     }
 
-    private BigDecimal obtenerDescuento(Venta venta) {
-        return venta.getDescuentoValor() != null
-                ? venta.getDescuentoValor()
-                : BigDecimal.ZERO;
-    }
-
     private List<VentaResponseDTO> mapVentas(List<Venta> ventas) {
-        return ventas.stream()
-                .map(ventaService::construirRespuesta)
-                .toList();
+        return ventas.stream().map(ventaService::construirRespuesta).toList();
     }
 
     private List<GastoCajaResponseDTO> mapGastos(List<GastoCaja> gastos) {
@@ -162,4 +171,3 @@ public class ReporteTurnoService {
                 .toList();
     }
 }
-

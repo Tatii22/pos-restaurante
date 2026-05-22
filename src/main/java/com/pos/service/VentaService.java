@@ -43,16 +43,22 @@ public class VentaService {
     private final VentaPagoDetalleService ventaPagoDetalleService;
     private final FechaOperativaService fechaOperativaService;
     private final FiadoService fiadoService;
+    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AuditService auditService;
 
     public Venta obtenerPorId(Long ventaId) {
-        Venta venta = ventaRepository.findByIdWithDetalles(ventaId)
+        return ventaRepository.findByIdWithDetalles(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
-        return reconciliarFormaPagoDesdeDetalle(venta);
     }
 
     public VentaDetalleResponseDTO obtenerDetallePorId(Long ventaId) {
         Venta venta = obtenerPorId(ventaId);
         VentaPagoDetalleDTO pago = ventaPagoDetalleService.obtener(venta.getId());
+        FormaPago formaPago = resolverFormaPago(
+                venta.getFormaPago(),
+                pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
+        );
 
         return new VentaDetalleResponseDTO(
                 venta.getId(),
@@ -67,7 +73,7 @@ public class VentaService {
                 venta.getDescuentoPorcentaje(),
                 venta.getDescuentoValor(),
                 venta.getTotal(),
-                venta.getFormaPago(),
+                formaPago,
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                 venta.getCondicionPago(),
@@ -91,30 +97,34 @@ public class VentaService {
     }
 
     public com.pos.dto.venta.VentaResponseDTO construirRespuesta(Venta venta) {
-        Venta reconciliada = reconciliarFormaPagoDesdeDetalle(venta);
-        VentaPagoDetalleDTO pago = reconciliada.getId() != null
-                ? ventaPagoDetalleService.obtener(reconciliada.getId())
+        VentaPagoDetalleDTO pago = venta.getId() != null
+                ? ventaPagoDetalleService.obtener(venta.getId())
                 : null;
+        FormaPago formaPago = resolverFormaPago(
+                venta.getFormaPago(),
+                pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
+        );
 
         return new com.pos.dto.venta.VentaResponseDTO(
-                reconciliada.getId(),
-                reconciliada.getFecha(),
-                reconciliada.getTipoVenta(),
-                reconciliada.getEstado(),
-                reconciliada.getClienteNombre(),
-                reconciliada.getTelefono(),
-                reconciliada.getDireccion(),
-                reconciliada.getValorDomicilio(),
-                reconciliada.getParaLlevar(),
-                reconciliada.getDescuentoPorcentaje(),
-                reconciliada.getDescuentoValor(),
-                reconciliada.getTotal(),
-                reconciliada.getFormaPago(),
+                venta.getId(),
+                venta.getFecha(),
+                venta.getTipoVenta(),
+                venta.getEstado(),
+                venta.getClienteNombre(),
+                venta.getTelefono(),
+                venta.getDireccion(),
+                venta.getValorDomicilio(),
+                venta.getParaLlevar(),
+                venta.getDescuentoPorcentaje(),
+                venta.getDescuentoValor(),
+                venta.getTotal(),
+                formaPago,
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
-                reconciliada.getCondicionPago(),
-                reconciliada.getSaldoPendiente(),
-                reconciliada.getDeudor() != null ? reconciliada.getDeudor().getId() : null
+                venta.getCondicionPago(),
+                venta.getSaldoPendiente(),
+                venta.getDeudor() != null ? venta.getDeudor().getId() : null
         );
     }
 
@@ -175,14 +185,13 @@ public class VentaService {
                 )
         );
 
-        pageResult.forEach(this::reconciliarFormaPagoDesdeDetalle);
         return pageResult;
     }
 
     @Transactional
     public Venta registrarVenta(VentaCreateDTO dto, Usuario usuario) {
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         if (dto.tipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
@@ -240,6 +249,10 @@ public class VentaService {
         MenuDiario menuActivo = null;
 
         for (VentaDetalleCreateDTO d : dto.detalles()) {
+            if (d.cantidad() == null || d.cantidad() <= 0) {
+                throw new BadRequestException("La cantidad de cada producto debe ser mayor a cero");
+            }
+
             Producto producto = productoRepository.findById(d.productoId())
                     .orElseThrow(() -> new BadRequestException("Producto no existe"));
 
@@ -305,15 +318,14 @@ public class VentaService {
         venta.setSaldoPendiente(esFiado ? total : BigDecimal.ZERO);
         venta.setDetalles(detalles);
 
+        boolean cobraAhora = dto.tipoVenta() == TipoVenta.LOCAL && !esFiado;
+        PagoAplicado pagoAplicado = cobraAhora
+                ? calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, "El pago es insuficiente para registrar la venta")
+                : PagoAplicado.cero();
+
         if (dto.tipoVenta() == TipoVenta.LOCAL) {
             if (!esFiado) {
-                validarPagoSuficiente(
-                        total,
-                        pagoEfectivo,
-                        pagoTransferencia,
-                        "El pago es insuficiente para registrar la venta"
-                );
-                turno.setTotalVentas(turno.getTotalVentas().add(total));
+                turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
                 turnoCajaRepository.save(turno);
             }
         }
@@ -321,12 +333,36 @@ public class VentaService {
         Venta ventaGuardada = ventaRepository.save(venta);
         ventaPagoDetalleService.guardar(
                 ventaGuardada.getId(),
-                esFiado ? BigDecimal.ZERO : pagoEfectivo,
-                esFiado ? BigDecimal.ZERO : pagoTransferencia
+                pagoAplicado.efectivoAplicado(),
+                pagoAplicado.transferenciaAplicada(),
+                pagoAplicado.efectivoRecibido(),
+                pagoAplicado.transferenciaRecibida(),
+                pagoAplicado.cambioEfectivo()
+        );
+        if (esFiado) {
+            movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+        } else if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA) {
+            movimientoFinancieroService.registrarVentaContado(
+                    ventaGuardada,
+                    usuario,
+                    pagoAplicado.efectivoAplicado(),
+                    pagoAplicado.transferenciaAplicada()
+            );
+        }
+        auditService.record(
+                esFiado ? "VENTA_FIADA_REGISTRADA" : "VENTA_REGISTRADA",
+                "Venta",
+                ventaGuardada.getId(),
+                usuario,
+                turno,
+                null,
+                auditService.change("total", null, ventaGuardada.getTotal()),
+                auditService.change("estado", null, ventaGuardada.getEstado()),
+                auditService.change("condicionPago", null, ventaGuardada.getCondicionPago())
         );
 
         if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
-            imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
+            imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
         }
 
         return ventaGuardada;
@@ -377,7 +413,7 @@ public class VentaService {
 
     @Transactional
     public Venta despacharVenta(Long ventaId, VentaDespachoDTO dto, Usuario usuario) {
-        Venta venta = ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findByIdWithDetallesForUpdate(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
         if (venta.getTipoVenta() != TipoVenta.DOMICILIO) {
@@ -401,32 +437,51 @@ public class VentaService {
         BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
 
         boolean esFiado = venta.getCondicionPago() == CondicionPago.FIADO;
-        if (!esFiado) {
-            validarPagoSuficiente(
-                    venta.getTotal(),
-                    pagoEfectivo,
-                    pagoTransferencia,
-                    "El pago es insuficiente para despachar la venta"
-            );
-        }
+        PagoAplicado pagoAplicado = esFiado
+                ? PagoAplicado.cero()
+                : calcularPagoAplicado(venta.getTotal(), pagoEfectivo, pagoTransferencia, "El pago es insuficiente para despachar la venta");
 
         venta.setEstado(EstadoVenta.DESPACHADA);
         venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setSaldoPendiente(esFiado ? venta.getTotal() : BigDecimal.ZERO);
         if (!esFiado) {
-            turno.setTotalVentas(turno.getTotalVentas().add(venta.getTotal()));
+            turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
         }
 
         turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
         ventaPagoDetalleService.guardar(
                 ventaGuardada.getId(),
-                esFiado ? BigDecimal.ZERO : pagoEfectivo,
-                esFiado ? BigDecimal.ZERO : pagoTransferencia
+                pagoAplicado.efectivoAplicado(),
+                pagoAplicado.transferenciaAplicada(),
+                pagoAplicado.efectivoRecibido(),
+                pagoAplicado.transferenciaRecibida(),
+                pagoAplicado.cambioEfectivo()
+        );
+        if (esFiado) {
+            movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+        } else {
+            movimientoFinancieroService.registrarVentaContado(
+                    ventaGuardada,
+                    usuario,
+                    pagoAplicado.efectivoAplicado(),
+                    pagoAplicado.transferenciaAplicada()
+            );
+        }
+        auditService.record(
+                "VENTA_DESPACHADA",
+                "Venta",
+                ventaGuardada.getId(),
+                usuario,
+                turno,
+                null,
+                auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
+                auditService.change("pagoEfectivo", null, pagoAplicado.efectivoAplicado()),
+                auditService.change("pagoTransferencia", null, pagoAplicado.transferenciaAplicada())
         );
 
         if (isFacturaAutoEnabled() && !esFiado) {
-            imprimirFacturaSeguro(ventaGuardada, pagoEfectivo, pagoTransferencia);
+            imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
         }
 
         return ventaGuardada;
@@ -434,7 +489,7 @@ public class VentaService {
 
     @Transactional
     public Venta cancelarVenta(Long ventaId, Usuario usuario) {
-        Venta venta = ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findByIdWithDetallesForUpdate(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
         if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
@@ -453,7 +508,17 @@ public class VentaService {
 
         devolverInventario(venta);
         venta.setEstado(EstadoVenta.CANCELADA);
-        return ventaRepository.save(venta);
+        Venta guardada = ventaRepository.save(venta);
+        auditService.record(
+                "VENTA_CANCELADA",
+                "Venta",
+                guardada.getId(),
+                usuario,
+                guardada.getTurno(),
+                null,
+                auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.CANCELADA)
+        );
+        return guardada;
     }
 
     @Transactional
@@ -463,7 +528,7 @@ public class VentaService {
 
     @Transactional
     public Venta anularVenta(Long ventaId, String motivo, Usuario usuario) {
-        Venta venta = ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findByIdWithDetallesForUpdate(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
         if (venta.getEstado() != EstadoVenta.DESPACHADA) {
@@ -481,8 +546,11 @@ public class VentaService {
         }
 
         TurnoCaja turno = venta.getTurno();
+        VentaPagoDetalleDTO pago = ventaPagoDetalleService.obtener(venta.getId());
+        BigDecimal efectivoAplicado = pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO;
+        BigDecimal transferenciaAplicada = pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO;
         if (venta.getCondicionPago() != CondicionPago.FIADO) {
-            turno.setTotalVentas(turno.getTotalVentas().subtract(venta.getTotal()));
+            turno.setTotalVentas(turno.getTotalVentas().subtract(efectivoAplicado.add(transferenciaAplicada)));
         }
 
         devolverInventario(venta);
@@ -493,12 +561,26 @@ public class VentaService {
         venta.setSaldoPendiente(BigDecimal.ZERO);
 
         turnoCajaRepository.save(turno);
-        return ventaRepository.save(venta);
+        Venta guardada = ventaRepository.save(venta);
+        if (guardada.getCondicionPago() != CondicionPago.FIADO) {
+            movimientoFinancieroService.registrarAnulacionVenta(guardada, usuario, efectivoAplicado, transferenciaAplicada);
+        }
+        auditService.record(
+                "VENTA_ANULADA",
+                "Venta",
+                guardada.getId(),
+                usuario,
+                turno,
+                guardada.getMotivoAnulacion(),
+                auditService.change("estado", EstadoVenta.DESPACHADA, EstadoVenta.ANULADA),
+                auditService.change("saldoPendiente", venta.getTotal(), BigDecimal.ZERO)
+        );
+        return guardada;
     }
 
     @Transactional
     public Venta actualizarValorDomicilio(Long ventaId, BigDecimal valorDomicilio, Usuario usuario) {
-        Venta venta = ventaRepository.findById(ventaId)
+        Venta venta = ventaRepository.findByIdWithDetallesForUpdate(ventaId)
                 .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
 
         validarOperacionEnProcesoDomicilio(venta, usuario);
@@ -507,10 +589,22 @@ public class VentaService {
             throw new BadRequestException("El valor del domicilio es invalido");
         }
 
+        BigDecimal anterior = venta.getValorDomicilio();
         venta.setValorDomicilio(valorDomicilio);
         recalcularTotales(venta);
 
-        return ventaRepository.save(venta);
+        Venta guardada = ventaRepository.save(venta);
+        auditService.record(
+                "VENTA_VALOR_DOMICILIO_ACTUALIZADO",
+                "Venta",
+                guardada.getId(),
+                usuario,
+                guardada.getTurno(),
+                null,
+                auditService.change("valorDomicilio", anterior, valorDomicilio),
+                auditService.change("total", null, guardada.getTotal())
+        );
+        return guardada;
     }
 
     public Venta imprimirFacturaEnProceso(Long ventaId, Usuario usuario) {
@@ -519,6 +613,7 @@ public class VentaService {
 
         validarOperacionEnProcesoDomicilio(venta, usuario);
         imprimirFacturaSeguro(venta);
+        auditService.record("VENTA_FACTURA_REIMPRESA", "Venta", venta.getId(), usuario, venta.getTurno(), null);
         return venta;
     }
 
@@ -528,6 +623,7 @@ public class VentaService {
 
         validarOperacionEnProcesoDomicilio(venta, usuario);
         imprimirTicketCocinaSeguro(venta);
+        auditService.record("VENTA_COCINA_REIMPRESA", "Venta", venta.getId(), usuario, venta.getTurno(), null);
         return venta;
     }
 
@@ -690,25 +786,48 @@ public class VentaService {
         return clean.length() > 255 ? clean.substring(0, 255) : clean;
     }
 
-    private Venta reconciliarFormaPagoDesdeDetalle(Venta venta) {
-        if (venta == null || venta.getId() == null) {
-            return venta;
+    private PagoAplicado calcularPagoAplicado(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia, String mensajeInsuficiente) {
+        BigDecimal totalVenta = total == null ? BigDecimal.ZERO : total;
+        BigDecimal efectivoRecibido = nonNegative(pagoEfectivo);
+        BigDecimal transferenciaRecibida = nonNegative(pagoTransferencia);
+
+        if (transferenciaRecibida.compareTo(totalVenta) > 0) {
+            throw new BadRequestException("La transferencia no puede superar el total de la venta");
         }
 
-        var detalle = ventaPagoDetalleService.obtener(venta.getId());
-        if (detalle == null) {
-            return venta;
+        BigDecimal faltanteDespuesTransferencia = totalVenta.subtract(transferenciaRecibida);
+        if (efectivoRecibido.add(transferenciaRecibida).compareTo(totalVenta) < 0) {
+            throw new BadRequestException(mensajeInsuficiente);
         }
 
-        FormaPago formaCalculada = resolverFormaPago(
-                venta.getFormaPago(),
-                detalle.pagoEfectivo(),
-                detalle.pagoTransferencia()
+        BigDecimal efectivoAplicado = efectivoRecibido.min(faltanteDespuesTransferencia);
+        BigDecimal cambio = efectivoRecibido.subtract(efectivoAplicado);
+        if (cambio.compareTo(totalVenta.max(BigDecimal.valueOf(100000))) > 0) {
+            throw new BadRequestException("El efectivo recibido supera un cambio razonable para la venta");
+        }
+
+        return new PagoAplicado(
+                efectivoAplicado,
+                transferenciaRecibida,
+                efectivoRecibido,
+                transferenciaRecibida,
+                cambio
         );
-        if (formaCalculada != venta.getFormaPago()) {
-            venta.setFormaPago(formaCalculada);
-            ventaRepository.save(venta);
+    }
+
+    private record PagoAplicado(
+            BigDecimal efectivoAplicado,
+            BigDecimal transferenciaAplicada,
+            BigDecimal efectivoRecibido,
+            BigDecimal transferenciaRecibida,
+            BigDecimal cambioEfectivo
+    ) {
+        static PagoAplicado cero() {
+            return new PagoAplicado(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
-        return venta;
+
+        BigDecimal totalAplicado() {
+            return efectivoAplicado.add(transferenciaAplicada);
+        }
     }
 }

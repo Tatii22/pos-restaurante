@@ -18,6 +18,7 @@ public class MenuDiarioService {
     private final MenuDiarioRepository menuDiarioRepository;
     private final InventarioDiarioRepository inventarioDiarioRepository;
     private final FechaOperativaService fechaOperativaService;
+    private final AuditService auditService;
 
     @Transactional
     public MenuDiario crearMenuHoy(Usuario usuario) {
@@ -47,5 +48,34 @@ public class MenuDiarioService {
         return menuDiarioRepository
                 .findByFechaAndActivoTrue(fechaOperativaService.obtenerFechaOperativa())
                 .orElseThrow(() -> new BadRequestException("No hay menu activo hoy"));
+    }
+
+    @Transactional
+    public void reiniciarMenuParaNuevoTurno(Usuario usuario) {
+        LocalDate hoy = fechaOperativaService.obtenerFechaOperativa();
+        MenuDiario menu = menuDiarioRepository.findByFechaAndActivoTrue(hoy)
+                .orElseGet(() -> menuDiarioRepository.save(MenuDiario.builder()
+                        .fecha(hoy)
+                        .usuario(usuario)
+                        .activo(true)
+                        .build()));
+
+        var inventarios = inventarioDiarioRepository.findByMenuDiarioWithProducto(menu);
+        for (var inv : inventarios) {
+            Integer stockAnterior = inv.getStockActual();
+            inv.setStockActual(inv.getStockInicial());
+            inv.setAgotado(inv.getStockInicial() <= 0);
+            inventarioDiarioRepository.save(inv);
+            auditService.record(
+                    "MENU_TURNO_REINICIADO",
+                    "InventarioDiario",
+                    inv.getId(),
+                    usuario,
+                    null,
+                    "Apertura de turno",
+                    auditService.change("stockActual", stockAnterior, inv.getStockActual()),
+                    auditService.change("agotado", null, inv.getAgotado())
+            );
+        }
     }
 }

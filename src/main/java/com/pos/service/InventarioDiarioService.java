@@ -22,6 +22,8 @@ public class InventarioDiarioService {
     private final MenuDiarioRepository menuDiarioRepository;
     private final ProductoService productoService;
     private final FechaOperativaService fechaOperativaService;
+    private final AuditService auditService;
+    private final ActorResolver actorResolver;
 
     public InventarioDiario crearInventario(
             Long productoId,
@@ -51,7 +53,18 @@ public class InventarioDiarioService {
                 .agotado(stockInicial <= 0)
                 .build();
 
-        return inventarioRepository.save(inv);
+        InventarioDiario guardado = inventarioRepository.save(inv);
+        auditService.record(
+                "INVENTARIO_CREADO",
+                "InventarioDiario",
+                guardado.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("stockInicial", null, guardado.getStockInicial()),
+                auditService.change("stockActual", null, guardado.getStockActual())
+        );
+        return guardado;
     }
 
     public List<InventarioDiario> listarHoy() {
@@ -79,12 +92,24 @@ public class InventarioDiarioService {
                         new BadRequestException("Inventario no encontrado")
                 );
 
+        Integer stockAnterior = inv.getStockActual();
         inv.setStockActual(inv.getStockActual() + cantidad);
 
         inv.setAgotado(inv.getStockActual() <= 0);
 
 
-        return inventarioRepository.save(inv);
+        InventarioDiario guardado = inventarioRepository.save(inv);
+        auditService.record(
+                "INVENTARIO_REABASTECIDO",
+                "InventarioDiario",
+                guardado.getId(),
+                actorResolver.currentActorOrNull(),
+                null,
+                null,
+                auditService.change("stockActual", stockAnterior, guardado.getStockActual()),
+                auditService.change("cantidad", null, cantidad)
+        );
+        return guardado;
     }
 }
 

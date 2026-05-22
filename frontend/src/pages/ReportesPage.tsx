@@ -90,7 +90,7 @@ export function ReportesPage() {
       datasets: [
         {
           label: "COP",
-          data: [Number(r.totalBruto || 0), Number(r.totalDescuentos || 0), Number(r.totalNeto || 0)],
+          data: [Number(r.totalBruto || 0), Number(r.totalDescuentos || 0), Number(r.recaudoReal || 0)],
           backgroundColor: ["#0ea5e9", "#f59e0b", "#16a34a"]
         }
       ]
@@ -156,7 +156,8 @@ export function ReportesPage() {
               <div><p className="text-sm text-pos-muted">Total ventas (mes)</p><p className="font-semibold">{reportMesQ.data.totalVentas}</p></div>
               <div><p className="text-sm text-pos-muted">Bruto (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.totalBruto || 0)}</p></div>
               <div><p className="text-sm text-pos-muted">Descuentos (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.totalDescuentos || 0)}</p></div>
-              <div><p className="text-sm text-pos-muted">Neto (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.totalNeto || 0)}</p></div>
+              <div><p className="text-sm text-pos-muted">Recaudo real (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.recaudoReal || 0)}</p></div>
+              <div><p className="text-sm text-pos-muted">Cartera generada</p><p className="font-semibold">{money.format(reportMesQ.data.carteraGenerada || 0)}</p></div>
             </div>
           )}
           {rentMesQ.data && (
@@ -170,18 +171,22 @@ export function ReportesPage() {
 
       {tab === "Rentabilidad" && (
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="card p-4">
-            <p className="text-sm text-pos-muted">Ingresos (ventas)</p>
-            <p className="text-2xl font-bold">{money.format(rentQ.data?.totalVentas || 0)}</p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-pos-muted">Gastos globales</p>
-            <p className="text-2xl font-bold">{money.format(rentQ.data?.totalGastos || 0)}</p>
-          </div>
-          <div className="card p-4">
-            <p className="text-sm text-pos-muted">Ganancia neta</p>
-            <p className="text-2xl font-bold">{money.format(rentQ.data?.gananciaNeta || 0)}</p>
-          </div>
+           <div className="card p-4">
+             <p className="text-sm text-pos-muted">Ventas realizadas</p>
+             <p className="text-2xl font-bold">{money.format(rentQ.data?.totalVentas || 0)}</p>
+           </div>
+           <div className="card p-4">
+             <p className="text-sm text-pos-muted">Ingresos recibidos</p>
+             <p className="text-2xl font-bold">{money.format(rentQ.data?.recaudoReal || 0)}</p>
+           </div>
+           <div className="card p-4">
+             <p className="text-sm text-pos-muted">Gastos registrados</p>
+             <p className="text-2xl font-bold">{money.format(rentQ.data?.totalGastos || 0)}</p>
+           </div>
+           <div className="card p-4 border-2 border-emerald-300 bg-emerald-50">
+             <p className="text-sm text-emerald-700 font-medium">Balance final del turno</p>
+             <p className="text-3xl font-bold text-emerald-800">{money.format(rentQ.data?.gananciaNeta || 0)}</p>
+           </div>
           <div className="card p-4">
             <p className="text-sm text-pos-muted">Margen neto (%)</p>
             <p className="text-2xl font-bold">{margen}%</p>
@@ -209,68 +214,86 @@ export function ReportesPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-pos-muted">Faltante acumulado</p>
+              <p className="text-sm text-pos-muted">Total neto operativo acumulado</p>
               <p className="font-semibold">
-                {money.format((turnosQ.data || []).reduce((acc, t) => acc + Number(t.faltante || 0), 0))}
+                {money.format((turnosQ.data || []).reduce((acc, t) => acc + Number(t.totalOperativoNeto || 0), 0))}
               </p>
             </div>
           </div>
 
-          <div className="card p-4">
+            <div className="card p-4">
+            <div className="mb-3 text-sm font-medium text-pos-muted">Histórico de turnos · Métricas operativas reales</div>
             {turnosQ.isLoading && <p className="text-sm text-pos-muted">Cargando turnos...</p>}
             {!turnosQ.isLoading && (turnosQ.data?.length || 0) === 0 && (
               <p className="text-sm text-pos-muted">No hay turnos en ese rango.</p>
             )}
             {(turnosQ.data?.length || 0) > 0 && (
               <div className="grid gap-2 md:hidden">
-                {(turnosQ.data || []).map((t) => (
-                  <div key={t.id} className="rounded-xl border border-pos-border p-3">
-                    <p className="font-semibold">Turno #{t.id}</p>
-                    <p className="text-xs text-pos-muted">Usuario: {t.usuario}</p>
-                    <p className="text-xs text-pos-muted">Estado: {t.estado}</p>
-                    <p className="text-xs">Apertura: {new Date(t.fechaApertura).toLocaleString()}</p>
-                    <p className="text-xs">Cierre: {t.fechaCierre ? new Date(t.fechaCierre).toLocaleString() : "-"}</p>
-                    <p className="text-xs">Inicial: {money.format(t.montoInicial || 0)}</p>
-                    <p className="text-xs">Ventas: {money.format(t.totalVentas || 0)}</p>
-                    <p className="text-xs">Gastos: {money.format(t.totalGastos || 0)}</p>
-                    <p className="text-xs">Esperado: {money.format(t.esperado || 0)}</p>
-                    <p className="text-xs">Faltante: {money.format(t.faltante || 0)}</p>
-                  </div>
-                ))}
+                {(turnosQ.data || []).map((t) => {
+                  const d = Number(t.diferenciaTotal || 0);
+                  const dClass = d === 0 ? "text-emerald-600" : d < 0 ? "text-red-600" : "text-amber-600";
+                  return (
+                    <div key={t.id} className="rounded-xl border border-pos-border p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Turno #{t.id}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-pos-muted">{t.estado}</span>
+                      </div>
+                      <p className="text-xs text-pos-muted">{t.usuario} · {new Date(t.fechaApertura).toLocaleString()}{t.fechaCierre ? ` → ${new Date(t.fechaCierre).toLocaleString()}` : ""}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div>Ventas: <span className="font-medium">{money.format(t.totalVentas || 0)}</span></div>
+                        <div>Gastos: <span className="font-medium">{money.format(t.totalGastos || 0)}</span></div>
+                        <div>Efectivo (neto op.): <span className="font-medium">{money.format(t.efectivoOperativo || 0)}</span></div>
+                        <div>Transferencias (neto op.): <span className="font-medium">{money.format(t.transferenciasOperativas || 0)}</span></div>
+                        <div>Total operativo: <span className="font-medium">{money.format(t.totalOperativoNeto || 0)}</span></div>
+                        <div className="col-span-2">Diferencia (cierre): <span className={`font-semibold ${dClass}`}>{money.format(d)}</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             {(turnosQ.data?.length || 0) > 0 && (
               <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1080px] text-sm">
                 <thead>
-                  <tr className="border-b border-pos-border">
-                    <th className="p-2 text-left">Turno</th>
+                  <tr className="border-b border-pos-border text-xs uppercase tracking-wider text-pos-muted">
+                    <th className="p-2 text-left w-12">Turno</th>
                     <th className="p-2 text-left">Apertura</th>
                     <th className="p-2 text-left">Cierre</th>
                     <th className="p-2 text-left">Usuario</th>
                     <th className="p-2 text-left">Estado</th>
-                    <th className="p-2 text-left">Monto inicial</th>
-                    <th className="p-2 text-left">Total ventas</th>
-                    <th className="p-2 text-left">Total gastos</th>
-                    <th className="p-2 text-left">Esperado</th>
-                    <th className="p-2 text-left">Faltante</th>
+                    <th className="p-2 text-right">Total ventas</th>
+                    <th className="p-2 text-right">Total gastos</th>
+                    <th className="p-2 text-right">Efectivo</th>
+                    <th className="p-2 text-right">Transferencias</th>
+                    <th className="p-2 text-right">Total</th>
+                    <th className="p-2 text-right">Diferencia</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(turnosQ.data || []).map((t) => (
-                    <tr key={t.id} className="border-b border-pos-border/70">
-                      <td className="p-2">#{t.id}</td>
-                      <td className="p-2">{new Date(t.fechaApertura).toLocaleString()}</td>
-                      <td className="p-2">{t.fechaCierre ? new Date(t.fechaCierre).toLocaleString() : "-"}</td>
-                      <td className="p-2">{t.usuario}</td>
-                      <td className="p-2">{t.estado}</td>
-                      <td className="p-2">{money.format(t.montoInicial || 0)}</td>
-                      <td className="p-2">{money.format(t.totalVentas || 0)}</td>
-                      <td className="p-2">{money.format(t.totalGastos || 0)}</td>
-                      <td className="p-2">{money.format(t.esperado || 0)}</td>
-                      <td className="p-2">{money.format(t.faltante || 0)}</td>
-                    </tr>
-                  ))}
+                  {(turnosQ.data || []).map((t) => {
+                    const dif = Number(t.diferenciaTotal || 0);
+                    const difClass = dif === 0 ? "text-emerald-600" : dif < 0 ? "text-red-600" : "text-amber-600";
+                    return (
+                      <tr key={t.id} className="border-b border-pos-border/70 hover:bg-pos-bg/50">
+                        <td className="p-2 font-medium">#{t.id}</td>
+                        <td className="p-2 text-xs">{new Date(t.fechaApertura).toLocaleString()}</td>
+                        <td className="p-2 text-xs">{t.fechaCierre ? new Date(t.fechaCierre).toLocaleString() : "—"}</td>
+                        <td className="p-2 text-xs">{t.usuario}</td>
+                        <td className="p-2">
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] ${t.estado === "CERRADO" ? "bg-emerald-100 text-emerald-700" : t.estado === "ABIERTO" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                            {t.estado}
+                          </span>
+                        </td>
+                        <td className="p-2 text-right tabular-nums">{money.format(t.totalVentas || 0)}</td>
+                        <td className="p-2 text-right tabular-nums">{money.format(t.totalGastos || 0)}</td>
+                        <td className="p-2 text-right tabular-nums">{money.format(t.efectivoOperativo || 0)}</td>
+                        <td className="p-2 text-right tabular-nums">{money.format(t.transferenciasOperativas || 0)}</td>
+                        <td className="p-2 text-right tabular-nums font-medium">{money.format(t.totalOperativoNeto || 0)}</td>
+                        <td className={`p-2 text-right tabular-nums font-semibold ${difClass}`}>{money.format(dif)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               </div>

@@ -47,6 +47,15 @@ public class VentaPagoDetalle {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal pagoTransferencia;
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal recibidoEfectivo;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal recibidoTransferencia;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal cambioEfectivo;
+
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;

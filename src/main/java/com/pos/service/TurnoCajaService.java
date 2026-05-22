@@ -2,6 +2,8 @@ package com.pos.service;
 
 import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
+import com.pos.entity.MedioFinanciero;
+import com.pos.entity.MovimientoFinancieroTipo;
 import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
@@ -25,8 +27,11 @@ public class TurnoCajaService {
     private final TurnoCajaRepository turnoCajaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VentaRepository ventaRepository;
+    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AuditService auditService;
+    private final MenuDiarioService menuDiarioService;
     @Transactional
-    public TurnoCaja abrirTurno(BigDecimal montoInicial, String username) {
+    public synchronized TurnoCaja abrirTurno(BigDecimal montoInicial, String username) {
 
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("Usuario no existe"));
@@ -39,6 +44,9 @@ public class TurnoCajaService {
                 List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))) {
             throw new BadRequestException("Ya existe un turno activo");
         }
+        if (montoInicial == null || montoInicial.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("El monto inicial no puede ser negativo");
+        }
         TurnoCaja turno = TurnoCaja.builder()
                 .fechaApertura(LocalDateTime.now())
                 .montoInicial(montoInicial)
@@ -48,43 +56,89 @@ public class TurnoCajaService {
                 .usuario(usuario)
                 .build();
 
-        return turnoCajaRepository.save(turno);
+        TurnoCaja guardado = turnoCajaRepository.save(turno);
+        menuDiarioService.reiniciarMenuParaNuevoTurno(usuario);
+        decorarMetricasCierre(guardado);
+        auditService.record(
+                "TURNO_ABIERTO",
+                "TurnoCaja",
+                guardado.getId(),
+                usuario,
+                guardado,
+                null,
+                auditService.change("montoInicial", null, guardado.getMontoInicial()),
+                auditService.change("estado", null, guardado.getEstado())
+        );
+        return guardado;
     }
 
-    public TurnoCaja simularCierre(BigDecimal efectivoContado, Usuario usuario) {
+    @Transactional
+    public TurnoCaja simularCierre(BigDecimal efectivoContado, BigDecimal transferenciasVerificadas, Usuario usuario) {
 
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede simular cierre");
         }
 
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
 
-        BigDecimal totalVentas = turno.getTotalVentas() != null ? turno.getTotalVentas() : BigDecimal.ZERO;
+        BigDecimal esperadoFisico = calcularEfectivoEsperado(turno);
+        BigDecimal transferenciasNetas = calcularTransferenciasNetas(turno);
+        BigDecimal totalOperativo = esperadoFisico.add(transferenciasNetas);
 
-        BigDecimal esperado = turno.getMontoInicial()
-                .add(totalVentas)
-                .subtract(turno.getTotalGastos());
+        BigDecimal diferenciaEfectivo = efectivoContado.subtract(esperadoFisico);
+        BigDecimal diferenciaTransferencias = transferenciasVerificadas.subtract(transferenciasNetas);
+        BigDecimal totalVerificado = efectivoContado.add(transferenciasVerificadas);
+        BigDecimal diferenciaTotal = totalVerificado.subtract(totalOperativo);
 
-        BigDecimal faltante = esperado.subtract(efectivoContado);
+        // Mantener compatibilidad con campo legacy "faltante" (diferencia físico)
+        BigDecimal faltanteFisico = diferenciaEfectivo;
 
-        turno.setEsperado(esperado);
-        turno.setFaltante(faltante);
+        turno.setEsperado(esperadoFisico);
+        turno.setFaltante(faltanteFisico);
+        turno.setTransferenciasNetas(transferenciasNetas);
+        turno.setTotalOperativoTurno(totalOperativo);
+
+        // Conciliación dual
+        turno.setEfectivoContado(efectivoContado);
+        turno.setTransferenciasVerificadas(transferenciasVerificadas);
+        turno.setDiferenciaEfectivo(diferenciaEfectivo);
+        turno.setDiferenciaTransferencias(diferenciaTransferencias);
+        turno.setTotalVerificado(totalVerificado);
+        turno.setDiferenciaTotal(diferenciaTotal);
+
         // La simulacion solo recalcula cifras; el turno debe seguir operativo.
         turno.setEstado(EstadoTurno.ABIERTO);
 
-        return turnoCajaRepository.save(turno);
+        TurnoCaja guardado = turnoCajaRepository.save(turno);
+        decorarMetricasCierre(guardado);
+
+        auditService.record(
+                "TURNO_CIERRE_SIMULADO",
+                "TurnoCaja",
+                guardado.getId(),
+                usuario,
+                guardado,
+                null,
+                auditService.change("efectivoContado", null, efectivoContado),
+                auditService.change("transferenciasVerificadas", null, transferenciasVerificadas),
+                auditService.change("diferenciaEfectivo", null, diferenciaEfectivo),
+                auditService.change("diferenciaTransferencias", null, diferenciaTransferencias),
+                auditService.change("diferenciaTotal", null, diferenciaTotal)
+        );
+        return guardado;
     }
 
-    public TurnoCaja cerrarTurno(BigDecimal montoFinal, Usuario usuario) {
+    @Transactional
+    public TurnoCaja cerrarTurno(BigDecimal efectivoContado, BigDecimal transferenciasVerificadas, Usuario usuario) {
 
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede cerrar turno");
         }
 
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno para cerrar"));
 
         boolean hayDomiciliosPendientes = ventaRepository.existsByTurnoAndTipoVentaAndEstado(
@@ -94,26 +148,66 @@ public class TurnoCajaService {
             throw new BadRequestException("No puedes cerrar turno: hay domicilios del turno pendientes por despachar");
         }
 
-        BigDecimal totalVentas = turno.getTotalVentas() != null ? turno.getTotalVentas() : BigDecimal.ZERO;
+        if (efectivoContado == null || efectivoContado.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("El efectivo físico contado no puede ser negativo");
+        }
+        if (transferenciasVerificadas == null || transferenciasVerificadas.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Las transferencias verificadas no pueden ser negativas");
+        }
 
-        BigDecimal esperado = turno.getMontoInicial()
-                .add(totalVentas)
-                .subtract(turno.getTotalGastos());
+        BigDecimal esperadoFisico = calcularEfectivoEsperado(turno);
+        BigDecimal transferenciasNetas = calcularTransferenciasNetas(turno);
+        BigDecimal totalOperativo = esperadoFisico.add(transferenciasNetas);
 
-        BigDecimal faltante = esperado.subtract(montoFinal);
+        BigDecimal diferenciaEfectivo = efectivoContado.subtract(esperadoFisico);
+        BigDecimal diferenciaTransferencias = transferenciasVerificadas.subtract(transferenciasNetas);
+        BigDecimal totalVerificado = efectivoContado.add(transferenciasVerificadas);
+        BigDecimal diferenciaTotal = totalVerificado.subtract(totalOperativo);
 
-        turno.setEsperado(esperado);
-        turno.setMontoFinal(montoFinal);
-        turno.setFaltante(faltante);
+        // Compatibilidad legacy
+        BigDecimal faltanteFisico = diferenciaEfectivo;
+
+        turno.setEsperado(esperadoFisico);
+        turno.setMontoFinal(efectivoContado); // legacy: usamos el físico como "montoFinal" para reportes antiguos
+        turno.setFaltante(faltanteFisico);
+        turno.setTransferenciasNetas(transferenciasNetas);
+        turno.setTotalOperativoTurno(totalOperativo);
+
+        // Conciliación dual
+        turno.setEfectivoContado(efectivoContado);
+        turno.setTransferenciasVerificadas(transferenciasVerificadas);
+        turno.setDiferenciaEfectivo(diferenciaEfectivo);
+        turno.setDiferenciaTransferencias(diferenciaTransferencias);
+        turno.setTotalVerificado(totalVerificado);
+        turno.setDiferenciaTotal(diferenciaTotal);
+
         turno.setFechaCierre(LocalDateTime.now());
         turno.setEstado(EstadoTurno.CERRADO);
 
-        return turnoCajaRepository.save(turno);
+        TurnoCaja guardado = turnoCajaRepository.save(turno);
+        decorarMetricasCierre(guardado);
+
+        auditService.record(
+                "TURNO_CERRADO",
+                "TurnoCaja",
+                guardado.getId(),
+                usuario,
+                guardado,
+                null,
+                auditService.change("estado", EstadoTurno.ABIERTO, EstadoTurno.CERRADO),
+                auditService.change("efectivoContado", null, efectivoContado),
+                auditService.change("transferenciasVerificadas", null, transferenciasVerificadas),
+                auditService.change("diferenciaEfectivo", null, diferenciaEfectivo),
+                auditService.change("diferenciaTransferencias", null, diferenciaTransferencias),
+                auditService.change("diferenciaTotal", null, diferenciaTotal)
+        );
+        return guardado;
     }
 
     public TurnoCaja obtenerTurnoActivo() {
         return turnoCajaRepository
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .map(this::decorarMetricasCierre)
                 .orElse(null);
     }
 
@@ -133,6 +227,50 @@ public class TurnoCajaService {
 
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
-        return turnoCajaRepository.findByFechaAperturaBetweenOrderByFechaAperturaDesc(inicio, fin);
+        return turnoCajaRepository.findByFechaAperturaBetweenOrderByFechaAperturaDesc(inicio, fin)
+                .stream()
+                .map(this::decorarMetricasCierre)
+                .toList();
+    }
+
+    private BigDecimal calcularEfectivoEsperado(TurnoCaja turno) {
+        BigDecimal movimientosEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.EFECTIVO,
+                List.of(
+                        MovimientoFinancieroTipo.VENTA_CONTADO,
+                        MovimientoFinancieroTipo.ABONO_FIADO,
+                        MovimientoFinancieroTipo.GASTO_CAJA,
+                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
+                        MovimientoFinancieroTipo.ANULACION_VENTA
+                )
+        );
+        return turno.getMontoInicial().add(movimientosEfectivo);
+    }
+
+    private BigDecimal calcularTransferenciasNetas(TurnoCaja turno) {
+        return movimientoFinancieroService.sumarTurnoMedioTipos(
+                turno,
+                MedioFinanciero.TRANSFERENCIA,
+                List.of(
+                        MovimientoFinancieroTipo.VENTA_CONTADO,
+                        MovimientoFinancieroTipo.ABONO_FIADO,
+                        MovimientoFinancieroTipo.GASTO_CAJA,
+                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
+                        MovimientoFinancieroTipo.ANULACION_VENTA
+                )
+        );
+    }
+
+    private TurnoCaja decorarMetricasCierre(TurnoCaja turno) {
+        if (turno == null || turno.getId() == null) {
+            return turno;
+        }
+        BigDecimal cajaFisica = calcularEfectivoEsperado(turno);
+        BigDecimal transferencias = calcularTransferenciasNetas(turno);
+        turno.setEsperado(turno.getEsperado() != null ? turno.getEsperado() : cajaFisica);
+        turno.setTransferenciasNetas(transferencias);
+        turno.setTotalOperativoTurno(cajaFisica.add(transferencias));
+        return turno;
     }
 }

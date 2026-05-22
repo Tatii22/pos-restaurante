@@ -8,7 +8,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -19,33 +18,62 @@ public class ExcelRentabilidadExporter {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public byte[] exportar(ReporteRentabilidadDTO reporte) {
-
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             Sheet sheet = workbook.createSheet("Rentabilidad");
             int fila = 0;
 
-            // ----------------- ESTILO MONEDA -----------------
-            CellStyle estiloMoneda = workbook.createCellStyle();
-            DataFormat format = workbook.createDataFormat();
-            estiloMoneda.setDataFormat(format.getFormat("$#,##0.00"));
+            ExcelReportHelper.addTitle(sheet, fila++, "REPORTE DE RENTABILIDAD");
+            ExcelReportHelper.addSubtitle(sheet, fila++,
+                    "Período: " + reporte.getFechaInicio() + " → " + reporte.getFechaFin());
 
-            // ----------------- TOTALES -----------------
-            fila = crearFilaTotal(sheet, fila, "Total Ventas", reporte.getTotalVentas(), estiloMoneda);
-            fila = crearFilaTotal(sheet, fila, "Total Gastos", reporte.getTotalGastos(), estiloMoneda);
-            fila = crearFilaTotal(sheet, fila, "Ganancia Neta", reporte.getGananciaNeta(), estiloMoneda);
             fila++;
 
-            // ----------------- TABLA VENTAS -----------------
-            fila = crearTablaVentas(sheet, fila, reporte.getVentas(), estiloMoneda);
+            CellStyle money = ExcelReportHelper.createMoneyStyle(workbook);
+            CellStyle header = ExcelReportHelper.createHeaderStyle(workbook);
+
+            // KPIs - lenguaje humano premium
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ventas realizadas", reporte.getTotalVentas(), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ingresos recibidos", reporte.getRecaudoReal(), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos(), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", reporte.getGananciaNeta(), money, true); // destacado
+
             fila++;
 
-            // ----------------- TABLA GASTOS -----------------
-            crearTablaGastos(sheet, fila, reporte.getGastos(), estiloMoneda);
+            // Tabla Ventas
+            String[] colsV = {"#", "Fecha", "Tipo", "Estado", "Cliente", "Total", "Forma Pago"};
+            ExcelReportHelper.addTableHeader(sheet, fila++, colsV, header);
+            int idx = 1;
+            for (VentaResponseDTO v : reporte.getVentas()) {
+                Row r = sheet.createRow(fila++);
+                r.createCell(0).setCellValue(idx++);
+                r.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
+                r.createCell(2).setCellValue(v.tipoVenta().name());
+                r.createCell(3).setCellValue(v.estado().name());
+                r.createCell(4).setCellValue(v.clienteNombre() != null ? v.clienteNombre() : "-");
+                Cell t = r.createCell(5);
+                ExcelReportHelper.applyMoneyToCell(t, v.total(), money);
+                r.createCell(6).setCellValue(v.formaPago().name());
+            }
 
-            // Auto-ajustar columnas
-            for (int i = 0; i < 7; i++) sheet.autoSizeColumn(i);
+            fila++;
+
+            // Tabla Gastos
+            String[] colsG = {"#", "Fecha", "Descripción", "Valor"};
+            ExcelReportHelper.addTableHeader(sheet, fila++, colsG, header);
+            idx = 1;
+            for (GastoResponseDTO g : reporte.getGastos()) {
+                Row r = sheet.createRow(fila++);
+                r.createCell(0).setCellValue(idx++);
+                r.createCell(1).setCellValue(g.getFecha().format(FECHA_FORMATO));
+                r.createCell(2).setCellValue(g.getDescripcion());
+                Cell val = r.createCell(3);
+                ExcelReportHelper.applyMoneyToCell(val, g.getMonto(), money);
+            }
+
+            ExcelReportHelper.autoSizeAll(sheet, 7);
+            ExcelReportHelper.addFooter(sheet, fila + 2, "POS Restaurante");
 
             workbook.write(baos);
             return baos.toByteArray();
@@ -53,88 +81,5 @@ public class ExcelRentabilidadExporter {
         } catch (Exception e) {
             throw new RuntimeException("Error generando Excel de Rentabilidad", e);
         }
-    }
-
-    // =====================================================
-    // MÉTODOS PRIVADOS
-    // =====================================================
-
-    private int crearFilaTotal(
-            Sheet sheet,
-            int fila,
-            String etiqueta,
-            BigDecimal valor,
-            CellStyle estiloMoneda
-    ) {
-        Row row = sheet.createRow(fila++);
-        row.createCell(0).setCellValue(etiqueta);
-
-        Cell cell = row.createCell(1);
-        cell.setCellValue(valor != null ? valor.doubleValue() : 0.0);
-        cell.setCellStyle(estiloMoneda);
-
-        return fila;
-    }
-
-    private int crearTablaVentas(
-            Sheet sheet,
-            int fila,
-            List<VentaResponseDTO> ventas,
-            CellStyle estiloMoneda
-    ) {
-        String[] columnas = {
-                "ID", "Fecha", "Tipo", "Estado", "Cliente", "Total", "Forma Pago"
-        };
-
-        Row header = sheet.createRow(fila++);
-        for (int i = 0; i < columnas.length; i++) {
-            header.createCell(i).setCellValue(columnas[i]);
-        }
-        int index = 1;
-        for (VentaResponseDTO v : ventas) {
-            Row row = sheet.createRow(fila++);
-            row.createCell(0).setCellValue(index++);
-            row.createCell(1).setCellValue(v.fecha().format(FECHA_FORMATO));
-            row.createCell(2).setCellValue(v.tipoVenta().name());
-            row.createCell(3).setCellValue(v.estado().name());
-            row.createCell(4).setCellValue(
-                    v.clienteNombre() != null ? v.clienteNombre() : "-"
-            );
-
-            Cell total = row.createCell(5);
-            total.setCellValue(v.total().doubleValue());
-            total.setCellStyle(estiloMoneda);
-
-            row.createCell(6).setCellValue(v.formaPago().name());
-        }
-
-        return fila;
-    }
-
-    private int crearTablaGastos(
-            Sheet sheet,
-            int fila,
-            List<GastoResponseDTO> gastos,
-            CellStyle estiloMoneda
-    ) {
-        String[] columnas = {"ID", "Fecha", "Descripción", "Valor"};
-
-        Row header = sheet.createRow(fila++);
-        for (int i = 0; i < columnas.length; i++) {
-            header.createCell(i).setCellValue(columnas[i]);
-        }
-        int index = 1;
-        for (GastoResponseDTO g : gastos) {
-            Row row = sheet.createRow(fila++);
-            row.createCell(0).setCellValue(index++);
-            row.createCell(1).setCellValue(g.getFecha().format(FECHA_FORMATO));
-            row.createCell(2).setCellValue(g.getDescripcion());
-
-            Cell valor = row.createCell(3);
-            valor.setCellValue(g.getMonto().doubleValue());
-            valor.setCellStyle(estiloMoneda);
-        }
-
-        return fila;
     }
 }

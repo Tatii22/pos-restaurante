@@ -29,9 +29,16 @@ public class ReporteVentaDTO {
 
     private BigDecimal totalEfectivo;
     private BigDecimal totalTransferencia;
-    private BigDecimal totalAbonos;
+    private BigDecimal totalAbonos;
     private BigDecimal totalAbonosEfectivo;
     private BigDecimal totalAbonosTransferencia;
+    private Long totalVentasContado;
+    private Long totalVentasFiadas;
+    private BigDecimal totalMontoContado;
+    private BigDecimal totalMontoFiado;
+    private BigDecimal carteraGenerada;
+    private BigDecimal carteraPendiente;
+    private BigDecimal recaudoReal;
     private List<VentaResponseDTO> ventas;
 
     

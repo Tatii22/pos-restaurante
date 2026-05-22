@@ -9,6 +9,7 @@ import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.TipoGastoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,6 +21,8 @@ public class GastoAdminService {
 
     private final GastoAdminRepository gastoAdminRepository;
     private final TipoGastoRepository tipoGastoRepository;
+    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AuditService auditService;
 
     public List<GastoAdmin> listarPorFecha(LocalDate fecha) {
         return gastoAdminRepository.findByFecha(fecha);
@@ -29,6 +32,7 @@ public class GastoAdminService {
         return gastoAdminRepository.findByFechaBetween(inicio, fin);
     }
 
+    @Transactional
     public GastoAdmin registrar(
             GastoAdminCreateDTO dto,
             Usuario usuario
@@ -61,15 +65,41 @@ public class GastoAdminService {
                 .usuario(usuario)
                 .build();
 
-        return gastoAdminRepository.save(gasto);
+        GastoAdmin guardado = gastoAdminRepository.save(gasto);
+        movimientoFinancieroService.registrarGastoAdmin(guardado);
+        auditService.record(
+                "GASTO_ADMIN_REGISTRADO",
+                "GastoAdmin",
+                guardado.getId(),
+                usuario,
+                null,
+                guardado.getDescripcion(),
+                auditService.change("monto", null, guardado.getMonto()),
+                auditService.change("montoEfectivo", null, guardado.getMontoEfectivo()),
+                auditService.change("montoTransferencia", null, guardado.getMontoTransferencia())
+        );
+        return guardado;
     }
 
+    @Transactional
     public void eliminarPorId(Long id, Usuario usuario) {
         if (usuario == null || usuario.getRol() == null || !"ADMIN".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo ADMIN puede eliminar gastos administrativos");
         }
         GastoAdmin gasto = gastoAdminRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Gasto administrativo no encontrado"));
+        auditService.record(
+                "GASTO_ADMIN_ELIMINADO",
+                "GastoAdmin",
+                gasto.getId(),
+                usuario,
+                null,
+                gasto.getDescripcion(),
+                auditService.change("monto", gasto.getMonto(), null),
+                auditService.change("montoEfectivo", gasto.getMontoEfectivo(), null),
+                auditService.change("montoTransferencia", gasto.getMontoTransferencia(), null)
+        );
+        movimientoFinancieroService.registrarEliminacionGastoAdmin(gasto, usuario);
         gastoAdminRepository.delete(gasto);
     }
 

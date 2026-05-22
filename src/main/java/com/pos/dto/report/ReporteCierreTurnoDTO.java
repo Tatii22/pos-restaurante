@@ -24,7 +24,24 @@ public class ReporteCierreTurnoDTO {
     private BigDecimal totalGastosTransferencia;
     private BigDecimal gananciaEfectivo;
     private BigDecimal gananciaTransferencia;
-    private BigDecimal netoEnCaja;
+    private BigDecimal netoEnCaja;
+
+    // === Valores calculados por ledger (usados como Efectivo / Transferencias / Total en reportes) ===
+    private BigDecimal cajaFisicaEsperada;   // = Efectivo final físico real (base + neto efectivo)
+    private BigDecimal transferenciasNetas;  // = Transferencias netas reales
+    private BigDecimal totalOperativoTurno;  // = Total = Efectivo + Transferencias
+
+    // Campos legacy de comparación (ya no se usan en tablas principales)
+    private BigDecimal cajaContada;
+    private BigDecimal diferenciaCaja;
+
+    // Conciliación dual (si el turno ya fue cerrado)
+    private BigDecimal efectivoContado;
+    private BigDecimal transferenciasVerificadas;
+    private BigDecimal diferenciaEfectivo;
+    private BigDecimal diferenciaTransferencias;
+    private BigDecimal totalVerificado;
+    private BigDecimal diferenciaTotal;
     private BigDecimal totalAbonos;
     private BigDecimal totalAbonosEfectivo;
     private BigDecimal totalAbonosTransferencia;

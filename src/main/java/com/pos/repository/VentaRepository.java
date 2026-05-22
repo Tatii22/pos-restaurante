@@ -6,8 +6,10 @@ import com.pos.entity.Deudor;
 import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,6 +27,16 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
         where v.id = :id
     """)
     java.util.Optional<Venta> findByIdWithDetalles(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select distinct v
+        from Venta v
+        left join fetch v.detalles d
+        left join fetch d.producto
+        where v.id = :id
+    """)
+    java.util.Optional<Venta> findByIdWithDetallesForUpdate(@Param("id") Long id);
 
     @Query("""
         SELECT COALESCE(SUM(v.total), 0)
@@ -60,6 +72,21 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             Deudor deudor,
             EstadoVenta estado,
             BigDecimal saldoPendiente
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select v
+        from Venta v
+        where v.deudor = :deudor
+          and v.estado = :estado
+          and v.saldoPendiente > :saldoPendiente
+        order by v.fecha asc
+    """)
+    List<Venta> findPendientesByDeudorForUpdate(
+            @Param("deudor") Deudor deudor,
+            @Param("estado") EstadoVenta estado,
+            @Param("saldoPendiente") BigDecimal saldoPendiente
     );
 
     List<Venta> findByDeudorOrderByFechaDesc(Deudor deudor);

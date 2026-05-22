@@ -26,6 +26,11 @@ public class ReporteRentabilidadDTO {
     private BigDecimal totalGastosTransferencia = BigDecimal.ZERO;
 
     private BigDecimal gananciaNeta = BigDecimal.ZERO;
+    private BigDecimal totalVentasComerciales = BigDecimal.ZERO;
+    private BigDecimal ventasContado = BigDecimal.ZERO;
+    private BigDecimal ventasFiadas = BigDecimal.ZERO;
+    private BigDecimal carteraGenerada = BigDecimal.ZERO;
+    private BigDecimal recaudoReal = BigDecimal.ZERO;
 
     private List<VentaResponseDTO> ventas;
     private List<GastoResponseDTO> gastos; 

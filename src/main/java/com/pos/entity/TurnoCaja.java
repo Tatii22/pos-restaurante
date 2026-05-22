@@ -20,6 +20,9 @@ public class TurnoCaja {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false)
     private LocalDateTime fechaApertura;
 
@@ -43,6 +46,25 @@ public class TurnoCaja {
     @Column(precision = 12, scale = 2)
     private BigDecimal faltante;
 
+    // === Conciliación dual (nuevo) ===
+    @Column(precision = 12, scale = 2)
+    private BigDecimal efectivoContado;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal transferenciasVerificadas;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal diferenciaEfectivo;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal diferenciaTransferencias;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal totalVerificado;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal diferenciaTotal;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoTurno estado;
@@ -50,4 +72,10 @@ public class TurnoCaja {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    @Transient
+    private BigDecimal transferenciasNetas;
+
+    @Transient
+    private BigDecimal totalOperativoTurno;
 }

@@ -138,12 +138,12 @@ export const posApi = {
     });
     return data;
   },
-  simularCierre: async (efectivoContado: number) => {
-    const { data } = await http.post<Turno>("/api/v1/turnos/simular-cierre", { efectivoContado });
+  simularCierre: async (efectivoContado: number, transferenciasVerificadas: number) => {
+    const { data } = await http.post<Turno>("/api/v1/turnos/simular-cierre", { efectivoContado, transferenciasVerificadas });
     return data;
   },
-  cerrarTurno: async (montoFinal: number) => {
-    const { data } = await http.post<Turno>("/api/v1/turnos/cerrar", { montoFinal });
+  cerrarTurno: async (efectivoContado: number, transferenciasVerificadas: number) => {
+    const { data } = await http.post<Turno>("/api/v1/turnos/cerrar", { efectivoContado, transferenciasVerificadas });
     return data;
   },
   getReporteVentas: async (fechaInicio: string, fechaFin: string) => {
