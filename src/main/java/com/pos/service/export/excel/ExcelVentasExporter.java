@@ -36,9 +36,9 @@ public class ExcelVentasExporter {
             ExcelReportHelper.addKpiRow(sheet, fila++, "Ventas realizadas",
                     BigDecimal.valueOf(reporte.getTotalVentas()), money);
             ExcelReportHelper.addKpiRow(sheet, fila++, "Ingresos recibidos", reporte.getRecaudoReal(), money);
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos() != null ? new BigDecimal(reporte.getTotalGastos()) : BigDecimal.ZERO, money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO, money);
             BigDecimal balV = (reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null) 
-                    ? reporte.getRecaudoReal().subtract(new BigDecimal(reporte.getTotalGastos())) : BigDecimal.ZERO;
+                    ? reporte.getRecaudoReal().subtract(reporte.getTotalGastos()) : BigDecimal.ZERO;
             ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", balV, money, true); // destacado
 
             fila++;

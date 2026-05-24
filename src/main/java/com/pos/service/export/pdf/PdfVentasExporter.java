@@ -39,11 +39,11 @@ public class PdfVentasExporter {
 
             // === RESUMEN (KPI dashboard style) ===
             Map<String, BigDecimal> resumen = new LinkedHashMap<>();
-            resumen.put("Ventas realizadas", reporte.getTotalVentas() != null ? new BigDecimal(reporte.getTotalVentas()) : BigDecimal.ZERO);
+            resumen.put("Ventas realizadas", reporte.getTotalVentas() != null ? BigDecimal.valueOf(reporte.getTotalVentas()) : BigDecimal.ZERO);
             resumen.put("Ingresos recibidos", reporte.getRecaudoReal());
-            resumen.put("Gastos registrados", reporte.getTotalGastos() != null ? new BigDecimal(reporte.getTotalGastos()) : BigDecimal.ZERO);
+            resumen.put("Gastos registrados", reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO);
             resumen.put("Balance final del turno", reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null ? 
-                    reporte.getRecaudoReal().subtract(reporte.getTotalGastos() != null ? new BigDecimal(reporte.getTotalGastos()) : BigDecimal.ZERO) : BigDecimal.ZERO);
+                    reporte.getRecaudoReal().subtract(reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO) : BigDecimal.ZERO);
             PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
 
             // === TABLA DETALLE DE VENTAS ===

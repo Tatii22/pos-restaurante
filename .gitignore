@@ -42,4 +42,4 @@ spring-run*.log
 # application config (secrets)
 **/application*.yaml
 **/application*.properties
-
+.kilo

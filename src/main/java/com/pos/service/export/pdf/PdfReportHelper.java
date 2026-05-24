@@ -134,14 +134,14 @@ public final class PdfReportHelper {
 
         Paragraph lbl = new Paragraph(label)
                 .setFontSize(destacado ? 10 : 8)
-                .setBold(destacado)
+                .setBold()
                 .setFontColor(ColorConstants.DARK_GRAY)
                 .setMarginBottom(2);
 
         String numStr = String.format("$%,.0f", valor != null ? valor : BigDecimal.ZERO);
         Paragraph num = new Paragraph(numStr)
                 .setFontSize(destacado ? 18 : 14)
-                .setBold(true)
+                .setBold()
                 .setFontColor(valor != null && valor.compareTo(BigDecimal.ZERO) < 0 ? NEGATIVE : POSITIVE);
 
         cell.add(lbl);
