@@ -2,7 +2,7 @@ package com.pos.dto.fiado;
 
 import java.math.BigDecimal;
 
-public record DeudorResponseDTO(
+public record ClienteResponseDTO(
         Long id,
         String nombre,
         String telefono,

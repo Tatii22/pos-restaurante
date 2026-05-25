@@ -5,7 +5,7 @@ import com.pos.dto.venta.VentaResponseDTO;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record DeudorDetalleDTO(
+public record ClienteDetalleDTO(
         Long id,
         String nombre,
         String telefono,

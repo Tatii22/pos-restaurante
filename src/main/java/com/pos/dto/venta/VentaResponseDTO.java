@@ -25,5 +25,5 @@ public record VentaResponseDTO(
         BigDecimal pagoTransferencia,
         CondicionPago condicionPago,
         BigDecimal saldoPendiente,
-        Long deudorId
+        Long clienteId
 ) {}

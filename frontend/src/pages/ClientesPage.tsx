@@ -2,19 +2,15 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Plus, Search, X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
+import { ClienteSearch } from "../shared/ClienteSearch";
 import { formatCurrencyInput, getErrorMessage, money, parseCurrencyInput } from "../shared/utils";
-import type { Deudor, DeudorDetalle, AbonoFiado } from "../shared/types";
+import type { Cliente, ClienteDetalle, AbonoFiado, ClienteSearch as ClienteSearchType } from "../types";
 
-export function DeudoresPage() {
-  const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [showNuevoDeudor, setShowNuevoDeudor] = useState(false);
-  const [showDetalle, setShowDetalle] = useState<DeudorDetalle | null>(null);
-  const [showAbono, setShowAbono] = useState<Deudor | null>(null);
+export function ClientesPage() {
+  const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [showDetalle, setShowDetalle] = useState<ClienteDetalle | null>(null);
+  const [showAbono, setShowAbono] = useState<Cliente | null>(null);
   const [soloConDeuda, setSoloConDeuda] = useState(true);
-
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
 
   const [abonoEfectivo, setAbonoEfectivo] = useState("0");
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
@@ -29,46 +25,32 @@ export function DeudoresPage() {
   const efectivoAplicadoEst   = Math.min(abonoEfectivoNum, faltanteTrasTransf);
   const cambioEstimado        = Math.max(0, abonoEfectivoNum - efectivoAplicadoEst);
 
-  const deudoresQ = useQuery({
-    queryKey: ["deudores-page", soloConDeuda],
-    queryFn: () => posApi.getDeudores(soloConDeuda)
+  const clientesQ = useQuery({
+    queryKey: ["clientes-page", soloConDeuda],
+    queryFn: () => posApi.getClientes(soloConDeuda)
   });
 
   const detalleQ = useQuery({
-    queryKey: ["deudor-detalle", showDetalle?.id],
-    queryFn: () => posApi.getDeudorById(showDetalle!.id),
+    queryKey: ["cliente-detalle", showDetalle?.id],
+    queryFn: () => posApi.getClienteById(showDetalle!.id),
     enabled: !!showDetalle
-  });
-
-  const crearDeudorM = useMutation({
-    mutationFn: () =>
-      posApi.crearDeudor({
-        nombre: nombre.trim(),
-        telefono: telefono.replace(/[^\d]/g, "")
-      }),
-    onSuccess: () => {
-      setShowNuevoDeudor(false);
-      setNombre("");
-      setTelefono("");
-      qc.invalidateQueries({ queryKey: ["deudores-page"] });
-    }
   });
 
   const abonoM = useMutation({
     mutationFn: () =>
       posApi.registrarAbonoFiado({
-        deudorId: showAbono!.id,
+         clienteId: showAbono!.id,
         montoEfectivo: parseCurrencyInput(abonoEfectivo),
         montoTransferencia: parseCurrencyInput(abonoTransferencia),
         observacion: abonoObservacion.trim() || undefined
       }),
-    onSuccess: (data) => {
+    onSuccess: (data: AbonoFiado) => {
       setShowAbono(null);
       setAbonoEfectivo("0");
       setAbonoTransferencia("0");
       setAbonoObservacion("");
-      qc.invalidateQueries({ queryKey: ["deudores-page"] });
-      qc.invalidateQueries({ queryKey: ["deudor-detalle"] });
+      qc.invalidateQueries({ queryKey: ["clientes-page"] });
+      qc.invalidateQueries({ queryKey: ["cliente-detalle"] });
       // Mostrar cambio si el servidor lo informa
       if (data.cambioEfectivo && data.cambioEfectivo > 0) {
         window.alert(
@@ -78,7 +60,7 @@ export function DeudoresPage() {
     }
   });
 
-  const filteredDeudores = (deudoresQ.data || []).filter(
+  const filteredClientes = (clientesQ.data || []).filter(
     (d) =>
       d.nombre.toLowerCase().includes(search.toLowerCase()) ||
       d.telefono.includes(search)
@@ -94,10 +76,10 @@ export function DeudoresPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Deudores</h1>
+        <h1 className="text-2xl font-bold">Clientes frecuentes</h1>
         <button className="btn-primary" onClick={() => setShowNuevoDeudor(true)}>
           <Plus size={16} className="mr-1" />
-          Nuevo deudor
+          Nuevo cliente
         </button>
       </div>
 
@@ -194,37 +176,20 @@ export function DeudoresPage() {
                 <X size={16} />
               </button>
             </div>
-            <div className="grid gap-3">
-              <label className="text-sm">
-                Nombre
-                <input
-                  className="input mt-1"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Nombre del cliente"
-                />
-              </label>
-              <label className="text-sm">
-                Teléfono
-                <input
-                  className="input mt-1"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="3001234567"
-                  inputMode="numeric"
-                />
-              </label>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button className="btn-ghost flex-1" onClick={() => setShowNuevoDeudor(false)}>
+            <ClienteSearch
+              onSelect={(cliente: ClienteSearchType) => {
+                setShowNuevoDeudor(false);
+                qc.invalidateQueries({ queryKey: ["deudores-page"] });
+              }}
+              label="Buscar o crear cliente"
+              placeholder="Nombre o teléfono del nuevo deudor..."
+              allowCreate={true}
+              autoFocus={true}
+              showDebt={false}
+            />
+            <div className="mt-4">
+              <button className="btn-ghost w-full" onClick={() => setShowNuevoDeudor(false)}>
                 Cancelar
-              </button>
-              <button
-                className="btn-primary flex-1"
-                disabled={!nombre.trim() || !telefono.trim() || crearDeudorM.isPending}
-                onClick={() => crearDeudorM.mutate()}
-              >
-                Crear
               </button>
             </div>
           </div>

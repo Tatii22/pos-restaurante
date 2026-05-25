@@ -1,18 +1,18 @@
 import { create } from "zustand";
-import type { Deudor } from "../types";
+import type { Cliente } from "../types";
 
 type FiadoState = {
   modoFiado: boolean;
-  selectedDeudor: Deudor | null;
+  selectedCliente: Cliente | null;
   activarModoFiado: () => void;
   salirModoFiado: () => void;
-  setSelectedDeudor: (deudor: Deudor | null) => void;
+  setSelectedCliente: (cliente: Cliente | null) => void;
 };
 
 export const useFiadoStore = create<FiadoState>((set) => ({
   modoFiado: false,
-  selectedDeudor: null,
+  selectedCliente: null,
   activarModoFiado: () => set({ modoFiado: true }),
-  salirModoFiado: () => set({ modoFiado: false, selectedDeudor: null }),
-  setSelectedDeudor: (deudor) => set({ selectedDeudor: deudor })
+  salirModoFiado: () => set({ modoFiado: false, selectedCliente: null }),
+  setSelectedCliente: (cliente) => set({ selectedCliente: cliente })
 }));

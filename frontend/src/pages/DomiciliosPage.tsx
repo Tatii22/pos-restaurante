@@ -6,7 +6,7 @@ import { ClienteSearch } from "../shared/ClienteSearch";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { getErrorMessage, money } from "../shared/utils";
-import type { Deudor } from "../types";
+import type { ClienteSearch as ClienteSearchType } from "../types";
 
 function estadoClass(estado: string): string {
   if (estado === "EN_PROCESO") return "bg-yellow-100 text-yellow-800";
@@ -177,11 +177,11 @@ export function DomiciliosPage() {
     mutationFn: (id: number) => posApi.imprimirFactura(id)
   });
   const marcarFiadoM = useMutation({
-    mutationFn: (payload: { id: number; deudorId?: number; deudorNombre: string; deudorTelefono: string }) =>
+    mutationFn: (payload: { id: number; clienteId?: number; clienteNombre: string; clienteTelefono: string }) =>
       posApi.marcarVentaComoFiado(payload.id, {
-        deudorId: payload.deudorId,
-        deudorNombre: payload.deudorNombre,
-        deudorTelefono: payload.deudorTelefono
+        clienteId: payload.clienteId,
+        clienteNombre: payload.clienteNombre,
+        clienteTelefono: payload.clienteTelefono
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["domicilios-list"] });
@@ -326,12 +326,24 @@ export function DomiciliosPage() {
 
 <div className="grid gap-2">
                   {role === "DOMI" && selected.estado === "EN_PROCESO" && selected.condicionPago !== "FIADO" && (
-                    <button
-                      className="btn-ghost w-full text-orange-700"
-                      onClick={() => setConvertToFiado({ ventaId: selected.id })}
-                    >
-                      <BsCashStack size={16} className="mr-1" /> Pasar a fiado
-                    </button>
+                     <button
+                       className="btn-ghost w-full text-orange-700"
+                       onClick={() => {
+                         if (selected.deudorId) {
+                           // Ya tiene cliente asociado → conversión directa sin pedir selección
+                          marcarFiadoM.mutate({
+                            id: selected.id,
+                            deudorId: selected.deudorId,
+                            deudorNombre: selected.clienteNombre || '',
+                            deudorTelefono: selected.telefono || ''
+                          });
+                         } else {
+                           setConvertToFiado({ ventaId: selected.id });
+                         }
+                       }}
+                     >
+                       <BsCashStack size={16} className="mr-1" /> Pasar a fiado
+                     </button>
                   )}
                   <button
                     className="btn-soft"
@@ -414,11 +426,13 @@ export function DomiciliosPage() {
             <ClienteSearch
               label="Cliente deudor"
               placeholder="Buscar o crear cliente..."
-              permitirCrearInline={true}
+              allowCreate={true}
               autoFocus={true}
-              onClienteSeleccionado={(cliente: Deudor) => {
+              showDebt={true}
+              onSelect={(cliente: ClienteSearchType) => {
                 marcarFiadoM.mutate({
                   id: convertToFiado.ventaId,
+                  deudorId: cliente.id,
                   deudorNombre: cliente.nombre,
                   deudorTelefono: cliente.telefono
                 });
@@ -483,12 +497,23 @@ export function DomiciliosPage() {
                 </label>
 
 {role === "DOMI" && selected.estado === "EN_PROCESO" && selected.condicionPago !== "FIADO" && (
-                   <button
-                     className="btn-ghost w-full text-orange-700"
-                     onClick={() => setConvertToFiado({ ventaId: selected.id })}
-                   >
-                     <BsCashStack size={16} className="mr-1" /> Pasar a fiado
-                   </button>
+                    <button
+                      className="btn-ghost w-full text-orange-700"
+                      onClick={() => {
+                        if (selected.deudorId) {
+                          marcarFiadoM.mutate({
+                            id: selected.id,
+                            deudorId: selected.deudorId,
+                            deudorNombre: selected.clienteNombre || '',
+                            deudorTelefono: selected.telefono || ''
+                          });
+                        } else {
+                          setConvertToFiado({ ventaId: selected.id });
+                        }
+                      }}
+                    >
+                      <BsCashStack size={16} className="mr-1" /> Pasar a fiado
+                    </button>
                  )}
                  <div className="mt-4 grid gap-2">
                    <button

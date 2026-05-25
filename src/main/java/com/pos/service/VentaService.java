@@ -79,7 +79,7 @@ public class VentaService {
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                 venta.getCondicionPago(),
                 venta.getSaldoPendiente(),
-                venta.getDeudor() != null ? venta.getDeudor().getId() : null,
+                venta.getCliente() != null ? venta.getCliente().getId() : null,
                 venta.getFechaAnulacion(),
                 venta.getMotivoAnulacion(),
                 venta.getDetalles() == null
@@ -125,7 +125,7 @@ public class VentaService {
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                 venta.getCondicionPago(),
                 venta.getSaldoPendiente(),
-                venta.getDeudor() != null ? venta.getDeudor().getId() : null
+                 venta.getCliente() != null ? venta.getCliente().getId() : null
         );
     }
 
@@ -223,7 +223,20 @@ public class VentaService {
         BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
         BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
         boolean esFiado = Boolean.TRUE.equals(dto.fiado());
-        Deudor deudor = fiadoService.resolverDeudorVenta(esFiado, dto.deudorId(), dto.deudorNombre(), dto.deudorTelefono());
+
+        Cliente cliente;
+        if (dto.tipoVenta() == TipoVenta.DOMICILIO) {
+            // Para cualquier domicilio (contado, transferencia o fiado) sincronizamos el cliente maestro automáticamente
+            cliente = fiadoService.resolverOActualizarCliente(
+                    dto.clienteNombre(),
+                    dto.telefono(),
+                    dto.direccion()
+            );
+        } else if (esFiado) {
+            cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(), dto.telefono());
+        } else {
+            cliente = null;
+        }
 
         venta.setFormaPago(esFiado ? FormaPago.FIADO
                 : resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
@@ -231,15 +244,15 @@ public class VentaService {
         venta.setUsuario(usuario);
         venta.setTurno(turno);
         venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
-        venta.setDeudor(deudor);
+        venta.setCliente(cliente);
         venta.setClienteNombre(
-                deudor != null
-                        ? deudor.getNombre()
+                cliente != null
+                        ? cliente.getNombre()
                         : dto.clienteNombre()
         );
         venta.setTelefono(
-                deudor != null
-                        ? deudor.getTelefono()
+                cliente != null
+                        ? cliente.getTelefono()
                         : dto.telefono()
         );
         venta.setDireccion(dto.direccion());
@@ -505,16 +518,28 @@ public class VentaService {
             return venta;
         }
 
-        Deudor deudor = fiadoService.resolverDeudorVenta(true, dto.deudorId(), dto.deudorNombre(), dto.deudorTelefono());
-        venta.setDeudor(deudor);
+        Cliente cliente;
+        if (venta.getCliente() != null) {
+            // Ya tiene cliente asociado desde la creación del domicilio → reutilizar
+            cliente = venta.getCliente();
+            // Opcional: actualizar nombre si el DTO trae uno distinto (por si hubo corrección manual)
+            if (dto.clienteNombre() != null && !dto.clienteNombre().isBlank() 
+                    && !dto.clienteNombre().equals(cliente.getNombre())) {
+                cliente.setNombre(dto.clienteNombre());
+            }
+        } else {
+            // Venta legacy o sin cliente previo → resolver/crear
+            cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(), dto.clienteTelefono());
+        }
+        venta.setCliente(cliente);
         venta.setCondicionPago(CondicionPago.FIADO);
         venta.setFormaPago(FormaPago.FIADO);
         venta.setEstado(EstadoVenta.DESPACHADA);
         venta.setSaldoPendiente(venta.getTotal());
 
-        if (deudor != null) {
-            venta.setClienteNombre(deudor.getNombre());
-            venta.setTelefono(deudor.getTelefono());
+        if (cliente != null) {
+            venta.setClienteNombre(cliente.getNombre());
+            venta.setTelefono(cliente.getTelefono());
         }
 
         TurnoCaja turno = venta.getTurno();
@@ -540,7 +565,7 @@ public class VentaService {
                 auditService.change("condicionPago", CondicionPago.CONTADO, CondicionPago.FIADO),
                 auditService.change("formaPago", null, FormaPago.FIADO),
                 auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
-                auditService.change("deudorId", null, deudor.getId())
+                auditService.change("clienteId", null, cliente.getId())
         );
         return ventaGuardada;
     }

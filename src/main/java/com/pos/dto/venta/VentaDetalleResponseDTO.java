@@ -27,7 +27,7 @@ public record VentaDetalleResponseDTO(
         BigDecimal pagoTransferencia,
         CondicionPago condicionPago,
         BigDecimal saldoPendiente,
-        Long deudorId,
+        Long clienteId,
         LocalDateTime fechaAnulacion,
         String motivoAnulacion,
         List<VentaItemResponseDTO> detalles

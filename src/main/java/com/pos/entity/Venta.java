@@ -70,7 +70,7 @@ public class Venta {
     private BigDecimal saldoPendiente;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Deudor deudor;
+    private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Usuario usuario;

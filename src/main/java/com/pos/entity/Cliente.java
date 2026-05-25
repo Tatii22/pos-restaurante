@@ -6,15 +6,15 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "deudores", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_deudor_telefono", columnNames = "telefono")
+@Table(name = "clientes", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_cliente_telefono", columnNames = "telefono")
 })
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Deudor {
+public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

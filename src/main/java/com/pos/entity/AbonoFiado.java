@@ -39,7 +39,7 @@ public class AbonoFiado {
     private String observacion;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private Deudor deudor;
+    private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Usuario usuario;

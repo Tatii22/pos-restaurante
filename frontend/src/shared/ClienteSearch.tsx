@@ -1,15 +1,30 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Deudor } from "../types";
+import type { ClienteSearch as ClienteSearchType, Cliente } from "../types";
 import { posApi } from "./api/posApi";
 
+/**
+ * Props para el componente ClienteSearch
+ * 
+ * @property onSelect - Callback cuando se selecciona un cliente
+ * @property onCrearNuevo - Callback para crear nuevo cliente (override de API)
+ * @property placeholder - Placeholder del input
+ * @property label - Label del campo
+ * @property allowCreate - Permitir crear cliente inline (default: true)
+ * @property autoFocus - Auto-enfocar el input
+ * @property className - Clases CSS adicionales
+ * @property showDebt - Mostrar deuda en el listado (default: true)
+ * @property initialQuery - Query inicial para búsqueda
+ */
 export type ClienteSearchProps = {
-  onClienteSeleccionado: (cliente: Deudor) => void;
-  onCrearNuevo?: (nombre: string, telefono: string) => void;
+  onSelect: (cliente: ClienteSearchType) => void;
+  onCrearNuevo?: (nombre: string, telefono: string) => Promise<ClienteSearchType | Cliente> | ClienteSearchType | Cliente;
   placeholder?: string;
   label?: string;
-  permitirCrearInline?: boolean;
+  allowCreate?: boolean;
   autoFocus?: boolean;
   className?: string;
+  showDebt?: boolean;
+  initialQuery?: string;
 };
 
 const normalizarTelefono = (tel: string): string => {
@@ -22,93 +37,106 @@ const validarTelefono = (tel: string): boolean => {
 };
 
 /**
- * ClienteSearch
- * Componente reutilizable para búsqueda y selección de clientes (deudores).
- *
+ * Hook reutilizable para autocomplete de clientes.
+ * Maneja debounce (300ms), normalización, llamada a buscarClientesLigero.
+ * Usado internamente por ClienteSearch y directamente en formularios con inputs clásicos.
+ */
+export function useClienteAutocomplete(query: string) {
+  const [results, setResults] = useState<ClienteSearchType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const buscar = useCallback(async (q: string) => {
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await posApi.buscarClientesLigero(q);
+      setResults(res || []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error en búsqueda");
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => buscar(query), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, buscar]);
+
+  return { results, loading, error, buscar };
+}
+
+/**
+ * ClienteSearch - Componente reutilizable para búsqueda y selección de clientes.
+ * 
  * Características:
- * - Búsqueda por nombre o teléfono con debounce
- * - Normalización de teléfono (solo dígitos)
- * - Validación de formato
- * - Opción para crear cliente inline
- * - Integración con API de fiados
+ * - Búsqueda rápida por nombre o teléfono
+ * - Ordenamiento inteligente (exacta > parcial > nombre)
+ * - Normalización de teléfono
+ * - Creación inline de clientes
+ * - Indicador de deuda
+  * - Reutilizable en VentasPage, DomiciliosPage, ClientesPage
+ * 
+ * Ejemplo de uso:
+ * 
+ * ```tsx
+ * const handleSelectCliente = (cliente: ClienteSearch) => {
+ *   console.log(cliente.id, cliente.nombre, cliente.telefono);
+ * };
+ * 
+ * <ClienteSearch
+ *   onSelect={handleSelectCliente}
+ *   label="Cliente"
+ *   placeholder="Buscar o crear cliente..."
+ *   showDebt={true}
+ * />
+ * ```
  */
 export function ClienteSearch({
-  onClienteSeleccionado,
+  onSelect,
   onCrearNuevo,
   placeholder = "Buscar cliente por nombre o teléfono...",
   label,
-  permitirCrearInline = true,
+  allowCreate = true,
   autoFocus = false,
-  className = ""
+  className = "",
+  showDebt = true,
+  initialQuery = ""
 }: ClienteSearchProps) {
-  const [searchInput, setSearchInput] = useState("");
-  const [sugerencias, setSugerencias] = useState<Deudor[]>([]);
-  const [cargando, setCargando] = useState(false);
+  const [searchInput, setSearchInput] = useState(initialQuery);
   const [mostrarDropdown, setMostrarDropdown] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [mostrarFormCreacion, setMostrarFormCreacion] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
   const [telefonoNuevo, setTelefonoNuevo] = useState("");
   const [creandoCliente, setCreandoCliente] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Debounce de búsqueda
-  const realizarBusqueda = useCallback(
-    async (q: string) => {
-      if (!q.trim()) {
-        setSugerencias([]);
-        setMostrarDropdown(false);
-        return;
-      }
+  const { results: sugerencias, loading: cargando, error: searchError } = useClienteAutocomplete(searchInput);
 
-      setCargando(true);
-      setError(null);
-      try {
-        const resultados = await posApi.buscarClientes(q);
-        setSugerencias(resultados || []);
-        setMostrarDropdown(true);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error en búsqueda");
-        setSugerencias([]);
-      } finally {
-        setCargando(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    if (!searchInput.trim()) {
-      setSugerencias([]);
-      setMostrarDropdown(false);
-      return;
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      realizarBusqueda(searchInput);
-    }, 300);
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchInput, realizarBusqueda]);
-
-  const handleSeleccionarCliente = (cliente: Deudor) => {
-    onClienteSeleccionado(cliente);
+  const handleSeleccionarCliente = (cliente: ClienteSearchType) => {
+    onSelect(cliente);
     setSearchInput("");
-    setSugerencias([]);
     setMostrarDropdown(false);
-    setError(null);
     setMostrarFormCreacion(false);
     setNombreNuevo("");
     setTelefonoNuevo("");
+    setFormError(null);
   };
 
   const handleCrearCliente = async (e: React.FormEvent) => {
@@ -118,38 +146,43 @@ export function ClienteSearch({
     const telefono = normalizarTelefono(telefonoNuevo);
 
     if (!nombre) {
-      setError("El nombre es obligatorio");
+      setFormError("El nombre es obligatorio");
       return;
     }
 
     if (!validarTelefono(telefonoNuevo)) {
-      setError("El teléfono debe tener entre 7 y 15 dígitos");
+      setFormError("El teléfono debe tener entre 7 y 15 dígitos");
       return;
     }
 
     setCreandoCliente(true);
-    setError(null);
+    setFormError(null);
 
     try {
+      let nuevoCliente: ClienteSearchType | Cliente;
+      
       if (onCrearNuevo) {
-        onCrearNuevo(nombre, telefono);
+        nuevoCliente = await onCrearNuevo(nombre, telefono);
       } else {
         // Crear vía API
-        const nuevoCliente = await posApi.crearDeudor({ nombre, telefono });
-        handleSeleccionarCliente(nuevoCliente);
+        nuevoCliente = await posApi.crearCliente({ nombre, telefono });
       }
 
-      // Limpiar formulario
-      setNombreNuevo("");
-      setTelefonoNuevo("");
-      setMostrarFormCreacion(false);
-      setSearchInput("");
-      setSugerencias([]);
-      setMostrarDropdown(false);
+      // Convertir a ClienteSearchType si es necesario
+      const clienteSearch: ClienteSearchType = {
+        id: nuevoCliente.id,
+        nombre: nuevoCliente.nombre,
+        telefono: nuevoCliente.telefono,
+        direccionPredeterminada: nuevoCliente.direccionPredeterminada,
+        deudaActual: "deudaActual" in nuevoCliente ? nuevoCliente.deudaActual : 0,
+        tieneDeuda: "tieneDeuda" in nuevoCliente ? nuevoCliente.tieneDeuda : false
+      };
+
+      handleSeleccionarCliente(clienteSearch);
     } catch (err) {
-      setError(
+      setFormError(
         err instanceof Error
-          ? err.message.includes("duplicate")
+          ? err.message.includes("duplicate") || err.message.includes("ya está")
             ? "Este teléfono ya está registrado"
             : err.message
           : "Error al crear cliente"
@@ -159,9 +192,8 @@ export function ClienteSearch({
     }
   };
 
-  const formatearDeudor = (deudor: Deudor): string => {
-    const deuda = deudor.deudaTotal > 0 ? ` (Debe: $${deudor.deudaTotal.toFixed(0)})` : "";
-    return `${deudor.nombre} - ${deudor.telefono}${deuda}`;
+  const formatearDeuda = (deuda: number): string => {
+    return `$${deuda.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
   };
 
   return (
@@ -174,6 +206,7 @@ export function ClienteSearch({
 
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
@@ -194,9 +227,9 @@ export function ClienteSearch({
         )}
       </div>
 
-      {error && (
+      {(formError || searchError) && (
         <div className="mt-1 text-sm text-red-600 bg-red-50 px-2 py-1 rounded">
-          {error}
+          {formError || searchError}
         </div>
       )}
 
@@ -204,24 +237,29 @@ export function ClienteSearch({
       {mostrarDropdown && sugerencias.length > 0 && (
         <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-64 overflow-y-auto">
           <ul className="py-1">
-            {sugerencias.map((deudor) => (
-              <li key={deudor.id}>
+            {sugerencias.map((cliente) => (
+              <li key={cliente.id}>
                 <button
                   type="button"
-                  onClick={() => handleSeleccionarCliente(deudor)}
-                  className="w-full text-left px-3 py-2 hover:bg-blue-50 focus:outline-none focus:bg-blue-100 text-sm"
+                  onClick={() => handleSeleccionarCliente(cliente)}
+                  className="w-full text-left px-3 py-2 hover:bg-blue-50 focus:outline-none focus:bg-blue-100 text-sm transition-colors"
                 >
                   <div className="font-medium text-gray-900">
-                    {deudor.nombre}
+                    {cliente.nombre}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {deudor.telefono}
-                    {deudor.deudaTotal > 0 && (
-                      <span className="ml-2 font-semibold text-red-600">
-                        Debe: ${deudor.deudaTotal.toFixed(0)}
+                  <div className="text-xs text-gray-500 flex justify-between items-center">
+                    <span>{cliente.telefono}</span>
+                    {showDebt && cliente.tieneDeuda && (
+                      <span className="font-semibold text-red-600">
+                        Debe: {formatearDeuda(cliente.deudaActual)}
                       </span>
                     )}
                   </div>
+                  {cliente.direccionPredeterminada && (
+                    <div className="text-xs text-gray-400 truncate">
+                      {cliente.direccionPredeterminada}
+                    </div>
+                  )}
                 </button>
               </li>
             ))}
@@ -236,11 +274,12 @@ export function ClienteSearch({
             No se encontraron clientes para "{searchInput}"
           </div>
 
-          {permitirCrearInline && !mostrarFormCreacion && (
+          {allowCreate && !mostrarFormCreacion && (
             <button
               type="button"
               onClick={() => {
                 setMostrarFormCreacion(true);
+                setFormError(null);
                 // Detectar si es teléfono o nombre
                 if (normalizarTelefono(searchInput).length >= 7) {
                   setTelefonoNuevo(normalizarTelefono(searchInput));
@@ -250,7 +289,7 @@ export function ClienteSearch({
                   setTelefonoNuevo("");
                 }
               }}
-              className="w-full px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="w-full px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
             >
               + Crear nuevo cliente
             </button>
@@ -294,7 +333,7 @@ export function ClienteSearch({
               type="submit"
               onClick={handleCrearCliente}
               disabled={!nombreNuevo.trim() || !validarTelefono(telefonoNuevo) || creandoCliente}
-              className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {creandoCliente ? "Creando..." : "Crear"}
             </button>
@@ -304,8 +343,9 @@ export function ClienteSearch({
                 setMostrarFormCreacion(false);
                 setNombreNuevo("");
                 setTelefonoNuevo("");
+                setFormError(null);
               }}
-              className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
             >
               Cancelar
             </button>

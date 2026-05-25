@@ -31,7 +31,7 @@ export type Venta = {
   pagoTransferencia?: number | null;
   condicionPago?: "CONTADO" | "FIADO";
   saldoPendiente?: number | null;
-  deudorId?: number | null;
+  clienteId?: number | null;
 };
 
 export type VentaDetalleItem = {
@@ -54,7 +54,7 @@ export type VentaDetalle = Venta & {
   detalles: VentaDetalleItem[];
 };
 
-export type Deudor = {
+export type Cliente = {
   id: number;
   nombre: string;
   telefono: string;
@@ -77,7 +77,7 @@ export type AbonoFiado = {
   cambioEfectivo?: number | null;
 };
 
-export type DeudorDetalle = {
+export type ClienteDetalle = {
   id: number;
   nombre: string;
   telefono: string;

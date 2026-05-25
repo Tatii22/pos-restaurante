@@ -31,7 +31,7 @@ export type Venta = {
   pagoTransferencia?: number | null;
   condicionPago?: "CONTADO" | "FIADO";
   saldoPendiente?: number | null;
-  deudorId?: number | null;
+  clienteId?: number | null;
 };
 
 export type VentaDetalleItem = {
@@ -54,7 +54,7 @@ export type VentaDetalle = Venta & {
   detalles: VentaDetalleItem[];
 };
 
-export type Deudor = {
+export type Cliente = {
   id: number;
   nombre: string;
   telefono: string;
@@ -64,6 +64,19 @@ export type Deudor = {
   esDeudor?: boolean;
   deudaTotal: number;
   ventasPendientes: number;
+};
+
+/**
+ * DTO ligero para búsqueda rápida de clientes (autocomplete).
+ * Contiene solo la información necesaria para selección en UI.
+ */
+export type ClienteSearch = {
+  id: number;
+  nombre: string;
+  telefono: string;
+  direccionPredeterminada?: string | null;
+  deudaActual: number;
+  tieneDeuda: boolean;
 };
 
 export type AbonoFiado = {
@@ -76,9 +89,11 @@ export type AbonoFiado = {
   observacion: string | null;
   usuario: string;
   turnoId: number | null;
+  /** Efectivo que el cajero debe devolver al cliente. 0 si no aplica. */
+  cambioEfectivo?: number | null;
 };
 
-export type DeudorDetalle = {
+export type ClienteDetalle = {
   id: number;
   nombre: string;
   telefono: string;

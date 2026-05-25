@@ -1,14 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
-import { ClienteSearch } from "../shared/ClienteSearch";
+import { ClienteSearch, useClienteAutocomplete } from "../shared/ClienteSearch";
 import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { useFiadoStore } from "../shared/store/fiadoStore";
 import { HandCoins } from "lucide-react";
-import type { Deudor } from "../types";
+import type { Cliente, ClienteSearch as ClienteSearchType } from "../types";
 
 type CartItem = { id: number; nombre: string; precio: number; cantidad: number; observacion: string };
 
@@ -105,6 +105,10 @@ export function VentasPage() {
   const [cashAmount, setCashAmount] = useState("0");
   const [activeCalcField, setActiveCalcField] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
   const [checkoutMode, setCheckoutMode] = useState<"SALON" | "LLEVAR">("SALON");
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [nombreEditadoManual, setNombreEditadoManual] = useState(false);
+  const [direccionEditadaManual, setDireccionEditadaManual] = useState(false);
+  const [clienteResuelto, setClienteResuelto] = useState(false); // true cuando se autocompletó un cliente por teléfono o selección de nombre
 
   const productsMetaEnabled = role === "CAJA";
   const catalogQ = useQuery({ queryKey: ["catalogo-hoy"], queryFn: () => posApi.catalogoHoy() });
@@ -120,20 +124,11 @@ export function VentasPage() {
     retry: false
   });
 
-  const { modoFiado, selectedDeudor, activarModoFiado, salirModoFiado, setSelectedDeudor } = useFiadoStore();
-  
-  const crearDeudorM = useMutation({
-    mutationFn: ({ nombre, telefono }: { nombre: string; telefono: string }) =>
-      posApi.crearDeudor({
-        nombre: nombre.trim(),
-        telefono: telefono.replace(/[^\d]/g, "")
-      }),
-    onSuccess: (data) => {
-      setSelectedDeudor(data);
-    }
-  });
+  const { modoFiado, selectedCliente, activarModoFiado, salirModoFiado, setSelectedCliente } = useFiadoStore();
 
   const createSale = useMutation({
+    // Nota sobre fechas en BD: Las columnas DATETIME(6) almacenan microsegundos (hasta 6 decimales).
+    // Esto explica valores como "2026-05-25 18:06:01.000000". No es un bug, es comportamiento normal de MySQL/MariaDB con precisión alta.
     mutationFn: (payload: unknown) => posApi.crearVenta(payload),
     onSuccess: () => {
       const wasFiado = modoFiado;
@@ -143,6 +138,9 @@ export function VentasPage() {
       setClienteNombre("");
       setTelefono("");
       setDireccion("");
+      setNombreEditadoManual(false);
+      setDireccionEditadaManual(false);
+      setClienteResuelto(false);
       setValorDomicilio("0");
       setOrderCode(String(Math.floor(Math.random() * 9000) + 1000));
       setShowPayModal(false);
@@ -256,6 +254,84 @@ export function VentasPage() {
     }
   }
 
+  // === Autocomplete reutilizable (hook extraído de ClienteSearch) ===
+  const { results: nameSuggestionsRaw } = useClienteAutocomplete(clienteNombre);
+  const nameSuggestions = nameSuggestionsRaw.slice(0, 5);
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+
+  // Teléfono: autocompletar por match exacto (debounce, respeta edición manual)
+  useEffect(() => {
+    if (isAutoFilling) return;
+    const limpio = telefono.replace(/\D/g, "");
+    if (limpio.length < 7) return;
+
+    const t = setTimeout(async () => {
+      if (isAutoFilling) return;
+      try {
+        const res = await posApi.buscarClientesLigero(limpio);
+        const exact = res.find((c) => c.telefono.replace(/\D/g, "") === limpio);
+        if (exact) {
+          setIsAutoFilling(true);
+          setTelefono(exact.telefono); // por si había normalización
+
+          // Autocompletar nombre solo si el usuario no lo ha editado manualmente
+          if (!nombreEditadoManual) {
+            setClienteNombre(exact.nombre);
+          }
+
+          // Autocompletar dirección solo si el usuario no la ha editado manualmente
+          if (!direccionEditadaManual) {
+            setDireccion(exact.direccionPredeterminada || "");
+          }
+
+          setClienteResuelto(true); // Cliente resuelto por teléfono → bloquear input de teléfono
+          setTimeout(() => setIsAutoFilling(false), 70);
+        }
+      } catch {
+        /* silencioso para no romper flujo de caja */
+      }
+    }, 350);
+
+    return () => clearTimeout(t);
+  }, [telefono, isAutoFilling]); // Nota: intencionalmente NO depende de 'direccion' para evitar re-autocompletados mientras el usuario edita manualmente
+
+  // Handlers que marcan edición manual (evitan loops de auto-fill)
+  function handleNombreChange(v: string) {
+    setClienteNombre(cleanText(v, 60));
+    setNombreEditadoManual(true); // Usuario editó nombre manualmente → no volver a pisar con autocompletado
+    setShowNameSuggestions(true);
+    if (isAutoFilling) setIsAutoFilling(false);
+  }
+  function handleTelefonoChange(v: string) {
+    setTelefono(cleanDigits(v, 15));
+    setNombreEditadoManual(false);
+    setDireccionEditadaManual(false);
+    setClienteResuelto(false); // Usuario está escribiendo nuevo teléfono → desbloquear y permitir nuevo autocompletado
+    if (isAutoFilling) setIsAutoFilling(false);
+  }
+  function handleDireccionChange(v: string) {
+    setDireccion(cleanText(v, 120));
+    setDireccionEditadaManual(true); // Usuario está editando manualmente → no volver a pisar
+    if (isAutoFilling) setIsAutoFilling(false);
+  }
+
+  function seleccionarSugerenciaNombre(c: ClienteSearchType) {
+    setIsAutoFilling(true);
+
+    // Al seleccionar explícitamente desde dropdown, aceptamos los valores del cliente
+    // y reseteamos los flags para que futuras ediciones manuales sean respetadas.
+    setNombreEditadoManual(false);
+    setDireccionEditadaManual(false);
+
+    setClienteNombre(c.nombre);
+    setTelefono(c.telefono);
+    setDireccion(c.direccionPredeterminada || "");
+
+    setClienteResuelto(true); // Cliente resuelto por selección de nombre → bloquear teléfono
+    setShowNameSuggestions(false);
+    setTimeout(() => setIsAutoFilling(false), 70);
+  }
+
   const telefonoLimpio = telefono.trim();
   const direccionLimpia = direccion.trim();
   const valorDomicilioNumero = parseCurrencyInput(valorDomicilio);
@@ -263,8 +339,6 @@ export function VentasPage() {
   const direccionValida = !esDomi || direccionLimpia.length >= 5;
   const valorDomicilioValido = !esDomi || (valorDomicilio.trim().length > 0 && valorDomicilioNumero >= 0);
   const datosDomicilioValidos = telefonoValido && direccionValida && valorDomicilioValido;
-  const showTelefonoError = esDomi && telefonoLimpio.length > 0 && !telefonoValido;
-  const showDireccionError = esDomi && direccionLimpia.length > 0 && !direccionValida;
 
   function showValidationWarns(messages: string[]) {
     if (!messages.length) return;
@@ -313,7 +387,7 @@ export function VentasPage() {
   }
 
 function buildSalePayload(transferValue: number, cashValue: number) {
-    const esFiadoPayload = modoFiado && !!selectedDeudor;
+    const esFiadoPayload = modoFiado && !!selectedCliente;
     const payload: Record<string, unknown> = {
       tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
       // Las ventas fiadas no tienen forma de pago de efectivo/transferencia;
@@ -331,7 +405,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
     };
     if (esFiadoPayload) {
       payload.fiado = true;
-      payload.deudorId = selectedDeudor.id;
+      payload.clienteId = selectedCliente.id;
     }
     return payload;
   }
@@ -375,8 +449,8 @@ function buildSalePayload(transferValue: number, cashValue: number) {
   async function registerSale() {
     if (bloqueado || cart.length === 0) return;
     if (modoFiado) {
-      if (!selectedDeudor) {
-        setValidationWarns(["Debes seleccionar un deudor para registrar una venta fiada"]);
+      if (!selectedCliente) {
+        setValidationWarns(["Debes seleccionar un cliente para registrar una venta fiada"]);
         return;
       }
       await createSale.mutateAsync(buildSalePayload(0, 0));
@@ -515,41 +589,89 @@ function buildSalePayload(transferValue: number, cashValue: number) {
         </div>
 
         <div className="mb-3 grid grid-cols-1 gap-2">
-          <label className="text-sm">
-            Nombre del cliente (opcional)
-            <input
-              className="input mt-1"
-              value={clienteNombre}
-              onChange={(e) => setClienteNombre(cleanText(e.target.value, 60))}
-              placeholder="Ej: Juan Perez"
-              maxLength={60}
-            />
-          </label>
+          {/* Nombre con autocomplete dropdown (siempre visible y editable) */}
+          <div className="relative">
+            <label className="text-sm">
+              Nombre {esDomi ? "(para domicilio)" : "(opcional)"}
+              <input
+                className="input mt-1"
+                value={clienteNombre}
+                onChange={(e) => handleNombreChange(e.target.value)}
+                onFocus={() => setShowNameSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 180)}
+                placeholder="Ej: Juan Perez"
+                maxLength={60}
+              />
+            </label>
+
+            {/* Dropdown de sugerencias (máx 5) - solo asistencia, no reemplaza inputs */}
+            {showNameSuggestions && nameSuggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-44 overflow-auto text-sm">
+                {nameSuggestions.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => seleccionarSugerenciaNombre(c)}
+                    className="w-full px-3 py-1.5 text-left hover:bg-blue-50 focus:bg-blue-50"
+                  >
+                    <div className="font-medium text-gray-900">{c.nombre}</div>
+                    <div className="text-[10px] text-gray-500 flex items-center gap-x-2">
+                      <span>{c.telefono}</span>
+                      {c.direccionPredeterminada && <span className="truncate max-w-[140px]">{c.direccionPredeterminada}</span>}
+                      {c.tieneDeuda && <span className="text-red-600 font-medium">Debe ${c.deudaActual.toLocaleString("es-CO")}</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Teléfono y Dirección SIEMPRE visibles y editables para DOMI */}
           {esDomi && (
             <>
+               <label className="text-sm">
+                 Teléfono
+                 <div className="flex gap-2 items-center">
+                   <input
+                     className="input mt-1 flex-1"
+                     value={telefono}
+                     onChange={(e) => handleTelefonoChange(e.target.value)}
+                     placeholder="Ej: 3001234567"
+                     inputMode="numeric"
+                     maxLength={15}
+                      readOnly={esDomi && clienteResuelto} // Bloquear teléfono solo después de resolver un cliente por autocompletado
+                   />
+                    {esDomi && clienteResuelto && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTelefono("");
+                          setClienteNombre("");
+                          setDireccion("");
+                          setNombreEditadoManual(false);
+                          setDireccionEditadaManual(false);
+                          setClienteResuelto(false);
+                          setShowNameSuggestions(false);
+                        }}
+                        className="text-xs px-2 py-1 mt-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
+                      >
+                        Cambiar cliente
+                      </button>
+                   )}
+                 </div>
+               </label>
+
               <label className="text-sm">
-                Telefono
-                <input
-                  className="input mt-1"
-                  value={telefono}
-                  onChange={(e) => setTelefono(cleanDigits(e.target.value, 15))}
-                  placeholder="Ej: 3001234567"
-                  inputMode="numeric"
-                  maxLength={15}
-                />
-                {showTelefonoError && <p className="mt-1 text-xs text-orange-700">Ingresa un telefono valido (7 a 15 digitos).</p>}
-              </label>
-              <label className="text-sm">
-                Direccion
+                Dirección (editable)
                 <input
                   className="input mt-1"
                   value={direccion}
-                  onChange={(e) => setDireccion(cleanText(e.target.value, 120))}
+                  onChange={(e) => handleDireccionChange(e.target.value)}
                   placeholder="Ej: Calle 10 # 15-20"
                   maxLength={120}
                 />
-                {showDireccionError && <p className="mt-1 text-xs text-orange-700">La direccion debe tener al menos 5 caracteres.</p>}
               </label>
+
               <label className="text-sm">
                 Valor domicilio
                 <input
@@ -559,7 +681,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                   inputMode="numeric"
                   maxLength={9}
                 />
-                {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor de domicilio valido.</p>}
+                {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor de domicilio válido.</p>}
               </label>
             </>
           )}
@@ -622,97 +744,18 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                   Salir
                 </button>
               </div>
-              {selectedDeudor ? (
-                <div className="rounded-lg border border-orange-200 bg-white p-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">{selectedDeudor.nombre}</p>
-                      <p className="text-xs text-pos-muted">{selectedDeudor.telefono}</p>
-                    </div>
-                    <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedDeudor(null)}>
-                      Cambiar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    className="input"
-                    placeholder="Buscar deudor por nombre o teléfono..."
-                    value={deudorSearch}
-                    onChange={(e) => {
-                      setDeudorSearch(e.target.value);
-                      setShowDeudorSelector(e.target.value.length > 0);
-                    }}
-                  />
-                  {(showDeudorSelector || deudorSearch.length > 0) && deudoresQ.data && deudoresQ.data.filter(d => 
-                    d.nombre.toLowerCase().includes(deudorSearch.toLowerCase()) || 
-                    d.telefono.includes(deudorSearch)
-                  ).length > 0 && (
-                    <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-pos-border bg-white">
-                      {deudoresQ.data.filter(d => 
-                        d.nombre.toLowerCase().includes(deudorSearch.toLowerCase()) || 
-                        d.telefono.includes(deudorSearch)
-                      ).map((d) => (
-                        <button
-                          key={d.id}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-50"
-                          onClick={() => {
-                            setSelectedDeudor(d);
-                            setShowDeudorSelector(false);
-                            setDeudorSearch("");
-                          }}
-                        >
-                          <p className="font-semibold">{d.nombre}</p>
-                          <p className="text-xs text-pos-muted">{d.telefono}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    className="btn-ghost mt-2 w-full text-xs"
-                    onClick={() => {
-                      setShowNuevoDeudorForm(true);
-                      setShowDeudorSelector(false);
-                    }}
-                  >
-                    + Crear nuevo deudor
-                  </button>
-                </div>
-              )}
-              {showNuevoDeudorForm && (
-                <div className="mt-2 rounded-lg border border-pos-border bg-gray-50 p-3">
-                  <p className="mb-2 text-sm font-semibold">Nuevo deudor</p>
-                  <input
-                    className="input mb-2 w-full"
-                    placeholder="Nombre"
-                    value={nuevoDeudorNombre}
-                    onChange={(e) => setNuevoDeudorNombre(e.target.value)}
-                  />
-                  <input
-                    className="input mb-2 w-full"
-                    placeholder="Teléfono"
-                    value={nuevoDeudorTelefono}
-                    onChange={(e) => setNuevoDeudorTelefono(e.target.value)}
-                    inputMode="numeric"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      className="btn-ghost flex-1 text-xs"
-                      onClick={() => setShowNuevoDeudorForm(false)}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      className="btn-primary flex-1 text-xs"
-                      disabled={!nuevoDeudorNombre.trim() || !nuevoDeudorTelefono.trim() || crearDeudorM.isPending}
-                      onClick={() => crearDeudorM.mutate()}
-                    >
-                      Crear
-                    </button>
-                  </div>
-                </div>
-              )}
+               {selectedCliente ? (
+                        <p className="font-semibold">{selectedCliente.nombre}</p>
+                        <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
+                      <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedCliente(null)}>
+                      const cliente: Cliente = {
+                      setSelectedCliente(cliente);
+                    label="Seleccionar cliente"
+                   placeholder="Buscar por nombre o teléfono..."
+                   allowCreate={true}
+                   showDebt={true}
+                 />
+               )}
             </div>
           )}
           {esDomi ? (
@@ -864,10 +907,9 @@ function buildSalePayload(transferValue: number, cashValue: number) {
               </button>
             </div>
 
-            {modoFiado && selectedDeudor && (
-              <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
-                <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedDeudor.nombre}</p>
-                <p className="text-xs text-pos-muted">{selectedDeudor.telefono}</p>
+             {modoFiado && selectedCliente && (
+                 <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedCliente.nombre}</p>
+                 <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
                 <p className="text-sm text-pos-muted">Total: {money.format(total)} (pendiente de pago)</p>
               </div>
             )}

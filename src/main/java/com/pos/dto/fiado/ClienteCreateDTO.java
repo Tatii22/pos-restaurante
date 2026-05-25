@@ -3,7 +3,7 @@ package com.pos.dto.fiado;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-public record DeudorCreateDTO(
+public record ClienteCreateDTO(
         @NotBlank(message = "El nombre es obligatorio")
         String nombre,
         @NotBlank(message = "El telefono es obligatorio")

@@ -15,12 +15,13 @@ import type {
   TipoGasto,
   Turno,
   Usuario,
-  Deudor,
-  DeudorDetalle,
+  Cliente,
+  ClienteDetalle,
   AbonoFiado,
   Venta,
   VentaDetalle
 } from "../types";
+import type { ClienteSearch } from "../../types";
 
 export const posApi = {
   login: async (username: string, password: string) => {
@@ -78,34 +79,50 @@ export const posApi = {
     return data;
   },
   marcarVentaComoFiado: async (id: number, payload: {
-    deudorId?: number | null;
-    deudorNombre?: string | null;
-    deudorTelefono?: string | null;
+    clienteId?: number | null;
+    clienteNombre?: string | null;
+    clienteTelefono?: string | null;
   }) => {
     const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/fiado`, payload);
     return data;
   },
-  getDeudores: async (soloConDeuda = false) => {
-    const { data } = await http.get<Deudor[]>("/api/v1/fiados/deudores", {
+  // NUEVOS (preferidos)
+  getClientes: async (soloConDeuda = false) => {
+    const { data } = await http.get<Cliente[]>("/api/v1/fiados/clientes", {
       params: { soloConDeuda }
     });
     return data;
   },
-  getDeudorById: async (id: number) => {
-    const { data } = await http.get<DeudorDetalle>(`/api/v1/fiados/deudores/${id}`);
+  getClienteById: async (id: number) => {
+    const { data } = await http.get<ClienteDetalle>(`/api/v1/fiados/clientes/${id}`);
     return data;
   },
-  crearDeudor: async (payload: { nombre: string; telefono: string }) => {
-    const { data } = await http.post<Deudor>("/api/v1/fiados/deudores", payload);
+  crearCliente: async (payload: { nombre: string; telefono: string }) => {
+    const { data } = await http.post<Cliente>("/api/v1/fiados/clientes", payload);
     return data;
   },
   registrarAbonoFiado: async (payload: {
-    deudorId: number;
+    clienteId: number;
     montoEfectivo: number;
     montoTransferencia: number;
     observacion?: string;
   }) => {
     const { data } = await http.post<AbonoFiado>("/api/v1/fiados/abonos", payload);
+    return data;
+  },
+  // LEGACY (deprecated - se eliminarán)
+  getDeudores: async (soloConDeuda = false) => {
+    const { data } = await http.get<Cliente[]>("/api/v1/fiados/deudores", {
+      params: { soloConDeuda }
+    });
+    return data;
+  },
+  getDeudorById: async (id: number) => {
+    const { data } = await http.get<ClienteDetalle>(`/api/v1/fiados/deudores/${id}`);
+    return data;
+  },
+  crearDeudor: async (payload: { nombre: string; telefono: string }) => {
+    const { data } = await http.post<Cliente>("/api/v1/fiados/deudores", payload);
     return data;
   },
   catalogoHoy: async () => {
@@ -304,7 +321,25 @@ export const posApi = {
     return data;
   },
   buscarClientes: async (q: string) => {
-    const { data } = await http.get<Deudor[]>("/api/v1/fiados/deudores/buscar", {
+    // Usa el nuevo endpoint limpio
+    const { data } = await http.get<Cliente[]>("/api/v1/fiados/clientes/buscar", {
+      params: { q }
+    });
+    return data;
+  },
+  // Legacy alias (deprecated)
+  buscarDeudores: async (q: string) => {
+    const { data } = await http.get<Cliente[]>("/api/v1/fiados/deudores/buscar", {
+      params: { q }
+    });
+    return data;
+  },
+  /**
+   * Búsqueda optimizada para autocomplete: devuelve DTO ligero con ordenamiento inteligente.
+   * Prioriza coincidencias exactas de teléfono, luego parciales, luego nombres.
+   */
+  buscarClientesLigero: async (q: string) => {
+    const { data } = await http.get<ClienteSearch[]>("/api/v1/fiados/clientes/buscar", {
       params: { q }
     });
     return data;
