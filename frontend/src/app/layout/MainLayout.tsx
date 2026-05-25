@@ -19,7 +19,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import { flushSync } from "react-dom";
 import { useAuthStore } from "../../shared/store/authStore";
-import type { Role } from "../../shared/types";
+import type { Cliente, Role } from "../../shared/types";
 import { useTurnoStore } from "../../shared/store/turnoStore";
 import { posApi } from "../../shared/api/posApi";
 import { formatCurrencyInput, getErrorMessage, money, normalizeRole, parseCurrencyInput } from "../../shared/utils";
@@ -39,7 +39,7 @@ const items: MenuItem[] = [
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
   { to: "/gastos", label: "Gastos", roles: ["CAJA", "ADMIN"], icon: <Wallet size={16} /> },
   { to: "/reportes", label: "Reportes", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
-  { to: "/deudores", label: "Deudores", roles: ["ADMIN"], icon: <HandCoins size={16} /> },
+  { to: "/clientes", label: "Clientes", roles: ["ADMIN"], icon: <HandCoins size={16} /> },
   { to: "/categorias", label: "Categorias", roles: ["ADMIN"], icon: <Boxes size={16} /> },
   { to: "/productos", label: "Productos", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/usuarios", label: "Usuarios", roles: ["ADMIN"], icon: <Users size={16} /> },
@@ -55,7 +55,7 @@ export function MainLayout() {
   const [showAlerts, setShowAlerts] = useState(false);
   const [showFiadosMenu, setShowFiadosMenu] = useState(false);
   const [showPagoDeuda, setShowPagoDeuda] = useState(false);
-  const [selectedDeudorId, setSelectedDeudorId] = useState<number | null>(null);
+  const [selectedClienteId, setSelectedClienteId] = useState<number | null>(null);
   const [abonoEfectivo, setAbonoEfectivo] = useState("0");
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
   const [abonoObservacion, setAbonoObservacion] = useState("");
@@ -279,32 +279,32 @@ export function MainLayout() {
     );
   }, [productosQ.data, inventarioQ.data]);
   const montoInicialValido = Number(montoInicial) > 0;
-  const deudoresQ = useQuery({
-    queryKey: ["fiados-deudores-menu", fiadosEnabled, showPagoDeuda],
-    queryFn: () => posApi.getDeudores(true),
+  const clientesQ = useQuery({
+    queryKey: ["fiados-clientes-menu", fiadosEnabled, showPagoDeuda],
+    queryFn: () => posApi.getClientes(true),
     enabled: fiadosEnabled && (showFiadosMenu || showPagoDeuda)
   });
-  const deudorDetalleQ = useQuery({
-    queryKey: ["fiado-deudor-detalle-layout", selectedDeudorId],
-    queryFn: () => posApi.getDeudorById(selectedDeudorId as number),
-    enabled: showPagoDeuda && !!selectedDeudorId
+  const clienteDetalleQ = useQuery({
+    queryKey: ["fiado-cliente-detalle-layout", selectedClienteId],
+    queryFn: () => posApi.getClienteById(selectedClienteId as number),
+    enabled: showPagoDeuda && !!selectedClienteId
   });
   const abonoM = useMutation({
     mutationFn: () =>
       posApi.registrarAbonoFiado({
-        deudorId: selectedDeudorId as number,
+        clienteId: selectedClienteId as number,
         montoEfectivo: parseCurrencyInput(abonoEfectivo),
         montoTransferencia: parseCurrencyInput(abonoTransferencia),
         observacion: abonoObservacion.trim() || undefined
       }),
     onSuccess: async () => {
       setShowPagoDeuda(false);
-      setSelectedDeudorId(null);
+      setSelectedClienteId(null);
       setAbonoEfectivo("0");
       setAbonoTransferencia("0");
       setAbonoObservacion("");
-      await queryClient.invalidateQueries({ queryKey: ["fiados-deudores-menu"] });
-      await queryClient.invalidateQueries({ queryKey: ["fiado-deudor-detalle-layout"] });
+      await queryClient.invalidateQueries({ queryKey: ["fiados-clientes-menu"] });
+      await queryClient.invalidateQueries({ queryKey: ["fiado-cliente-detalle-layout"] });
       await queryClient.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       await queryClient.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
       if (resolvedRole === "CAJA") {
@@ -320,7 +320,7 @@ export function MainLayout() {
     "hidden items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 md:inline-flex";
   const isDomiMobileNav = resolvedRole === "DOMI";
   const totalAbono = parseCurrencyInput(abonoEfectivo) + parseCurrencyInput(abonoTransferencia);
-  const deudaActual = deudorDetalleQ.data?.deudaTotal ?? 0;
+  const deudaActual = clienteDetalleQ.data?.deudaTotal ?? 0;
   const restanteDeuda = Math.max(0, deudaActual - totalAbono);
 
   function pushDebtCalcValue(token: string) {
@@ -339,7 +339,7 @@ export function MainLayout() {
 
   function resetPagoDeudaState() {
     setShowPagoDeuda(false);
-    setSelectedDeudorId(null);
+    setSelectedClienteId(null);
     setAbonoEfectivo("0");
     setAbonoTransferencia("0");
     setAbonoObservacion("");
@@ -567,39 +567,39 @@ export function MainLayout() {
           <div className="card w-full max-w-lg p-5">
             <div className="mb-3 flex items-center justify-between">
               <h4 className="font-semibold">Pagar deuda</h4>
-              <button className="btn-ghost p-1" onClick={() => { setShowPagoDeuda(false); setSelectedDeudorId(null); }}>
+              <button className="btn-ghost p-1" onClick={() => { setShowPagoDeuda(false); setSelectedClienteId(null); }}>
                 <X size={14} />
               </button>
             </div>
 
-            {!selectedDeudorId ? (
+            {!selectedClienteId ? (
               <div className="max-h-[60vh] overflow-auto">
-                {deudoresQ.isLoading && <p className="text-center text-pos-muted">Cargando...</p>}
-                {deudoresQ.data && deudoresQ.data.length === 0 && (
-                  <p className="text-center text-pos-muted">No hay deudores con deuda</p>
+                {clientesQ.isLoading && <p className="text-center text-pos-muted">Cargando...</p>}
+                {clientesQ.data && clientesQ.data.length === 0 && (
+                  <p className="text-center text-pos-muted">No hay clientes con deuda</p>
                 )}
-                {deudoresQ.data?.map((deudor) => (
+                {clientesQ.data?.map((cliente: Cliente) => (
                   <button
-                    key={deudor.id}
+                    key={cliente.id}
                     className="w-full rounded-lg border border-pos-border p-3 text-left hover:bg-gray-50"
-                    onClick={() => setSelectedDeudorId(deudor.id)}
+                    onClick={() => setSelectedClienteId(cliente.id)}
                   >
-                    <p className="font-semibold">{deudor.nombre}</p>
-                    <p className="text-xs text-pos-muted">{deudor.telefono}</p>
-                    <p className="text-sm font-bold text-red-600">{money.format(deudor.deudaTotal)}</p>
+                    <p className="font-semibold">{cliente.nombre}</p>
+                    <p className="text-xs text-pos-muted">{cliente.telefono}</p>
+                    <p className="text-sm font-bold text-red-600">{money.format(cliente.deudaTotal)}</p>
                   </button>
                 ))}
               </div>
             ) : (
               <>
-                {deudorDetalleQ.isLoading && <p className="text-center text-pos-muted">Cargando detalle...</p>}
-                {deudorDetalleQ.data && (
+                {clienteDetalleQ.isLoading && <p className="text-center text-pos-muted">Cargando detalle...</p>}
+                {clienteDetalleQ.data && (
                   <>
                     <div className="mb-3 rounded-lg border border-pos-border bg-gray-50 p-3">
-                      <p className="font-semibold">{deudorDetalleQ.data.nombre}</p>
-                      <p className="text-xs text-pos-muted">{deudorDetalleQ.data.telefono}</p>
+                      <p className="font-semibold">{clienteDetalleQ.data.nombre}</p>
+                      <p className="text-xs text-pos-muted">{clienteDetalleQ.data.telefono}</p>
                       <p className="mt-2 text-xl font-bold text-red-600">
-                        Deuda: {money.format(deudorDetalleQ.data.deudaTotal)}
+                        Deuda: {money.format(clienteDetalleQ.data.deudaTotal)}
                       </p>
                     </div>
 
@@ -663,7 +663,7 @@ export function MainLayout() {
                     </div>
 
                     <div className="mt-3 flex gap-2">
-                      <button className="btn-ghost flex-1" onClick={() => setSelectedDeudorId(null)}>
+                      <button className="btn-ghost flex-1" onClick={() => setSelectedClienteId(null)}>
                         Atrás
                       </button>
                       <button

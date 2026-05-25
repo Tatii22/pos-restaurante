@@ -7,6 +7,8 @@ import { formatCurrencyInput, getErrorMessage, money, parseCurrencyInput } from 
 import type { Cliente, ClienteDetalle, AbonoFiado, ClienteSearch as ClienteSearchType } from "../types";
 
 export function ClientesPage() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
   const [showDetalle, setShowDetalle] = useState<ClienteDetalle | null>(null);
   const [showAbono, setShowAbono] = useState<Cliente | null>(null);
@@ -77,7 +79,7 @@ export function ClientesPage() {
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes frecuentes</h1>
-        <button className="btn-primary" onClick={() => setShowNuevoDeudor(true)}>
+        <button className="btn-primary" onClick={() => setShowNuevoCliente(true)}>
           <Plus size={16} className="mr-1" />
           Nuevo cliente
         </button>
@@ -113,49 +115,49 @@ export function ClientesPage() {
             </tr>
           </thead>
           <tbody>
-            {deudoresQ.isLoading && (
+            {clientesQ.isLoading && (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-pos-muted">
                   Cargando...
                 </td>
               </tr>
             )}
-            {deudoresQ.isError && (
+            {clientesQ.isError && (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-red-600">
-                  {getErrorMessage(deudoresQ.error)}
+                  {getErrorMessage(clientesQ.error)}
                 </td>
               </tr>
             )}
-            {deudoresQ.data && filteredDeudores.length === 0 && (
+            {clientesQ.data && filteredClientes.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-pos-muted">
-                  No hay deudores registrados
+                  No hay clientes registrados
                 </td>
               </tr>
             )}
-            {filteredDeudores.map((deudor) => (
-              <tr key={deudor.id} className="border-t border-pos-border">
-                <td className="px-3 py-2">{deudor.nombre}</td>
-                <td className="px-3 py-2 font-mono text-sm">{deudor.telefono}</td>
-                <td className={`px-3 py-2 text-right font-semibold ${deudor.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {money.format(deudor.deudaTotal)}
+            {filteredClientes.map((cliente) => (
+              <tr key={cliente.id} className="border-t border-pos-border">
+                <td className="px-3 py-2">{cliente.nombre}</td>
+                <td className="px-3 py-2 font-mono text-sm">{cliente.telefono}</td>
+                <td className={`px-3 py-2 text-right font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {money.format(cliente.deudaTotal)}
                 </td>
-                <td className="px-3 py-2 text-right">{deudor.ventasPendientes}</td>
+                <td className="px-3 py-2 text-right">{cliente.ventasPendientes}</td>
                 <td className="px-3 py-2 text-center">
                   <button
                     className="btn-ghost text-xs"
                     onClick={() => {
                       // Usar el query para obtener el detalle y evitar llamadas duplicadas
-                      setShowDetalle({ id: deudor.id, nombre: deudor.nombre, telefono: deudor.telefono, deudaTotal: deudor.deudaTotal, ventasPendientes: [], abonos: [] } as unknown as DeudorDetalle);
+                      setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle);
                     }}
                   >
                     Ver detalle
                   </button>
-                  {deudor.deudaTotal > 0 && (
+                  {cliente.deudaTotal > 0 && (
                     <button
                       className="btn-ghost text-xs text-green-600"
-                      onClick={() => setShowAbono(deudor)}
+                      onClick={() => setShowAbono(cliente)}
                     >
                       Registrar abono
                     </button>
@@ -167,28 +169,28 @@ export function ClientesPage() {
         </table>
       </div>
 
-      {showNuevoDeudor && (
+      {showNuevoCliente && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-md p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Nuevo deudor</h3>
-              <button className="btn-ghost p-1" onClick={() => setShowNuevoDeudor(false)}>
+              <h3 className="text-lg font-semibold">Nuevo cliente</h3>
+              <button className="btn-ghost p-1" onClick={() => setShowNuevoCliente(false)}>
                 <X size={16} />
               </button>
             </div>
             <ClienteSearch
               onSelect={(cliente: ClienteSearchType) => {
-                setShowNuevoDeudor(false);
-                qc.invalidateQueries({ queryKey: ["deudores-page"] });
+                setShowNuevoCliente(false);
+                qc.invalidateQueries({ queryKey: ["clientes-page"] });
               }}
               label="Buscar o crear cliente"
-              placeholder="Nombre o teléfono del nuevo deudor..."
+              placeholder="Nombre o teléfono del nuevo cliente..."
               allowCreate={true}
               autoFocus={true}
               showDebt={false}
             />
             <div className="mt-4">
-              <button className="btn-ghost w-full" onClick={() => setShowNuevoDeudor(false)}>
+              <button className="btn-ghost w-full" onClick={() => setShowNuevoCliente(false)}>
                 Cancelar
               </button>
             </div>
@@ -279,7 +281,7 @@ export function ClientesPage() {
               </button>
             </div>
             <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3">
-              <p className="text-xs text-pos-muted">Deudor</p>
+              <p className="text-xs text-pos-muted">Cliente</p>
               <p className="font-semibold">{showAbono.nombre}</p>
               <p className="text-sm text-pos-muted">{showAbono.telefono}</p>
               <p className="mt-2 text-lg font-bold text-red-600">

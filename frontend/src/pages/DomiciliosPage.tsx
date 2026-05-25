@@ -329,13 +329,13 @@ export function DomiciliosPage() {
                      <button
                        className="btn-ghost w-full text-orange-700"
                        onClick={() => {
-                         if (selected.deudorId) {
+                         if (selected.clienteId) {
                            // Ya tiene cliente asociado → conversión directa sin pedir selección
                           marcarFiadoM.mutate({
                             id: selected.id,
-                            deudorId: selected.deudorId,
-                            deudorNombre: selected.clienteNombre || '',
-                            deudorTelefono: selected.telefono || ''
+                            clienteId: selected.clienteId,
+                            clienteNombre: selected.clienteNombre || '',
+                            clienteTelefono: selected.telefono || ''
                           });
                          } else {
                            setConvertToFiado({ ventaId: selected.id });
@@ -416,7 +416,7 @@ export function DomiciliosPage() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Pasar domicilio a fiado</h3>
-                <p className="text-sm text-pos-muted">Selecciona o crea el cliente deudor.</p>
+                <p className="text-sm text-pos-muted">Selecciona o crea el cliente.</p>
               </div>
               <button className="btn-ghost p-1" onClick={() => setConvertToFiado(null)}>
                 <BsXLg size={14} />
@@ -424,7 +424,7 @@ export function DomiciliosPage() {
             </div>
 
             <ClienteSearch
-              label="Cliente deudor"
+              label="Cliente"
               placeholder="Buscar o crear cliente..."
               allowCreate={true}
               autoFocus={true}
@@ -432,9 +432,9 @@ export function DomiciliosPage() {
               onSelect={(cliente: ClienteSearchType) => {
                 marcarFiadoM.mutate({
                   id: convertToFiado.ventaId,
-                  deudorId: cliente.id,
-                  deudorNombre: cliente.nombre,
-                  deudorTelefono: cliente.telefono
+                  clienteId: cliente.id,
+                  clienteNombre: cliente.nombre,
+                  clienteTelefono: cliente.telefono
                 });
               }}
               className="w-full"
@@ -500,12 +500,12 @@ export function DomiciliosPage() {
                     <button
                       className="btn-ghost w-full text-orange-700"
                       onClick={() => {
-                        if (selected.deudorId) {
+                        if (selected.clienteId) {
                           marcarFiadoM.mutate({
                             id: selected.id,
-                            deudorId: selected.deudorId,
-                            deudorNombre: selected.clienteNombre || '',
-                            deudorTelefono: selected.telefono || ''
+                            clienteId: selected.clienteId,
+                            clienteNombre: selected.clienteNombre || '',
+                            clienteTelefono: selected.telefono || ''
                           });
                         } else {
                           setConvertToFiado({ ventaId: selected.id });

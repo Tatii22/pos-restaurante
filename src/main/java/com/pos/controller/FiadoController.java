@@ -72,7 +72,7 @@ public class FiadoController {
      * Pensado para búsqueda rápida en VentasPage, DomiciliosPage, etc.
      */
     @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
-    @GetMapping("/clientes/buscar")
+    @GetMapping("/clientes/buscar-ligero")
     public ResponseEntity<List<ClienteSearchDTO>> buscarClientesLigero(
             @RequestParam(name = "q", defaultValue = "") String query) {
         return ResponseEntity.ok(fiadoService.buscarClientesLigero(query));

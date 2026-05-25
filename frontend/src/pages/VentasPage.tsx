@@ -744,18 +744,33 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                   Salir
                 </button>
               </div>
-               {selectedCliente ? (
-                        <p className="font-semibold">{selectedCliente.nombre}</p>
-                        <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
-                      <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedCliente(null)}>
-                      const cliente: Cliente = {
-                      setSelectedCliente(cliente);
-                    label="Seleccionar cliente"
-                   placeholder="Buscar por nombre o teléfono..."
-                   allowCreate={true}
-                   showDebt={true}
-                 />
-               )}
+              {selectedCliente ? (
+                <div className="space-y-2">
+                  <p className="font-semibold">{selectedCliente.nombre}</p>
+                  <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
+                  <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedCliente(null)}>
+                    Cambiar cliente
+                  </button>
+                </div>
+              ) : (
+                <ClienteSearch
+                  onSelect={(cliente: ClienteSearchType) => {
+                    const clienteObj: Cliente = {
+                      id: cliente.id,
+                      nombre: cliente.nombre,
+                      telefono: cliente.telefono,
+                      activo: true,
+                      deudaTotal: 0,
+                      ventasPendientes: 0
+                    };
+                    setSelectedCliente(clienteObj);
+                  }}
+                  label="Seleccionar cliente"
+                  placeholder="Buscar por nombre o teléfono..."
+                  allowCreate={true}
+                  showDebt={true}
+                />
+              )}
             </div>
           )}
           {esDomi ? (
@@ -907,9 +922,10 @@ function buildSalePayload(transferValue: number, cashValue: number) {
               </button>
             </div>
 
-             {modoFiado && selectedCliente && (
-                 <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedCliente.nombre}</p>
-                 <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
+            {modoFiado && selectedCliente && (
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+                <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedCliente.nombre}</p>
+                <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
                 <p className="text-sm text-pos-muted">Total: {money.format(total)} (pendiente de pago)</p>
               </div>
             )}

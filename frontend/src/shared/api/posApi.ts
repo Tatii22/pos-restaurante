@@ -110,21 +110,6 @@ export const posApi = {
     const { data } = await http.post<AbonoFiado>("/api/v1/fiados/abonos", payload);
     return data;
   },
-  // LEGACY (deprecated - se eliminarán)
-  getDeudores: async (soloConDeuda = false) => {
-    const { data } = await http.get<Cliente[]>("/api/v1/fiados/deudores", {
-      params: { soloConDeuda }
-    });
-    return data;
-  },
-  getDeudorById: async (id: number) => {
-    const { data } = await http.get<ClienteDetalle>(`/api/v1/fiados/deudores/${id}`);
-    return data;
-  },
-  crearDeudor: async (payload: { nombre: string; telefono: string }) => {
-    const { data } = await http.post<Cliente>("/api/v1/fiados/deudores", payload);
-    return data;
-  },
   catalogoHoy: async () => {
     const { data } = await http.get<CatalogoHoy>("/api/v1/ventas/catalogo-hoy");
     return data;
@@ -339,7 +324,7 @@ export const posApi = {
    * Prioriza coincidencias exactas de teléfono, luego parciales, luego nombres.
    */
   buscarClientesLigero: async (q: string) => {
-    const { data } = await http.get<ClienteSearch[]>("/api/v1/fiados/clientes/buscar", {
+    const { data } = await http.get<ClienteSearch[]>("/api/v1/fiados/clientes/buscar-ligero", {
       params: { q }
     });
     return data;

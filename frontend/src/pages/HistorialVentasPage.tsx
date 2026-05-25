@@ -381,10 +381,10 @@ function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
   const [loadingAbonos, setLoadingAbonos] = useState(false);
 
   async function cargarAbonos() {
-    if (!detalle.deudorId) return;
+    if (!detalle.clienteId) return;
     try {
       setLoadingAbonos(true);
-      const d = await posApi.getDeudorById(detalle.deudorId);
+      const d = await posApi.getClienteById(detalle.clienteId);
       setAbonos(d.abonos || []);
     } catch (err) {
       setAbonos([]);
@@ -394,12 +394,12 @@ function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
   }
 
   useEffect(() => {
-    if (detalle.condicionPago === "FIADO" && detalle.deudorId) {
+    if (detalle.condicionPago === "FIADO" && detalle.clienteId) {
       cargarAbonos();
     } else {
       setAbonos(null);
     }
-  }, [detalle.condicionPago, detalle.deudorId]);
+  }, [detalle.condicionPago, detalle.clienteId]);
 
   return (
     <div className="grid gap-4">
@@ -436,7 +436,7 @@ function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
                   )}
                   {!loadingAbonos && abonos && abonos.length > 0 && (
                     <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                      <p className="mb-2 text-sm font-semibold">Abonos del deudor</p>
+                      <p className="mb-2 text-sm font-semibold">Historial de abonos</p>
                       <div className="space-y-2 divide-y divide-green-100">
                         {abonos.map((a) => (
                           <div key={a.id} className="pt-2 first:pt-0 text-sm">

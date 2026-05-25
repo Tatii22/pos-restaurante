@@ -3,8 +3,8 @@ import type {
   AuthMe,
   CatalogoHoy,
   Categoria,
-  Deudor,
-  DeudorDetalle,
+  Cliente,
+  ClienteDetalle,
   PageResponse,
   Producto,
   ReporteVentas,
@@ -263,28 +263,28 @@ export async function descargarArchivo(token: string, path: string, filename: st
 }
 
 // ─────────────────────────────────────────────────────────────────
-// FIADOS / DEUDORES
+// FIADOS / CLIENTES
 // ─────────────────────────────────────────────────────────────────
 
-export function buscarClientes(token: string, q: string): Promise<Deudor[]> {
+export function buscarClientes(token: string, q: string): Promise<Cliente[]> {
   const query = new URLSearchParams({ q });
-  return jsonRequest<Deudor[]>(`/api/v1/fiados/deudores/buscar?${query.toString()}`, {
+  return jsonRequest<Cliente[]>(`/api/v1/fiados/clientes/buscar?${query.toString()}`, {
     headers: makeHeaders(token)
   });
 }
 
-export function listarDeudores(token: string, soloConDeuda: boolean = false): Promise<Deudor[]> {
+export function listarClientes(token: string, soloConDeuda: boolean = false): Promise<Cliente[]> {
   const query = new URLSearchParams({ soloConDeuda: String(soloConDeuda) });
-  return jsonRequest<Deudor[]>(`/api/v1/fiados/deudores?${query.toString()}`, {
+  return jsonRequest<Cliente[]>(`/api/v1/fiados/clientes?${query.toString()}`, {
     headers: makeHeaders(token)
   });
 }
 
-export function obtenerDetalleDeudor(token: string, id: number): Promise<DeudorDetalle> {
-  return jsonRequest<DeudorDetalle>(`/api/v1/fiados/deudores/${id}`, { headers: makeHeaders(token) });
+export function obtenerDetalleCliente(token: string, id: number): Promise<ClienteDetalle> {
+  return jsonRequest<ClienteDetalle>(`/api/v1/fiados/clientes/${id}`, { headers: makeHeaders(token) });
 }
 
-export function crearDeudor(
+export function crearCliente(
   token: string,
   payload: {
     nombre: string;
@@ -292,8 +292,8 @@ export function crearDeudor(
     direccionPredeterminada?: string;
     notas?: string;
   }
-): Promise<Deudor> {
-  return jsonRequest<Deudor>("/api/v1/fiados/deudores", {
+): Promise<Cliente> {
+  return jsonRequest<Cliente>("/api/v1/fiados/clientes", {
     method: "POST",
     headers: makeHeaders(token),
     body: JSON.stringify(payload)
