@@ -3,6 +3,8 @@ import type {
   AuthMe,
   CatalogoHoy,
   Categoria,
+  Deudor,
+  DeudorDetalle,
   PageResponse,
   Producto,
   ReporteVentas,
@@ -258,4 +260,42 @@ export async function descargarArchivo(token: string, path: string, filename: st
   anchor.click();
   anchor.remove();
   window.URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// FIADOS / DEUDORES
+// ─────────────────────────────────────────────────────────────────
+
+export function buscarClientes(token: string, q: string): Promise<Deudor[]> {
+  const query = new URLSearchParams({ q });
+  return jsonRequest<Deudor[]>(`/api/v1/fiados/deudores/buscar?${query.toString()}`, {
+    headers: makeHeaders(token)
+  });
+}
+
+export function listarDeudores(token: string, soloConDeuda: boolean = false): Promise<Deudor[]> {
+  const query = new URLSearchParams({ soloConDeuda: String(soloConDeuda) });
+  return jsonRequest<Deudor[]>(`/api/v1/fiados/deudores?${query.toString()}`, {
+    headers: makeHeaders(token)
+  });
+}
+
+export function obtenerDetalleDeudor(token: string, id: number): Promise<DeudorDetalle> {
+  return jsonRequest<DeudorDetalle>(`/api/v1/fiados/deudores/${id}`, { headers: makeHeaders(token) });
+}
+
+export function crearDeudor(
+  token: string,
+  payload: {
+    nombre: string;
+    telefono: string;
+    direccionPredeterminada?: string;
+    notas?: string;
+  }
+): Promise<Deudor> {
+  return jsonRequest<Deudor>("/api/v1/fiados/deudores", {
+    method: "POST",
+    headers: makeHeaders(token),
+    body: JSON.stringify(payload)
+  });
 }

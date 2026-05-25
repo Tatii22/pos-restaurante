@@ -26,7 +26,7 @@ export type Venta = {
   descuentoPorcentaje: number | null;
   descuentoValor: number | null;
   total: number;
-  formaPago: "EFECTIVO" | "TRANSFERENCIA";
+  formaPago: "EFECTIVO" | "TRANSFERENCIA" | "FIADO";
   pagoEfectivo?: number | null;
   pagoTransferencia?: number | null;
   condicionPago?: "CONTADO" | "FIADO";
@@ -58,7 +58,10 @@ export type Deudor = {
   id: number;
   nombre: string;
   telefono: string;
+  direccionPredeterminada?: string | null;
+  notas?: string | null;
   activo: boolean;
+  esDeudor?: boolean;
   deudaTotal: number;
   ventasPendientes: number;
 };
@@ -79,6 +82,8 @@ export type DeudorDetalle = {
   id: number;
   nombre: string;
   telefono: string;
+  direccionPredeterminada?: string | null;
+  notas?: string | null;
   deudaTotal: number;
   ventasPendientes: Venta[];
   abonos: AbonoFiado[];

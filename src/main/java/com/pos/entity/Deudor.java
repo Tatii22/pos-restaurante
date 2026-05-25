@@ -26,6 +26,19 @@ public class Deudor {
     @Column(nullable = false, length = 20)
     private String telefono;
 
+    /**
+     * Dirección predeterminada del cliente.
+     * Se autocompleta en nuevos domicilios y se actualiza con la última dirección usada.
+     */
+    @Column(length = 255)
+    private String direccionPredeterminada;
+
+    /**
+     * Notas libres visibles para el operador: "timbre roto", "pago siempre en efectivo", etc.
+     */
+    @Column(length = 255)
+    private String notas;
+
     @Column(nullable = false)
     private Boolean activo;
 

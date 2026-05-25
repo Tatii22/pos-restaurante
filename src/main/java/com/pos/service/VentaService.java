@@ -4,6 +4,7 @@ import com.pos.dto.venta.VentaCocinaPreviewDTO;
 import com.pos.dto.venta.VentaCreateDTO;
 import com.pos.dto.venta.VentaDetalleResponseDTO;
 import com.pos.dto.venta.VentaDespachoDTO;
+import com.pos.dto.venta.VentaFiadoDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
 import com.pos.dto.venta.VentaItemResponseDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
@@ -224,7 +225,8 @@ public class VentaService {
         boolean esFiado = Boolean.TRUE.equals(dto.fiado());
         Deudor deudor = fiadoService.resolverDeudorVenta(esFiado, dto.deudorId(), dto.deudorNombre(), dto.deudorTelefono());
 
-        venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
+        venta.setFormaPago(esFiado ? FormaPago.FIADO
+                : resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setCondicionPago(esFiado ? CondicionPago.FIADO : CondicionPago.CONTADO);
         venta.setUsuario(usuario);
         venta.setTurno(turno);
@@ -442,7 +444,8 @@ public class VentaService {
                 : calcularPagoAplicado(venta.getTotal(), pagoEfectivo, pagoTransferencia, "El pago es insuficiente para despachar la venta");
 
         venta.setEstado(EstadoVenta.DESPACHADA);
-        venta.setFormaPago(resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
+        venta.setFormaPago(esFiado ? FormaPago.FIADO
+                : resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setSaldoPendiente(esFiado ? venta.getTotal() : BigDecimal.ZERO);
         if (!esFiado) {
             turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
@@ -484,6 +487,61 @@ public class VentaService {
             imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
         }
 
+        return ventaGuardada;
+    }
+
+    @Transactional
+    public Venta marcarVentaDomicilioComoFiado(Long ventaId, VentaFiadoDTO dto, Usuario usuario) {
+        Venta venta = ventaRepository.findByIdWithDetallesForUpdate(ventaId)
+                .orElseThrow(() -> new BadRequestException("Venta no encontrada"));
+
+        if (venta.getTipoVenta() != TipoVenta.DOMICILIO) {
+            throw new BadRequestException("Solo se pueden marcar como fiado los domicilios");
+        }
+        if (venta.getEstado() != EstadoVenta.EN_PROCESO) {
+            throw new BadRequestException("Solo se pueden marcar como fiado los pedidos en proceso");
+        }
+        if (venta.getCondicionPago() == CondicionPago.FIADO) {
+            return venta;
+        }
+
+        Deudor deudor = fiadoService.resolverDeudorVenta(true, dto.deudorId(), dto.deudorNombre(), dto.deudorTelefono());
+        venta.setDeudor(deudor);
+        venta.setCondicionPago(CondicionPago.FIADO);
+        venta.setFormaPago(FormaPago.FIADO);
+        venta.setEstado(EstadoVenta.DESPACHADA);
+        venta.setSaldoPendiente(venta.getTotal());
+
+        if (deudor != null) {
+            venta.setClienteNombre(deudor.getNombre());
+            venta.setTelefono(deudor.getTelefono());
+        }
+
+        TurnoCaja turno = venta.getTurno();
+        turnoCajaRepository.save(turno);
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+        ventaPagoDetalleService.guardar(
+                ventaGuardada.getId(),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
+        );
+        movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+        auditService.record(
+                "VENTA_DOMICILIO_FIADO",
+                "Venta",
+                ventaGuardada.getId(),
+                usuario,
+                ventaGuardada.getTurno(),
+                null,
+                auditService.change("condicionPago", CondicionPago.CONTADO, CondicionPago.FIADO),
+                auditService.change("formaPago", null, FormaPago.FIADO),
+                auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
+                auditService.change("deudorId", null, deudor.getId())
+        );
         return ventaGuardada;
     }
 
@@ -739,22 +797,24 @@ public class VentaService {
         }
     }
 
+    /**
+     * Resuelve la forma de pago real a partir de los montos recibidos.
+     * Si se usa junto a una venta fiada, llamar directamente con FormaPago.FIADO.
+     */
     private FormaPago resolverFormaPago(FormaPago formaPagoDeclarada, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
-        BigDecimal efectivo = pagoEfectivo == null ? BigDecimal.ZERO : pagoEfectivo;
+        // Si el caller ya sabe que es FIADO, respetarlo sin inspeccionar montos
+        if (formaPagoDeclarada == FormaPago.FIADO) return FormaPago.FIADO;
+
+        BigDecimal efectivo      = pagoEfectivo      == null ? BigDecimal.ZERO : pagoEfectivo;
         BigDecimal transferencia = pagoTransferencia == null ? BigDecimal.ZERO : pagoTransferencia;
 
-        boolean tieneEfectivo = efectivo.compareTo(BigDecimal.ZERO) > 0;
+        boolean tieneEfectivo      = efectivo.compareTo(BigDecimal.ZERO)      > 0;
         boolean tieneTransferencia = transferencia.compareTo(BigDecimal.ZERO) > 0;
 
-        if (tieneTransferencia && !tieneEfectivo) {
-            return FormaPago.TRANSFERENCIA;
-        }
-        if (tieneEfectivo && !tieneTransferencia) {
-            return FormaPago.EFECTIVO;
-        }
-        if (tieneEfectivo && tieneTransferencia) {
-            return transferencia.compareTo(efectivo) >= 0 ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
-        }
+        if (tieneTransferencia && !tieneEfectivo)  return FormaPago.TRANSFERENCIA;
+        if (tieneEfectivo && !tieneTransferencia)  return FormaPago.EFECTIVO;
+        if (tieneEfectivo && tieneTransferencia)   return transferencia.compareTo(efectivo) >= 0
+                ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
 
         return formaPagoDeclarada != null ? formaPagoDeclarada : FormaPago.EFECTIVO;
     }

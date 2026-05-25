@@ -39,6 +39,7 @@ public class ReporteVentaDTO {
     private BigDecimal carteraGenerada;
     private BigDecimal carteraPendiente;
     private BigDecimal recaudoReal;
+    private BigDecimal totalGastos;
     private List<VentaResponseDTO> ventas;
 
     

@@ -95,7 +95,7 @@ export function MainLayout() {
   }, [token, sessionQ.isError, clearTurno, clearAuth, navigate]);
 
   const menu = items.filter((i) => resolvedRole && i.roles.includes(resolvedRole));
-  const fiadosEnabled = resolvedRole === "CAJA" || resolvedRole === "DOMI";
+  const fiadosEnabled = resolvedRole === "CAJA";
 
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-layout", resolvedRole],
@@ -357,7 +357,13 @@ export function MainLayout() {
       <header className="sticky top-0 z-20 overflow-x-hidden border-b border-pos-border bg-white">
         <div className="grid grid-cols-1 gap-2 px-2 py-2 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3">
           <div className="grid min-w-0 grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_auto_auto] items-center gap-1 overflow-hidden text-[11px] sm:flex sm:items-center sm:gap-2 sm:text-sm">
-            <span className="min-w-0 truncate text-sm font-bold sm:shrink-0 sm:text-lg">Restaurant POS</span>
+            <div className="flex min-w-0 items-center gap-2 truncate">
+              <img src="/images/logo.png" alt="MentaPOS" className="h-7 w-7 flex-shrink-0" />
+              <span className="min-w-0 truncate text-sm font-bold sm:shrink-0 sm:text-lg">
+                <span className="text-pos-text">Menta</span>
+                <span className="text-pos-forest">POS</span>
+              </span>
+            </div>
             <span className="min-w-0 truncate text-right font-semibold sm:max-w-[220px] sm:text-left">{username}</span>
             {resolvedRole === "DOMI" && (
               <button className={logoutButtonClass} onClick={clearAuth}>
@@ -382,18 +388,20 @@ export function MainLayout() {
             )}
           </div>
           <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            {fiadosEnabled && (
+              <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowFiadosMenu((v) => !v)}>
+                <HandCoins size={14} />
+              </button>
+            )}
             {resolvedRole === "CAJA" && (
               <>
-<button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowAlerts((v) => !v)}>
+                <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowAlerts((v) => !v)}>
                   <Bell size={14} />
                   {lowStockAlerts.length > 0 && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                       {lowStockAlerts.length}
                     </span>
                   )}
-                </button>
-                <button className="btn-soft relative hidden h-9 w-9 shrink-0 p-0 sm:inline-flex sm:items-center sm:justify-center" onClick={() => setShowFiadosMenu((v) => !v)}>
-                  <HandCoins size={14} />
                 </button>
                 <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
                   {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}

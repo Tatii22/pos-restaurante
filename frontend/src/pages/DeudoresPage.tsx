@@ -20,6 +20,15 @@ export function DeudoresPage() {
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
   const [abonoObservacion, setAbonoObservacion] = useState("");
 
+  // Cambio estimado en tiempo real (solo orientativo; el servidor valida la cifra exacta)
+  const abonoEfectivoNum      = parseCurrencyInput(abonoEfectivo);
+  const abonoTransferenciaNum = parseCurrencyInput(abonoTransferencia);
+  const deudaActualAbono      = showAbono?.deudaTotal ?? 0;
+  const transferenciaExcede   = abonoTransferenciaNum > deudaActualAbono;
+  const faltanteTrasTransf    = Math.max(0, deudaActualAbono - abonoTransferenciaNum);
+  const efectivoAplicadoEst   = Math.min(abonoEfectivoNum, faltanteTrasTransf);
+  const cambioEstimado        = Math.max(0, abonoEfectivoNum - efectivoAplicadoEst);
+
   const deudoresQ = useQuery({
     queryKey: ["deudores-page", soloConDeuda],
     queryFn: () => posApi.getDeudores(soloConDeuda)
@@ -53,13 +62,19 @@ export function DeudoresPage() {
         montoTransferencia: parseCurrencyInput(abonoTransferencia),
         observacion: abonoObservacion.trim() || undefined
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setShowAbono(null);
       setAbonoEfectivo("0");
       setAbonoTransferencia("0");
       setAbonoObservacion("");
       qc.invalidateQueries({ queryKey: ["deudores-page"] });
       qc.invalidateQueries({ queryKey: ["deudor-detalle"] });
+      // Mostrar cambio si el servidor lo informa
+      if (data.cambioEfectivo && data.cambioEfectivo > 0) {
+        window.alert(
+          `✅ Abono registrado correctamente.\n💵 Devolver al cliente: ${data.cambioEfectivo.toLocaleString("es-CO")}`
+        );
+      }
     }
   });
 
@@ -149,7 +164,8 @@ export function DeudoresPage() {
                   <button
                     className="btn-ghost text-xs"
                     onClick={() => {
-                      posApi.getDeudorById(deudor.id).then(setShowDetalle);
+                      // Usar el query para obtener el detalle y evitar llamadas duplicadas
+                      setShowDetalle({ id: deudor.id, nombre: deudor.nombre, telefono: deudor.telefono, deudaTotal: deudor.deudaTotal, ventasPendientes: [], abonos: [] } as unknown as DeudorDetalle);
                     }}
                   >
                     Ver detalle
@@ -318,11 +334,16 @@ export function DeudoresPage() {
               <label className="text-sm">
                 Transferencia
                 <input
-                  className="input mt-1"
+                  className={`input mt-1 ${transferenciaExcede ? "border-red-400" : ""}`}
                   value={formatCurrencyInput(abonoTransferencia)}
                   onChange={(e) => formatCurrencyChange(setAbonoTransferencia)(e.target.value)}
                   inputMode="numeric"
                 />
+                {transferenciaExcede && (
+                  <p className="mt-1 text-xs text-red-600">
+                    La transferencia no puede superar la deuda pendiente.
+                  </p>
+                )}
               </label>
               <label className="text-sm">
                 Observación (opcional)
@@ -333,6 +354,23 @@ export function DeudoresPage() {
                   placeholder="Nota sobre el abono"
                 />
               </label>
+              {/* Resumen en tiempo real */}
+              <div className="rounded-lg border border-pos-border bg-gray-50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-pos-muted">Abono que se aplica</span>
+                  <span className="font-semibold">
+                    {money.format(efectivoAplicadoEst + abonoTransferenciaNum)}
+                  </span>
+                </div>
+                {cambioEstimado > 0 && (
+                  <div className="flex justify-between border-t pt-1">
+                    <span className="text-pos-muted">💵 Cambio a devolver</span>
+                    <span className="font-bold text-green-700">
+                      {money.format(cambioEstimado)}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="mt-4 flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setShowAbono(null)}>
@@ -341,9 +379,10 @@ export function DeudoresPage() {
               <button
                 className="btn-primary flex-1"
                 disabled={
-                  (parseCurrencyInput(abonoEfectivo) <= 0 && parseCurrencyInput(abonoTransferencia) <= 0) ||
+                (parseCurrencyInput(abonoEfectivo) <= 0 && parseCurrencyInput(abonoTransferencia) <= 0) ||
+                transferenciaExcede ||
                   abonoM.isPending
-                }
+              }
                 onClick={() => abonoM.mutate()}
               >
                 Registrar abono

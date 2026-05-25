@@ -1,15 +1,18 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BsXLg } from "react-icons/bs";
+import { BsCashStack, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
+import { ClienteSearch } from "../shared/ClienteSearch";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { getErrorMessage, money } from "../shared/utils";
+import type { Deudor } from "../types";
 
 function estadoClass(estado: string): string {
   if (estado === "EN_PROCESO") return "bg-yellow-100 text-yellow-800";
   if (estado === "DESPACHADA") return "bg-pos-accentSoft text-pos-mint";
   if (estado === "ANULADA") return "bg-red-100 text-red-800";
+  if (estado === "FIADO") return "bg-purple-100 text-purple-800";
   return "bg-pos-bg text-pos-muted";
 }
 
@@ -20,6 +23,7 @@ export function DomiciliosPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nuevoDomicilio, setNuevoDomicilio] = useState<string>("0");
   const [confirm, setConfirm] = useState<{ id: number; action: "cancelar" | "anular" } | null>(null);
+  const [convertToFiado, setConvertToFiado] = useState<{ ventaId: number } | null>(null);
   const [showCobro, setShowCobro] = useState(false);
   const [pagoEfectivo, setPagoEfectivo] = useState<string>("");
   const [pagoTransferencia, setPagoTransferencia] = useState<string>("");
@@ -72,6 +76,11 @@ export function DomiciliosPage() {
   function parseAmount(value: string): number {
     const normalized = value.replace(/[^\d]/g, "");
     return Number(normalized || "0");
+  }
+
+  function isValidFiadoPhone(value: string): boolean {
+    const digits = value.replace(/[^\d]/g, "");
+    return digits.length >= 7 && digits.length <= 15;
   }
 
   function cleanDigits(value: string, maxLen = 10): string {
@@ -167,6 +176,18 @@ export function DomiciliosPage() {
   const printFacturaM = useMutation({
     mutationFn: (id: number) => posApi.imprimirFactura(id)
   });
+  const marcarFiadoM = useMutation({
+    mutationFn: (payload: { id: number; deudorId?: number; deudorNombre: string; deudorTelefono: string }) =>
+      posApi.marcarVentaComoFiado(payload.id, {
+        deudorId: payload.deudorId,
+        deudorNombre: payload.deudorNombre,
+        deudorTelefono: payload.deudorTelefono
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["domicilios-list"] });
+      setConvertToFiado(null);
+    }
+  });
 
   if (role === "CAJA" && (!turno || !isAbierto())) {
     return (
@@ -213,16 +234,16 @@ export function DomiciliosPage() {
                 <p className="font-semibold"><span className="font-normal text-pos-muted">Total:</span> {money.format(v.total)}</p>
               </div>
 
-              <div className="mt-3">
-                <button
-                  className="btn-soft w-full"
-                  onClick={() => {
-                    setSelectedId(v.id);
-                    setNuevoDomicilio(String(v.valorDomicilio || 0));
-                  }}
-                >
-                  Ver
-                </button>
+              <div className="mt-3 grid gap-2">
+<button
+                   className="btn-soft w-full"
+                   onClick={() => {
+                     setSelectedId(v.id);
+                     setNuevoDomicilio(String(v.valorDomicilio || 0));
+                   }}
+                 >
+                   Ver
+                 </button>
               </div>
             </div>
           ))}
@@ -253,14 +274,14 @@ export function DomiciliosPage() {
                   <span className={`rounded-full px-2 py-1 text-xs font-semibold ${estadoClass(v.estado)}`}>{v.estado}</span>
                 </td>
                 <td className="p-3">{money.format(v.total)}</td>
-                <td className="p-3 whitespace-nowrap">
-                  <button className="btn-ghost" onClick={() => {
-                    setSelectedId(v.id);
-                    setNuevoDomicilio(String(v.valorDomicilio || 0));
-                  }}>
-                    Ver
-                  </button>
-                </td>
+<td className="p-3 whitespace-nowrap">
+                   <button className="btn-ghost" onClick={() => {
+                     setSelectedId(v.id);
+                     setNuevoDomicilio(String(v.valorDomicilio || 0));
+                   }}>
+                     Ver
+                   </button>
+                 </td>
               </tr>
             ))}
           </tbody>
@@ -303,7 +324,15 @@ export function DomiciliosPage() {
                   {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor valido para domicilio.</p>}
                 </label>
 
-                <div className="grid gap-2">
+<div className="grid gap-2">
+                  {role === "DOMI" && selected.estado === "EN_PROCESO" && selected.condicionPago !== "FIADO" && (
+                    <button
+                      className="btn-ghost w-full text-orange-700"
+                      onClick={() => setConvertToFiado({ ventaId: selected.id })}
+                    >
+                      <BsCashStack size={16} className="mr-1" /> Pasar a fiado
+                    </button>
+                  )}
                   <button
                     className="btn-soft"
                     disabled={printCocinaM.isPending || printFacturaM.isPending}
@@ -369,6 +398,46 @@ export function DomiciliosPage() {
         </div>
       )}
 
+      {convertToFiado && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-md p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Pasar domicilio a fiado</h3>
+                <p className="text-sm text-pos-muted">Selecciona o crea el cliente deudor.</p>
+              </div>
+              <button className="btn-ghost p-1" onClick={() => setConvertToFiado(null)}>
+                <BsXLg size={14} />
+              </button>
+            </div>
+
+            <ClienteSearch
+              label="Cliente deudor"
+              placeholder="Buscar o crear cliente..."
+              permitirCrearInline={true}
+              autoFocus={true}
+              onClienteSeleccionado={(cliente: Deudor) => {
+                marcarFiadoM.mutate({
+                  id: convertToFiado.ventaId,
+                  deudorNombre: cliente.nombre,
+                  deudorTelefono: cliente.telefono
+                });
+              }}
+              className="w-full"
+            />
+
+            <div className="mt-4">
+              <button
+                className="btn-ghost w-full"
+                onClick={() => setConvertToFiado(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selected && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 xl:hidden">
           <div className="card w-full max-w-lg p-5">
@@ -413,14 +482,22 @@ export function DomiciliosPage() {
                   {!valorDomicilioValido && <p className="mt-1 text-xs text-orange-700">Ingresa un valor valido para domicilio.</p>}
                 </label>
 
-                <div className="mt-4 grid gap-2">
-                  <button
-                    className="btn-soft"
-                    disabled={printCocinaM.isPending || printFacturaM.isPending}
-                    onClick={() => printCocinaM.mutate(selected.id)}
-                  >
-                    {printCocinaM.isPending ? "Imprimiendo cocina..." : "Imprimir Cocina"}
-                  </button>
+{role === "DOMI" && selected.estado === "EN_PROCESO" && selected.condicionPago !== "FIADO" && (
+                   <button
+                     className="btn-ghost w-full text-orange-700"
+                     onClick={() => setConvertToFiado({ ventaId: selected.id })}
+                   >
+                     <BsCashStack size={16} className="mr-1" /> Pasar a fiado
+                   </button>
+                 )}
+                 <div className="mt-4 grid gap-2">
+                   <button
+                     className="btn-soft"
+                     disabled={printCocinaM.isPending || printFacturaM.isPending}
+                     onClick={() => printCocinaM.mutate(selected.id)}
+                   >
+                     {printCocinaM.isPending ? "Imprimiendo cocina..." : "Imprimir Cocina"}
+                   </button>
                   <button
                     className="btn-soft"
                     disabled={printFacturaM.isPending || printCocinaM.isPending}

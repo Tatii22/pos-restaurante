@@ -104,4 +104,24 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             @Param("condicionPago") CondicionPago condicionPago,
             @Param("estado") EstadoVenta estado
     );
+
+    /**
+     * Devuelve deuda total y cantidad de ventas pendientes agrupadas por deudor,
+     * en una sola consulta. Elimina el problema N+1 de listarDeudores.
+     * Cada elemento del resultado es un Object[] con:
+     *   [0] = deudor.id (Long)
+     *   [1] = SUM(saldoPendiente) (BigDecimal)
+     *   [2] = COUNT(*) (Long)
+     */
+    @Query("""
+        SELECT v.deudor.id,
+               COALESCE(SUM(v.saldoPendiente), 0),
+               COUNT(v)
+        FROM Venta v
+        WHERE v.condicionPago = com.pos.entity.CondicionPago.FIADO
+          AND v.estado       = com.pos.entity.EstadoVenta.DESPACHADA
+          AND v.saldoPendiente > 0
+        GROUP BY v.deudor.id
+    """)
+    List<Object[]> sumarDeudaAgrupadaPorDeudor();
 }

@@ -275,17 +275,23 @@ public class ImpresoraTtermicaService {
     }
 
     private void appendPagoFactura(StringBuilder sb, Venta venta, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
-        BigDecimal efectivo = safeNonNegative(pagoEfectivo);
+        // Las ventas fiadas no tienen pago inmediato: se indica como pendiente
+        if (venta.getFormaPago() == com.pos.entity.FormaPago.FIADO) {
+            sb.append(kvLine("PAGO", "FIADO (pendiente)")).append("\n");
+            sb.append(kvLine("  Saldo", "$" + formatMoneda(venta.getSaldoPendiente()))).append("\n");
+            return;
+        }
+
+        BigDecimal efectivo      = safeNonNegative(pagoEfectivo);
         BigDecimal transferencia = safeNonNegative(pagoTransferencia);
         boolean mixto = efectivo.compareTo(BigDecimal.ZERO) > 0 && transferencia.compareTo(BigDecimal.ZERO) > 0;
 
         if (mixto) {
             sb.append(kvLine("PAGO", "MIXTO")).append("\n");
-            sb.append(kvLine("  Efectivo", "$" + formatMoneda(efectivo))).append("\n");
-            sb.append(kvLine("  Transfer", "$" + formatMoneda(transferencia))).append("\n");
+            sb.append(kvLine("  Efectivo",  "$" + formatMoneda(efectivo))).append("\n");
+            sb.append(kvLine("  Transfer",  "$" + formatMoneda(transferencia))).append("\n");
             return;
         }
-
         if (efectivo.compareTo(BigDecimal.ZERO) > 0) {
             sb.append(kvLine("PAGO", "EFECTIVO")).append("\n");
             sb.append(kvLine("  Valor", "$" + formatMoneda(efectivo))).append("\n");

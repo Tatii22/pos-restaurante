@@ -9,6 +9,7 @@ import com.pos.dto.venta.VentaDetalleResponseDTO;
 import com.pos.dto.venta.VentaDespachoDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.dto.venta.VentaValorDomicilioDTO;
+import com.pos.dto.venta.VentaFiadoDTO;
 import com.pos.entity.Usuario;
 import com.pos.service.VentaService;
 import org.springframework.data.domain.Page;
@@ -201,6 +202,21 @@ public class VentaController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Venta venta = ventaService.actualizarValorDomicilio(id, dto.valorDomicilio(), usuario);
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
+    }
+
+    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
+    @PutMapping("/{id}/fiado")
+    @Operation(summary = "Marcar domicilio en proceso como fiado")
+    public ResponseEntity<VentaResponseDTO> marcarFiado(
+            @PathVariable Long id,
+            @Valid @RequestBody VentaFiadoDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Venta venta = ventaService.marcarVentaDomicilioComoFiado(id, dto, usuario);
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 }

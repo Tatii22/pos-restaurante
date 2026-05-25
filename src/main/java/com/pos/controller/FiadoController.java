@@ -37,6 +37,14 @@ public class FiadoController {
     }
 
     @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
+    @GetMapping("/deudores/buscar")
+    public ResponseEntity<List<DeudorResponseDTO>> buscarDeudores(
+            @RequestParam(name = "q", defaultValue = "") String query
+    ) {
+        return ResponseEntity.ok(fiadoService.buscarClientes(query));
+    }
+
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
     @GetMapping("/deudores/{id}")
     public ResponseEntity<DeudorDetalleDTO> obtenerDetalle(@PathVariable Long id) {
         return ResponseEntity.ok(fiadoService.obtenerDetalle(id));

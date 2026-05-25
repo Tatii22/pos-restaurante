@@ -14,6 +14,8 @@ public record AbonoFiadoResponseDTO(
         FormaPago formaPago,
         String observacion,
         String usuario,
-        Long turnoId
+        Long turnoId,
+        /** Efectivo que debe devolverse al cliente. Cero si no aplica. */
+        BigDecimal cambioEfectivo
 ) {
 }

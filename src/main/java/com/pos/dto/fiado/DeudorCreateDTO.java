@@ -8,6 +8,8 @@ public record DeudorCreateDTO(
         String nombre,
         @NotBlank(message = "El telefono es obligatorio")
         @Pattern(regexp = "\\d{7,15}", message = "El telefono debe tener entre 7 y 15 digitos")
-        String telefono
+        String telefono,
+        String direccionPredeterminada,
+        String notas
 ) {
 }

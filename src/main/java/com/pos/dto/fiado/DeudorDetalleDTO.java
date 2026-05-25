@@ -9,6 +9,9 @@ public record DeudorDetalleDTO(
         Long id,
         String nombre,
         String telefono,
+        String direccionPredeterminada,
+        String notas,
+        Boolean esDeudor,
         BigDecimal deudaTotal,
         List<VentaResponseDTO> ventasPendientes,
         List<AbonoFiadoResponseDTO> abonos

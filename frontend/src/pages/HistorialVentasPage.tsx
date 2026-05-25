@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsEye, BsFilter, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
@@ -23,7 +23,10 @@ function estadoClass(estado: Venta["estado"]): string {
   return "bg-yellow-100 text-yellow-800";
 }
 
-function pagoLabel(venta: Pick<Venta, "formaPago" | "pagoEfectivo" | "pagoTransferencia">): string {
+function pagoLabel(venta: Pick<Venta, "formaPago" | "pagoEfectivo" | "pagoTransferencia" | "condicionPago">): string {
+  // Mostrar FIADO con prioridad si la condicionPago o la formaPago lo indican
+  if (venta.condicionPago === "FIADO" || venta.formaPago === "FIADO") return "FIADO";
+
   const pagoEfectivo = Number(venta.pagoEfectivo ?? 0);
   const pagoTransferencia = Number(venta.pagoTransferencia ?? 0);
 
@@ -374,6 +377,30 @@ export function HistorialVentasPage() {
 }
 
 function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
+  const [abonos, setAbonos] = useState<Array<any> | null>(null);
+  const [loadingAbonos, setLoadingAbonos] = useState(false);
+
+  async function cargarAbonos() {
+    if (!detalle.deudorId) return;
+    try {
+      setLoadingAbonos(true);
+      const d = await posApi.getDeudorById(detalle.deudorId);
+      setAbonos(d.abonos || []);
+    } catch (err) {
+      setAbonos([]);
+    } finally {
+      setLoadingAbonos(false);
+    }
+  }
+
+  useEffect(() => {
+    if (detalle.condicionPago === "FIADO" && detalle.deudorId) {
+      cargarAbonos();
+    } else {
+      setAbonos(null);
+    }
+  }, [detalle.condicionPago, detalle.deudorId]);
+
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 md:grid-cols-2">
@@ -399,6 +426,42 @@ function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
             {hasPositiveNumber(detalle.descuentoPorcentaje) && <p><span className="text-pos-muted">Descuento %:</span> {detalle.descuentoPorcentaje}%</p>}
             {hasPositiveNumber(detalle.descuentoValor) && <p><span className="text-pos-muted">Descuento valor:</span> {money.format(detalle.descuentoValor ?? 0)}</p>}
             <p className="font-semibold"><span className="text-pos-muted font-normal">Total:</span> {money.format(detalle.total)}</p>
+            {detalle.condicionPago === "FIADO" && (
+              <>
+                <p><span className="text-pos-muted">Condición:</span> <span className="font-semibold text-red-600">Fiado</span></p>
+                <p><span className="text-pos-muted">Saldo pendiente:</span> <span className="font-semibold">{money.format(detalle.saldoPendiente ?? 0)}</span></p>
+                <div className="mt-2 space-y-2 text-sm">
+                  {loadingAbonos && (
+                    <p className="text-sm text-pos-muted">Cargando abonos...</p>
+                  )}
+                  {!loadingAbonos && abonos && abonos.length > 0 && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                      <p className="mb-2 text-sm font-semibold">Abonos del deudor</p>
+                      <div className="space-y-2 divide-y divide-green-100">
+                        {abonos.map((a) => (
+                          <div key={a.id} className="pt-2 first:pt-0 text-sm">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="font-semibold">{money.format(a.monto)}</p>
+                                <p className="text-xs text-pos-muted">{new Date(a.fecha).toLocaleString()}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-pos-muted">{a.formaPago}</p>
+                                <p className="text-xs text-pos-muted">Usuario: {a.usuario}</p>
+                                {a.observacion && <p className="text-xs italic text-pos-muted">{a.observacion}</p>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!loadingAbonos && abonos && abonos.length === 0 && (
+                    <p className="text-sm text-pos-muted">No hay abonos registrados para este deudor.</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

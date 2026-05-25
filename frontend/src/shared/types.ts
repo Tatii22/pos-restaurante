@@ -26,7 +26,7 @@ export type Venta = {
   descuentoPorcentaje: number | null;
   descuentoValor: number | null;
   total: number;
-  formaPago: "EFECTIVO" | "TRANSFERENCIA";
+  formaPago: "EFECTIVO" | "TRANSFERENCIA" | "FIADO";
   pagoEfectivo?: number | null;
   pagoTransferencia?: number | null;
   condicionPago?: "CONTADO" | "FIADO";
@@ -73,6 +73,8 @@ export type AbonoFiado = {
   observacion: string | null;
   usuario: string;
   turnoId: number | null;
+  /** Efectivo que el cajero debe devolver al cliente. 0 si no aplica. */
+  cambioEfectivo?: number | null;
 };
 
 export type DeudorDetalle = {

@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
+import { ClienteSearch } from "../shared/ClienteSearch";
 import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { useFiadoStore } from "../shared/store/fiadoStore";
 import { HandCoins } from "lucide-react";
+import type { Deudor } from "../types";
 
 type CartItem = { id: number; nombre: string; precio: number; cantidad: number; observacion: string };
 
@@ -119,28 +121,15 @@ export function VentasPage() {
   });
 
   const { modoFiado, selectedDeudor, activarModoFiado, salirModoFiado, setSelectedDeudor } = useFiadoStore();
-  const deudoresQ = useQuery({
-    queryKey: ["ventas-page-deudores", modoFiado],
-    queryFn: () => posApi.getDeudores(false),
-    enabled: modoFiado
-  });
-  const [showDeudorSelector, setShowDeudorSelector] = useState(false);
-  const [showNuevoDeudorForm, setShowNuevoDeudorForm] = useState(false);
-  const [deudorSearch, setDeudorSearch] = useState("");
-  const [nuevoDeudorNombre, setNuevoDeudorNombre] = useState("");
-  const [nuevoDeudorTelefono, setNuevoDeudorTelefono] = useState("");
+  
   const crearDeudorM = useMutation({
-    mutationFn: () =>
+    mutationFn: ({ nombre, telefono }: { nombre: string; telefono: string }) =>
       posApi.crearDeudor({
-        nombre: nuevoDeudorNombre.trim(),
-        telefono: nuevoDeudorTelefono.replace(/[^\d]/g, "")
+        nombre: nombre.trim(),
+        telefono: telefono.replace(/[^\d]/g, "")
       }),
     onSuccess: (data) => {
       setSelectedDeudor(data);
-      setShowDeudorSelector(false);
-      setShowNuevoDeudorForm(false);
-      setNuevoDeudorNombre("");
-      setNuevoDeudorTelefono("");
     }
   });
 
@@ -317,18 +306,21 @@ export function VentasPage() {
   const remaining = Math.max(0, total - paid);
   const change = Math.max(0, paid - total);
 
-  function resolveFormaPagoFrom(transferValue: number, cashValue: number): "EFECTIVO" | "TRANSFERENCIA" {
+  function resolveFormaPagoFrom(transferValue: number, cashValue: number): "EFECTIVO" | "TRANSFERENCIA" | "FIADO" {
     if (transferValue > 0 && cashValue === 0) return "TRANSFERENCIA";
     if (cashValue > 0 && transferValue === 0) return "EFECTIVO";
     return cashValue >= transferValue ? "EFECTIVO" : "TRANSFERENCIA";
   }
 
 function buildSalePayload(transferValue: number, cashValue: number) {
+    const esFiadoPayload = modoFiado && !!selectedDeudor;
     const payload: Record<string, unknown> = {
       tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
-      formaPago: resolveFormaPagoFrom(transferValue, cashValue),
-      pagoEfectivo: cashValue,
-      pagoTransferencia: transferValue,
+      // Las ventas fiadas no tienen forma de pago de efectivo/transferencia;
+      // el backend las marcará explícitamente como FIADO.
+      formaPago: esFiadoPayload ? "FIADO" : resolveFormaPagoFrom(transferValue, cashValue),
+      pagoEfectivo: esFiadoPayload ? 0 : cashValue,
+      pagoTransferencia: esFiadoPayload ? 0 : transferValue,
       clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
       telefono: esDomi ? telefono.trim() : undefined,
       direccion: esDomi ? direccion.trim() : undefined,
@@ -337,7 +329,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
       descuentoPorcentaje: esDomi ? 0 : descuento,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
     };
-    if (modoFiado && selectedDeudor) {
+    if (esFiadoPayload) {
       payload.fiado = true;
       payload.deudorId = selectedDeudor.id;
     }

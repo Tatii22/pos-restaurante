@@ -45,7 +45,7 @@ export const posApi = {
   },
   despachar: async (
     id: number,
-    payload?: { formaPago?: "EFECTIVO" | "TRANSFERENCIA"; pagoEfectivo?: number; pagoTransferencia?: number }
+    payload?: { formaPago?: "EFECTIVO" | "TRANSFERENCIA" | "FIADO"; pagoEfectivo?: number; pagoTransferencia?: number }
   ) => {
     const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/despachar`, payload ?? {});
     return data;
@@ -75,6 +75,14 @@ export const posApi = {
   },
   actualizarValorDomicilio: async (id: number, valorDomicilio: number) => {
     const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/valor-domicilio`, { valorDomicilio });
+    return data;
+  },
+  marcarVentaComoFiado: async (id: number, payload: {
+    deudorId?: number | null;
+    deudorNombre?: string | null;
+    deudorTelefono?: string | null;
+  }) => {
+    const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/fiado`, payload);
     return data;
   },
   getDeudores: async (soloConDeuda = false) => {
@@ -293,6 +301,12 @@ export const posApi = {
   },
   saveAdminConfig: async (payload: AdminConfig) => {
     const { data } = await http.put<AdminConfig>("/api/v1/configuracion", payload);
+    return data;
+  },
+  buscarClientes: async (q: string) => {
+    const { data } = await http.get<Deudor[]>("/api/v1/fiados/deudores/buscar", {
+      params: { q }
+    });
     return data;
   }
 };
