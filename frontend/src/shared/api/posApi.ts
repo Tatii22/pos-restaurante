@@ -17,11 +17,11 @@ import type {
   Usuario,
   Cliente,
   ClienteDetalle,
+  ClienteSearch,
   AbonoFiado,
   Venta,
   VentaDetalle
 } from "../types";
-import type { ClienteSearch } from "../../types";
 
 export const posApi = {
   login: async (username: string, password: string) => {
@@ -41,6 +41,7 @@ export const posApi = {
     return data;
   },
   crearVenta: async (payload: unknown) => {
+    console.log("[DEBUG] crearVenta payload:", JSON.stringify(payload, null, 2));
     const { data } = await http.post<Venta>("/api/v1/ventas", payload);
     return data;
   },

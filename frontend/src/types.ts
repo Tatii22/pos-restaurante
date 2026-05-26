@@ -1,3 +1,8 @@
+// src/types.ts — fuente única de verdad para todos los tipos del frontend.
+// shared/types.ts es un alias que re-exporta desde aquí para compatibilidad.
+
+export type Role = "ADMIN" | "CAJA" | "DOMI";
+
 export type ApiError = {
   timestamp?: string;
   status?: number;
@@ -48,7 +53,7 @@ export type VentaDetalle = Venta & {
   pagoTransferencia: number;
   condicionPago: "CONTADO" | "FIADO";
   saldoPendiente: number;
-  deudorId?: number | null;
+  clienteId?: number | null;
   fechaAnulacion: string | null;
   motivoAnulacion: string | null;
   detalles: VentaDetalleItem[];
@@ -67,8 +72,8 @@ export type Cliente = {
 };
 
 /**
- * DTO ligero para búsqueda rápida de clientes (autocomplete).
- * Contiene solo la información necesaria para selección en UI.
+ * DTO ligero devuelto por /clientes/buscar-ligero.
+ * Usado en el componente ClienteSearch para autocomplete.
  */
 export type ClienteSearch = {
   id: number;
@@ -89,8 +94,8 @@ export type AbonoFiado = {
   observacion: string | null;
   usuario: string;
   turnoId: number | null;
-  /** Efectivo que el cajero debe devolver al cliente. 0 si no aplica. */
-  cambioEfectivo?: number | null;
+  /** Efectivo que el cajero debe devolver al cliente. Cero si no aplica. */
+  cambioEfectivo?: number;
 };
 
 export type ClienteDetalle = {
@@ -99,6 +104,7 @@ export type ClienteDetalle = {
   telefono: string;
   direccionPredeterminada?: string | null;
   notas?: string | null;
+  esDeudor?: boolean;
   deudaTotal: number;
   ventasPendientes: Venta[];
   abonos: AbonoFiado[];
@@ -106,7 +112,7 @@ export type ClienteDetalle = {
 
 export type PageResponse<T> = {
   content: T[];
-  page: {
+  page?: {
     number: number;
     size: number;
     totalElements: number;
@@ -119,6 +125,7 @@ export type ProductoVenta = {
   nombre: string;
   precio: number;
   agotado: boolean;
+  categoriaNombre?: string;
 };
 
 export type CatalogoHoy = {
@@ -133,6 +140,7 @@ export type Producto = {
   activo: boolean;
   categoriaId: number;
   categoriaNombre: string;
+  tipoVenta?: "MENU_DIARIO" | "SIEMPRE_DISPONIBLE";
 };
 
 export type Categoria = {
@@ -141,11 +149,53 @@ export type Categoria = {
   activa: boolean;
 };
 
+export type Usuario = {
+  id: number;
+  username: string;
+  rol: "ADMIN" | "CAJA" | "DOMI" | string;
+  activo: boolean;
+};
+
 export type UsuarioCreado = {
   id: number;
   username: string;
-  rol: string;
-  activo: boolean;
+  rol: "ADMIN" | "CAJA" | "DOMI" | string;
+};
+
+export type TipoGasto = {
+  id: number;
+  nombre: string;
+};
+
+export type GastoCaja = {
+  id: number;
+  fecha: string;
+  descripcion: string;
+  valor: number;
+  montoEfectivo?: number | null;
+  montoTransferencia?: number | null;
+};
+
+export type GastoAdmin = {
+  id: number;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  montoEfectivo?: number | null;
+  montoTransferencia?: number | null;
+  tipoGasto?: string;
+  usuario?: string;
+};
+
+export type InventarioDiario = {
+  id: number;
+  fecha: string;
+  productoId: number;
+  producto: string;
+  stockInicial: number;
+  stockActual: number;
+  stockMinimo: number;
+  agotado: boolean;
 };
 
 export type Turno = {
@@ -157,6 +207,17 @@ export type Turno = {
   totalGastos: number;
   esperado: number | null;
   faltante: number | null;
+  transferenciasNetas?: number | null;
+  totalOperativoTurno?: number | null;
+  efectivoOperativo?: number | null;
+  transferenciasOperativas?: number | null;
+  totalOperativoNeto?: number | null;
+  efectivoContado?: number | null;
+  transferenciasVerificadas?: number | null;
+  diferenciaEfectivo?: number | null;
+  diferenciaTransferencias?: number | null;
+  totalVerificado?: number | null;
+  diferenciaTotal?: number | null;
   estado: "ABIERTO" | "SIMULADO" | "CERRADO";
   usuario: string;
 };
@@ -170,5 +231,75 @@ export type ReporteVentas = {
   totalNeto: number;
   totalEfectivo: number;
   totalTransferencia: number;
+  totalAbonos?: number;
+  totalAbonosEfectivo?: number;
+  totalAbonosTransferencia?: number;
+  totalVentasContado?: number;
+  totalVentasFiadas?: number;
+  totalMontoContado?: number;
+  totalMontoFiado?: number;
+  carteraGenerada?: number;
+  carteraPendiente?: number;
+  recaudoReal?: number;
   ventas: Venta[];
+};
+
+export type GastoReporte = {
+  id: number;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  origen: "CAJA" | "ADMIN" | string;
+};
+
+export type ReporteRentabilidad = {
+  fechaInicio: string;
+  fechaFin: string;
+  totalVentas: number;
+  totalVentasComerciales?: number;
+  ventasContado?: number;
+  ventasFiadas?: number;
+  carteraGenerada?: number;
+  recaudoReal?: number;
+  totalGastos: number;
+  gananciaNeta: number;
+  ventas: Venta[];
+  gastos: GastoReporte[];
+};
+
+export type ReporteCierreTurno = {
+  turnoId: number;
+  apertura: string;
+  cierre: string | null;
+  totalVentas: number;
+  totalEfectivo: number;
+  totalTransferencia: number;
+  totalGastos: number;
+  totalGastosEfectivo: number;
+  totalGastosTransferencia: number;
+  gananciaEfectivo: number;
+  gananciaTransferencia: number;
+  netoEnCaja: number;
+  cajaFisicaEsperada?: number;
+  transferenciasNetas?: number;
+  totalOperativoTurno?: number;
+  cajaContada?: number | null;
+  diferenciaCaja?: number | null;
+  totalAbonos?: number;
+  totalAbonosEfectivo?: number;
+  totalAbonosTransferencia?: number;
+  ventas: Venta[];
+  gastos: GastoCaja[];
+};
+
+export type AdminConfig = {
+  negocioNombre: string;
+  negocioNit: string;
+  negocioTelefono: string;
+  negocioDireccion: string;
+  ticketEncabezado: string;
+  ticketPie: string;
+  imprimirFacturaAuto: boolean;
+  imprimirCocinaAuto: boolean;
+  tamanoFuenteTicket: "SMALL" | "NORMAL" | "LARGE";
 };

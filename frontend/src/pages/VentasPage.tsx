@@ -73,6 +73,172 @@ function categoryCardIcon(name: string): JSX.Element {
   return <ForkKnifeIcon size={34} className="leading-none" />;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FiadoClienteSelector
+// Componente inline para el bloque de modo fiado en VentasPage.
+// Dos modos en una misma UI:
+//   1. Buscar cliente existente (input búsqueda + dropdown)
+//   2. Crear nuevo directamente con inputs nombre + teléfono
+// El modo 2 siempre es visible como fallback sin tener que buscar primero.
+// ─────────────────────────────────────────────────────────────────────────────
+function FiadoClienteSelector({
+  onSelect,
+  onWarn,
+}: {
+  onSelect: (cliente: Cliente) => void;
+  onWarn: (msg: string) => void;
+}) {
+  const [tab, setTab] = useState<"buscar" | "nuevo">("buscar");
+
+  // ── Tab "buscar" ──
+  const [q, setQ] = useState("");
+  const { results, loading } = useClienteAutocomplete(q);
+  const [showDrop, setShowDrop] = useState(false);
+
+  // ── Tab "nuevo" ──
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const crearM = useMutation({
+    mutationFn: () =>
+      posApi.crearCliente({
+        nombre: nombre.trim(),
+        telefono: telefono.replace(/\D/g, ""),
+      }),
+    onSuccess: (data) => {
+      onSelect(data);
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Error al crear cliente";
+      setError(msg.toLowerCase().includes("duplicate") || msg.includes("ya") ? "Ya existe un cliente con ese teléfono" : msg);
+    },
+  });
+
+  function handleCrear() {
+    setError(null);
+    const tel = telefono.replace(/\D/g, "");
+    if (!nombre.trim()) { setError("El nombre es obligatorio"); return; }
+    if (tel.length < 7 || tel.length > 15) { setError("El teléfono debe tener entre 7 y 15 dígitos"); return; }
+    crearM.mutate();
+  }
+
+  function seleccionar(c: ClienteSearchType) {
+    onSelect({
+      id: c.id, nombre: c.nombre, telefono: c.telefono,
+      activo: true, deudaTotal: c.deudaActual ?? 0, ventasPendientes: 0,
+      direccionPredeterminada: c.direccionPredeterminada ?? undefined,
+    });
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Tabs */}
+      <div className="flex rounded-lg border border-orange-200 overflow-hidden text-xs">
+        <button
+          className={`flex-1 py-1.5 font-medium transition-colors ${
+            tab === "buscar" ? "bg-orange-500 text-white" : "bg-white text-orange-700 hover:bg-orange-50"
+          }`}
+          onClick={() => setTab("buscar")}
+        >
+          Buscar cliente
+        </button>
+        <button
+          className={`flex-1 py-1.5 font-medium transition-colors ${
+            tab === "nuevo" ? "bg-orange-500 text-white" : "bg-white text-orange-700 hover:bg-orange-50"
+          }`}
+          onClick={() => setTab("nuevo")}
+        >
+          Nuevo cliente
+        </button>
+      </div>
+
+      {tab === "buscar" && (
+        <div className="relative">
+          <input
+            className="input w-full"
+            placeholder="Nombre o teléfono..."
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setShowDrop(true); }}
+            onFocus={() => q && setShowDrop(true)}
+          />
+          {loading && (
+            <span className="absolute right-3 top-2.5 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-orange-500" />
+          )}
+          {showDrop && results.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-300 bg-white shadow-lg max-h-52 overflow-auto">
+              {results.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); seleccionar(c); setShowDrop(false); setQ(""); }}
+                  className="w-full px-3 py-2 text-left hover:bg-orange-50 text-sm"
+                >
+                  <p className="font-semibold">{c.nombre}</p>
+                  <div className="flex justify-between text-xs text-pos-muted">
+                    <span>{c.telefono}</span>
+                    {c.tieneDeuda && (
+                      <span className="font-medium text-red-600">Debe {money.format(c.deudaActual)}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {showDrop && !loading && results.length === 0 && q.trim() && (
+            <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-300 bg-white p-3 shadow-lg text-sm text-pos-muted">
+              Sin resultados.
+              <button
+                type="button"
+                className="ml-2 text-orange-600 underline text-xs"
+                onMouseDown={(e) => { e.preventDefault(); setTab("nuevo"); setShowDrop(false); }}
+              >
+                Crear nuevo
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "nuevo" && (
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-700">
+            Nombre *
+            <input
+              className="input mt-0.5 w-full"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value.slice(0, 100))}
+              placeholder="Ej: Juan Pérez"
+              autoFocus
+              maxLength={100}
+            />
+          </label>
+          <label className="block text-xs font-medium text-gray-700">
+            Teléfono *
+            <input
+              className="input mt-0.5 w-full"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value.replace(/\D/g, "").slice(0, 15))}
+              placeholder="Ej: 3001234567"
+              inputMode="numeric"
+              maxLength={15}
+            />
+          </label>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            className="btn-primary w-full text-sm"
+            disabled={!nombre.trim() || telefono.replace(/\D/g, "").length < 7 || crearM.isPending}
+            onClick={handleCrear}
+          >
+            {crearM.isPending ? "Creando..." : "Crear y seleccionar"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export function VentasPage() {
   const { role } = useAuthStore();
   const { isActivo, setTurno } = useTurnoStore();
@@ -387,14 +553,16 @@ export function VentasPage() {
   }
 
 function buildSalePayload(transferValue: number, cashValue: number) {
-    const esFiadoPayload = modoFiado && !!selectedCliente;
+    const esFiadoConPago = modoFiado && !!selectedCliente && (transferValue > 0 || cashValue > 0);
+    const esFiadoSinPago = modoFiado && !!selectedCliente && transferValue === 0 && cashValue === 0;
+    const formaPago = esFiadoSinPago ? "FIADO" : resolveFormaPagoFrom(transferValue, cashValue);
+    const saldoPendienteVenta = esFiadoSinPago ? total : Math.max(0, total - (cashValue + transferValue));
+    
     const payload: Record<string, unknown> = {
       tipoVenta: (esDomi ? "DOMICILIO" : "LOCAL") as "LOCAL" | "DOMICILIO",
-      // Las ventas fiadas no tienen forma de pago de efectivo/transferencia;
-      // el backend las marcará explícitamente como FIADO.
-      formaPago: esFiadoPayload ? "FIADO" : resolveFormaPagoFrom(transferValue, cashValue),
-      pagoEfectivo: esFiadoPayload ? 0 : cashValue,
-      pagoTransferencia: esFiadoPayload ? 0 : transferValue,
+      formaPago,
+      pagoEfectivo: esFiadoSinPago ? 0 : cashValue,
+      pagoTransferencia: esFiadoSinPago ? 0 : transferValue,
       clienteNombre: clienteNombre.trim() ? clienteNombre.trim() : undefined,
       telefono: esDomi ? telefono.trim() : undefined,
       direccion: esDomi ? direccion.trim() : undefined,
@@ -403,10 +571,12 @@ function buildSalePayload(transferValue: number, cashValue: number) {
       descuentoPorcentaje: esDomi ? 0 : descuento,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
     };
-    if (esFiadoPayload) {
+    
+    if (modoFiado && selectedCliente) {
       payload.fiado = true;
       payload.clienteId = selectedCliente.id;
     }
+    
     return payload;
   }
 
@@ -448,14 +618,23 @@ function buildSalePayload(transferValue: number, cashValue: number) {
 
   async function registerSale() {
     if (bloqueado || cart.length === 0) return;
+    
     if (modoFiado) {
       if (!selectedCliente) {
         setValidationWarns(["Debes seleccionar un cliente para registrar una venta fiada"]);
         return;
       }
-      await createSale.mutateAsync(buildSalePayload(0, 0));
+      try {
+        await createSale.mutateAsync(buildSalePayload(transfer, cash));
+      } catch (err: any) {
+        console.error("Error al registrar venta fiada:", err);
+        const apiErr = err?.response?.data;
+        const errorMsg = apiErr?.message || apiErr?.error || "Error al registrar la venta fiada. Intenta de nuevo.";
+        setValidationWarns([errorMsg]);
+      }
       return;
     }
+    
     if (remaining > 0) return;
     await createSale.mutateAsync(buildSalePayload(transfer, cash));
   }
@@ -732,7 +911,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
           <p className="mt-2 text-3xl font-bold">{money.format(total)}</p>
         </div>
 
-        <div className="mt-4 grid gap-2">
+<div className="mt-4 grid gap-2">
           {modoFiado && (
             <div className="rounded-xl border border-orange-300 bg-orange-50 p-3">
               <div className="mb-2 flex items-center justify-between">
@@ -745,30 +924,29 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                 </button>
               </div>
               {selectedCliente ? (
+                // ── Cliente ya seleccionado ───────────────────────────
                 <div className="space-y-2">
-                  <p className="font-semibold">{selectedCliente.nombre}</p>
-                  <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
-                  <button className="btn-ghost text-xs text-red-600" onClick={() => setSelectedCliente(null)}>
+                  <div className="rounded-lg border border-orange-200 bg-white p-2">
+                    <p className="font-semibold">{selectedCliente.nombre}</p>
+                    <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
+                    {selectedCliente.deudaTotal > 0 && (
+                      <p className="mt-1 text-xs font-semibold text-red-600">
+                        Deuda actual: {money.format(selectedCliente.deudaTotal)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    className="btn-ghost text-xs text-red-600 w-full"
+                    onClick={() => setSelectedCliente(null)}
+                  >
                     Cambiar cliente
                   </button>
                 </div>
               ) : (
-                <ClienteSearch
-                  onSelect={(cliente: ClienteSearchType) => {
-                    const clienteObj: Cliente = {
-                      id: cliente.id,
-                      nombre: cliente.nombre,
-                      telefono: cliente.telefono,
-                      activo: true,
-                      deudaTotal: 0,
-                      ventasPendientes: 0
-                    };
-                    setSelectedCliente(clienteObj);
-                  }}
-                  label="Seleccionar cliente"
-                  placeholder="Buscar por nombre o teléfono..."
-                  allowCreate={true}
-                  showDebt={true}
+                // ── Selector de cliente: buscar existente O crear nuevo ─
+                <FiadoClienteSelector
+                  onSelect={(c) => setSelectedCliente(c)}
+                  onWarn={(msg) => setValidationWarns([msg])}
                 />
               )}
             </div>
@@ -788,6 +966,26 @@ function buildSalePayload(transferValue: number, cashValue: number) {
             >
               Enviar pedido
             </button>
+          ) : modoFiado ? (
+            <button
+              className="btn-primary bg-green-600 hover:bg-green-700"
+              disabled={createSale.isPending || !selectedCliente}
+              onClick={async () => {
+                if (!selectedCliente) {
+                  setValidationWarns(["Debes seleccionar un cliente para registrar una venta fiada"]);
+                  return;
+                }
+                if (cart.length === 0) {
+                  setValidationWarns(["Agrega al menos un producto al pedido"]);
+                  return;
+                }
+                setShowPayModal(true);
+                setActiveCalcField("EFECTIVO");
+              }}
+              title={!selectedCliente ? "Selecciona un cliente para continuar" : ""}
+            >
+              REGISTRAR FIADO
+            </button>
           ) : (
             <>
               <button
@@ -795,20 +993,17 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                 disabled={createSale.isPending || printKitchenPreviewM.isPending}
                 onClick={() => startCajaCheckout("SALON")}
               >
-                {modoFiado ? "REGISTRAR FIADO" : "COBRAR"}
+                COBRAR
               </button>
-              {!modoFiado && (
-                <button
-                  className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
-                  disabled={createSale.isPending || printKitchenPreviewM.isPending}
-                  onClick={() => startCajaCheckout("LLEVAR")}
-                >
-                    COBRAR PARA LLEVAR
-                </button>
-              )}
+              <button
+                className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                disabled={createSale.isPending || printKitchenPreviewM.isPending}
+                onClick={() => startCajaCheckout("LLEVAR")}
+              >
+                COBRAR PARA LLEVAR
+              </button>
             </>
           )}
-          
           {esDomi && (
             <p className="text-xs text-pos-muted">
               Para domicilio debes completar telefono, direccion y valor de domicilio.
@@ -923,86 +1118,106 @@ function buildSalePayload(transferValue: number, cashValue: number) {
             </div>
 
             {modoFiado && selectedCliente && (
-              <div className="rounded-xl border border-orange-200 bg-orange-50 p-3">
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 mb-3">
                 <p className="text-sm font-semibold text-orange-700">Venta fiada para {selectedCliente.nombre}</p>
                 <p className="text-xs text-pos-muted">{selectedCliente.telefono}</p>
-                <p className="text-sm text-pos-muted">Total: {money.format(total)} (pendiente de pago)</p>
+                {selectedCliente.deudaTotal > 0 && (
+                  <p className="text-xs font-semibold text-red-600 mt-1">
+                    Deuda anterior: ${selectedCliente.deudaTotal.toLocaleString("es-CO")}
+                  </p>
+                )}
+                <p className="text-xs text-pos-muted mt-1">
+                  Nueva venta: {money.format(total)} {paid > 0 ? `(abonando ${money.format(paid)})` : "(sin pago, quedará pendiente)"}
+                </p>
               </div>
             )}
             <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
-                  <p>Total: <span className="font-semibold">{money.format(total)}</span></p>
-                  <p>Pagado: <span className="font-semibold">{money.format(paid)}</span></p>
-                  <p>Falta: <span className="font-semibold text-orange-700">{money.format(remaining)}</span></p>
-                  <p>Vueltos: <span className="font-semibold text-green-700">{money.format(change)}</span></p>
+              <p>Total venta: <span className="font-semibold">{money.format(total)}</span></p>
+              <p>Pagado ahora: <span className="font-semibold text-green-700">{money.format(paid)}</span></p>
+              <p>Saldo pendiente: <span className="font-semibold text-orange-700">{money.format(remaining)}</span></p>
+              {change > 0 && <p>Vueltos: <span className="font-semibold text-green-700">{money.format(change)}</span></p>}
+              {modoFiado && selectedCliente && selectedCliente.deudaTotal > 0 && (
+                <div className="border-t border-pos-border pt-2 mt-2">
+                  <p className="text-xs font-semibold text-red-600">
+                    Deuda total después: ${(selectedCliente.deudaTotal + remaining).toLocaleString("es-CO")}
+                  </p>
                 </div>
-
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <div>
-                <button
-                  className={activeCalcField === "TRANSFERENCIA" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
-                  onClick={() => setActiveCalcField("TRANSFERENCIA")}
-                >
-                  Transferencia
-                </button>
-                <input
-                  className="input mt-2"
-                    value={formatCurrencyInput(transferAmount)}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setTransferAmount)}
-                    inputMode="numeric"
-                    maxLength={9}
-                />
-              </div>
-              <div>
-                <button
-                  className={activeCalcField === "EFECTIVO" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
-                  onClick={() => setActiveCalcField("EFECTIVO")}
-                >
-                  Efectivo
-                </button>
-                <input
-                  className="input mt-2"
-                    value={formatCurrencyInput(cashAmount)}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setCashAmount)}
-                    inputMode="numeric"
-                    maxLength={9}
-                />
-              </div>
+              )}
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <button className="btn-soft col-span-3" onClick={setExactPayment}>
-                Pagar exacto ({money.format(remaining)})
-              </button>
-              {["7", "8", "9", "4", "5", "6", "1", "2", "3", "000", "0", "<"].map((k) => (
-                <button key={k} className="btn-ghost" onClick={() => pushCalcValue(k)}>
-                  {k}
-                </button>
-              ))}
-              <button className="btn-ghost col-span-3" onClick={() => pushCalcValue("C")}>
-                Limpiar
-              </button>
-            </div>
-
-            <div className="mt-3 flex gap-2">
-              <button className="btn-ghost flex-1" onClick={() => setShowPayModal(false)}>
-                Cancelar
-              </button>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <div>
               <button
-                className="btn-primary flex-1"
-                disabled={(remaining > 0 && !modoFiado) || createSale.isPending || (esDomi && !datosDomicilioValidos)}
-                onClick={registerSale}
+                className={activeCalcField === "TRANSFERENCIA" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
+                onClick={() => setActiveCalcField("TRANSFERENCIA")}
               >
-                {modoFiado ? "Confirmar fiado" : "Confirmar cobro"}
+                Transferencia
               </button>
+              <input
+                className="input mt-2"
+                value={formatCurrencyInput(transferAmount)}
+                onChange={(e) => handleCurrencyChange(e.target.value, setTransferAmount)}
+                inputMode="numeric"
+                maxLength={9}
+              />
             </div>
-            {remaining > 0 && (
-              <p className="mt-2 text-xs text-orange-700">Aun falta dinero por registrar para completar el pago.</p>
-            )}
-            {esDomi && !datosDomicilioValidos && (
-              <p className="mt-2 text-xs text-orange-700">Revisa telefono, direccion y valor de domicilio antes de continuar.</p>
-            )}
+            <div>
+              <button
+                className={activeCalcField === "EFECTIVO" ? "btn-soft w-full border border-green-300 bg-green-50 text-green-700" : "btn-ghost w-full"}
+                onClick={() => setActiveCalcField("EFECTIVO")}
+              >
+                Efectivo
+              </button>
+              <input
+                className="input mt-2"
+                value={formatCurrencyInput(cashAmount)}
+                onChange={(e) => handleCurrencyChange(e.target.value, setCashAmount)}
+                inputMode="numeric"
+                maxLength={9}
+              />
+            </div>
           </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <button className="btn-soft col-span-3" onClick={setExactPayment}>
+              Pagar exacto ({money.format(remaining)})
+            </button>
+            {["7", "8", "9", "4", "5", "6", "1", "2", "3", "000", "0", "<"].map((k) => (
+              <button key={k} className="btn-ghost" onClick={() => pushCalcValue(k)}>
+                {k}
+              </button>
+            ))}
+            <button className="btn-ghost col-span-3" onClick={() => pushCalcValue("C")}>
+              Limpiar
+            </button>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <button className="btn-ghost flex-1" onClick={() => setShowPayModal(false)}>
+              Cancelar
+            </button>
+            <button
+              className="btn-primary flex-1"
+              disabled={createSale.isPending || (esDomi && !datosDomicilioValidos)}
+              onClick={registerSale}
+            >
+              {modoFiado ? "Confirmar fiado" : remaining > 0 ? "Pagar parcial" : "Confirmar cobro"}
+            </button>
+          </div>
+          {modoFiado && (
+            <div className="mt-2 rounded-lg bg-blue-50 p-2 text-xs text-blue-700">
+              {paid > 0 ? (
+                <p>Se registrará una venta fiada con abono de {money.format(paid)} y saldo pendiente de {money.format(remaining)}.</p>
+              ) : (
+                <p>Se registrará una venta fiada SIN PAGO. El total de {money.format(total)} quedará pendiente.</p>
+              )}
+            </div>
+          )}
+          {esDomi && !datosDomicilioValidos && (
+            <p className="mt-2 text-xs text-orange-700">Revisa telefono, direccion y valor de domicilio antes de continuar.</p>
+          )}
         </div>
+      </div>
       )}
     </div>
   );

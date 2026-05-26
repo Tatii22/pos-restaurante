@@ -51,6 +51,8 @@ public class VentaController {
             @Valid @RequestBody VentaCreateDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
+        log.info("Registrando venta: tipoVenta={}, formaPago={}, fiado={}, clienteId={}, formaPago={}",
+                dto.tipoVenta(), dto.formaPago(), dto.fiado(), dto.clienteId(), dto.formaPago());
 
         Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));

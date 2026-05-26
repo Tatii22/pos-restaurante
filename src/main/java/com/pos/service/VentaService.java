@@ -330,16 +330,18 @@ public class VentaService {
         venta.setDescuentoPorcentaje(dto.descuentoPorcentaje());
         venta.setDescuentoValor(descuentoValor);
         venta.setTotal(total);
-        venta.setSaldoPendiente(esFiado ? total : BigDecimal.ZERO);
         venta.setDetalles(detalles);
 
-        boolean cobraAhora = dto.tipoVenta() == TipoVenta.LOCAL && !esFiado;
+        boolean hayAbonoParcial = esFiado && (pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0);
+        boolean cobraAhora = dto.tipoVenta() == TipoVenta.LOCAL || hayAbonoParcial;
         PagoAplicado pagoAplicado = cobraAhora
-                ? calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, "El pago es insuficiente para registrar la venta")
+                ? calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, esFiado ? null : "El pago es insuficiente para registrar la venta")
                 : PagoAplicado.cero();
 
+        venta.setSaldoPendiente(hayAbonoParcial ? total.subtract(pagoAplicado.totalAplicado()) : (esFiado ? total : BigDecimal.ZERO));
+
         if (dto.tipoVenta() == TipoVenta.LOCAL) {
-            if (!esFiado) {
+            if (hayAbonoParcial) {
                 turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
                 turnoCajaRepository.save(turno);
             }
@@ -355,7 +357,11 @@ public class VentaService {
                 pagoAplicado.cambioEfectivo()
         );
         if (esFiado) {
-            movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+            if (hayAbonoParcial) {
+                movimientoFinancieroService.registrarVentaFiadaConAbono(ventaGuardada, usuario, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
+            } else {
+                movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+            }
         } else if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA) {
             movimientoFinancieroService.registrarVentaContado(
                     ventaGuardada,

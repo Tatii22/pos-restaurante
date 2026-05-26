@@ -39,6 +39,23 @@ public class MovimientoFinancieroService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public void registrarVentaFiadaConAbono(Venta venta, Usuario usuario, BigDecimal efectivo, BigDecimal transferencia) {
+        registrar(venta.getFecha(), MovimientoFinancieroTipo.VENTA_FIADA, MedioFinanciero.CARTERA, venta.getTotal(), 1,
+                venta.getTurno(), venta, null, null, null, usuario, "Venta fiada");
+        BigDecimal abonoTotal = efectivo.add(transferencia);
+        if (efectivo.compareTo(BigDecimal.ZERO) > 0) {
+            registrar(venta.getFecha(), MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA, MedioFinanciero.EFECTIVO, efectivo, 1,
+                    venta.getTurno(), venta, null, null, null, usuario, "Abono con venta fiada efectivo");
+        }
+        if (transferencia.compareTo(BigDecimal.ZERO) > 0) {
+            registrar(venta.getFecha(), MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA, MedioFinanciero.TRANSFERENCIA, transferencia, 1,
+                    venta.getTurno(), venta, null, null, null, usuario, "Abono con venta fiada transferencia");
+        }
+        registrar(venta.getFecha(), MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA, MedioFinanciero.CARTERA, abonoTotal, -1,
+                venta.getTurno(), venta, null, null, null, usuario, "Reduccion cartera por abono con venta fiada");
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void registrarAbono(AbonoFiado abono) {
         registrar(abono.getFecha(), MovimientoFinancieroTipo.ABONO_FIADO, MedioFinanciero.EFECTIVO, abono.getMontoEfectivo(), 1,
                 abono.getTurno(), null, abono, null, null, abono.getUsuario(), "Abono fiado efectivo");

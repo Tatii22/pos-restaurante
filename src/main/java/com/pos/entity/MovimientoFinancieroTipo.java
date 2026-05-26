@@ -4,6 +4,7 @@ public enum MovimientoFinancieroTipo {
     VENTA_CONTADO,
     VENTA_FIADA,
     ABONO_FIADO,
+    ABONO_CON_VENTA_FIADA,
     GASTO_CAJA,
     GASTO_ADMIN,
     ANULACION_VENTA,

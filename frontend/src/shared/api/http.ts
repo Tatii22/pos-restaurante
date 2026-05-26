@@ -23,6 +23,13 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log full error for debugging
+    if (error.response?.status === 400) {
+      console.error("[API 400 ERROR] Status:", error.response.status);
+      console.error("[API 400 ERROR] Data:", error.response.data);
+      console.error("[API 400 ERROR] Full error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    }
+    
     if (error.response?.data) {
       return Promise.reject(error.response.data);
     }
