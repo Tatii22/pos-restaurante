@@ -83,6 +83,8 @@ export const posApi = {
     clienteId?: number | null;
     clienteNombre?: string | null;
     clienteTelefono?: string | null;
+    pagoEfectivo?: number;
+    pagoTransferencia?: number;
   }) => {
     const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/fiado`, payload);
     return data;
@@ -309,13 +311,6 @@ export const posApi = {
   buscarClientes: async (q: string) => {
     // Usa el nuevo endpoint limpio
     const { data } = await http.get<Cliente[]>("/api/v1/fiados/clientes/buscar", {
-      params: { q }
-    });
-    return data;
-  },
-  // Legacy alias (deprecated)
-  buscarDeudores: async (q: string) => {
-    const { data } = await http.get<Cliente[]>("/api/v1/fiados/deudores/buscar", {
       params: { q }
     });
     return data;

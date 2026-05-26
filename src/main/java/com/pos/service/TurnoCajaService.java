@@ -240,6 +240,7 @@ public class TurnoCajaService {
                 List.of(
                         MovimientoFinancieroTipo.VENTA_CONTADO,
                         MovimientoFinancieroTipo.ABONO_FIADO,
+                        MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA,
                         MovimientoFinancieroTipo.GASTO_CAJA,
                         MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
                         MovimientoFinancieroTipo.ANULACION_VENTA
@@ -255,6 +256,7 @@ public class TurnoCajaService {
                 List.of(
                         MovimientoFinancieroTipo.VENTA_CONTADO,
                         MovimientoFinancieroTipo.ABONO_FIADO,
+                        MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA,
                         MovimientoFinancieroTipo.GASTO_CAJA,
                         MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
                         MovimientoFinancieroTipo.ANULACION_VENTA

@@ -9,7 +9,7 @@ public record ClienteResponseDTO(
         String direccionPredeterminada,
         String notas,
         Boolean activo,
-        Boolean esDeudor,
+        Boolean tieneDeuda,
         BigDecimal deudaTotal,
         long ventasPendientes
 ) {

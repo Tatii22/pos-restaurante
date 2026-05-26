@@ -457,7 +457,7 @@ function DetalleVentaPanel({ detalle }: { detalle: VentaDetalle }) {
                     </div>
                   )}
                   {!loadingAbonos && abonos && abonos.length === 0 && (
-                    <p className="text-sm text-pos-muted">No hay abonos registrados para este deudor.</p>
+                    <p className="text-sm text-pos-muted">No hay abonos registrados para este cliente.</p>
                   )}
                 </div>
               </>

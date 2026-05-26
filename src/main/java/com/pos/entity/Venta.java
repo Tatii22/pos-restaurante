@@ -69,7 +69,13 @@ public class Venta {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal saldoPendiente;
 
+    /**
+     * Referencia al perfil del cliente (tabla clientes).
+     * Presente en ventas fiadas y domicilios con cliente identificado.
+     * Nullable: ventas locales contado y domicilios anónimos no tienen cliente.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -88,4 +94,3 @@ public class Venta {
     private Boolean paraLlevar;
 
 }
-

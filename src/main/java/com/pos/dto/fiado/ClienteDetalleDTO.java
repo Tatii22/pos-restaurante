@@ -11,7 +11,7 @@ public record ClienteDetalleDTO(
         String telefono,
         String direccionPredeterminada,
         String notas,
-        Boolean esDeudor,
+        Boolean tieneDeuda,
         BigDecimal deudaTotal,
         List<VentaResponseDTO> ventasPendientes,
         List<AbonoFiadoResponseDTO> abonos

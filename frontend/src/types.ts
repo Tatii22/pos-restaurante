@@ -66,7 +66,7 @@ export type Cliente = {
   direccionPredeterminada?: string | null;
   notas?: string | null;
   activo: boolean;
-  esDeudor?: boolean;
+  tieneDeuda?: boolean;
   deudaTotal: number;
   ventasPendientes: number;
 };
@@ -104,7 +104,7 @@ export type ClienteDetalle = {
   telefono: string;
   direccionPredeterminada?: string | null;
   notas?: string | null;
-  esDeudor?: boolean;
+  tieneDeuda?: boolean;
   deudaTotal: number;
   ventasPendientes: Venta[];
   abonos: AbonoFiado[];

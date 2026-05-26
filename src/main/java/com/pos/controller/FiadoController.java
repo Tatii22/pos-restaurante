@@ -46,26 +46,6 @@ public class FiadoController {
         return ResponseEntity.ok(fiadoService.buscarClientes(query));
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ENDPOINTS LEGACY (deprecados - mantener temporalmente para compatibilidad)
-    // TODO: Eliminar después de completar la migración del frontend (2026-Q3)
-    // ─────────────────────────────────────────────────────────────────
-    @Deprecated(since = "2026-05", forRemoval = true)
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
-    @GetMapping("/deudores")
-    public ResponseEntity<List<ClienteResponseDTO>> listarDeudoresLegacy(
-            @RequestParam(defaultValue = "false") boolean soloConDeuda) {
-        return ResponseEntity.ok(fiadoService.listarClientes(soloConDeuda));
-    }
-
-    @Deprecated(since = "2026-05", forRemoval = true)
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
-    @GetMapping("/deudores/buscar")
-    public ResponseEntity<List<ClienteResponseDTO>> buscarDeudoresLegacy(
-            @RequestParam(name = "q", defaultValue = "") String query) {
-        return ResponseEntity.ok(fiadoService.buscarClientes(query));
-    }
-
     /**
      * Búsqueda optimizada para autocomplete en componentes de UI.
      * Devuelve DTO ligero con ordenamiento inteligente.
@@ -87,21 +67,6 @@ public class FiadoController {
     @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
     @PostMapping("/clientes")
     public ResponseEntity<ClienteResponseDTO> crearCliente(@Valid @RequestBody ClienteCreateDTO dto) {
-        return ResponseEntity.ok(fiadoService.crearCliente(dto));
-    }
-
-    // ── Legacy deprecated ─────────────────────────────────────────────
-    @Deprecated(since = "2026-05", forRemoval = true)
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
-    @GetMapping("/deudores/{id}")
-    public ResponseEntity<ClienteDetalleDTO> obtenerDetalleLegacy(@PathVariable Long id) {
-        return ResponseEntity.ok(fiadoService.obtenerDetalle(id));
-    }
-
-    @Deprecated(since = "2026-05", forRemoval = true)
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
-    @PostMapping("/deudores")
-    public ResponseEntity<ClienteResponseDTO> crearDeudorLegacy(@Valid @RequestBody ClienteCreateDTO dto) {
         return ResponseEntity.ok(fiadoService.crearCliente(dto));
     }
 

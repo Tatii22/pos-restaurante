@@ -10,6 +10,7 @@ import com.pos.dto.venta.VentaItemResponseDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
+import com.pos.repository.AbonoFiadoRepository;
 import com.pos.repository.InventarioDiarioRepository;
 import com.pos.repository.MenuDiarioRepository;
 import com.pos.repository.ProductoRepository;
@@ -45,6 +46,7 @@ public class VentaService {
     private final FechaOperativaService fechaOperativaService;
     private final FiadoService fiadoService;
     private final MovimientoFinancieroService movimientoFinancieroService;
+    private final AbonoFiadoRepository abonoFiadoRepository;
     private final AuditService auditService;
 
     public Venta obtenerPorId(Long ventaId) {
@@ -238,6 +240,11 @@ public class VentaService {
             cliente = null;
         }
 
+        log.info("[VENTA] Cliente resuelto: id={} nombre={} telefono={}",
+                cliente != null ? cliente.getId() : null,
+                cliente != null ? cliente.getNombre() : dto.clienteNombre(),
+                cliente != null ? cliente.getTelefono() : dto.telefono());
+
         venta.setFormaPago(esFiado ? FormaPago.FIADO
                 : resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
         venta.setCondicionPago(esFiado ? CondicionPago.FIADO : CondicionPago.CONTADO);
@@ -333,18 +340,24 @@ public class VentaService {
         venta.setDetalles(detalles);
 
         boolean hayAbonoParcial = esFiado && (pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0);
-        boolean cobraAhora = dto.tipoVenta() == TipoVenta.LOCAL || hayAbonoParcial;
-        PagoAplicado pagoAplicado = cobraAhora
-                ? calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, esFiado ? null : "El pago es insuficiente para registrar la venta")
-                : PagoAplicado.cero();
+        boolean cobraContado = dto.tipoVenta() == TipoVenta.LOCAL && !esFiado;
+        PagoAplicado pagoAplicado;
+        if (cobraContado) {
+            pagoAplicado = calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, "El pago es insuficiente para registrar la venta");
+        } else if (hayAbonoParcial) {
+            pagoAplicado = calcularPagoFiadoAbono(total, pagoEfectivo, pagoTransferencia);
+        } else {
+            pagoAplicado = PagoAplicado.cero();
+        }
 
         venta.setSaldoPendiente(hayAbonoParcial ? total.subtract(pagoAplicado.totalAplicado()) : (esFiado ? total : BigDecimal.ZERO));
 
-        if (dto.tipoVenta() == TipoVenta.LOCAL) {
-            if (hayAbonoParcial) {
-                turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
-                turnoCajaRepository.save(turno);
-            }
+        log.info("[VENTA] tipo={} fiado={} total={} efectivo={} transf={} cobraContado={} hayAbonoParcial={} saldoPendiente={}",
+                dto.tipoVenta(), esFiado, total, pagoEfectivo, pagoTransferencia, cobraContado, hayAbonoParcial, venta.getSaldoPendiente());
+
+        if (dto.tipoVenta() == TipoVenta.LOCAL && (!esFiado || hayAbonoParcial)) {
+            turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
+            turnoCajaRepository.save(turno);
         }
 
         Venta ventaGuardada = ventaRepository.save(venta);
@@ -370,6 +383,31 @@ public class VentaService {
                     pagoAplicado.transferenciaAplicada()
             );
         }
+        if (hayAbonoParcial && ventaGuardada.getCliente() != null) {
+            BigDecimal efectivoAplicado = pagoAplicado.efectivoAplicado();
+            BigDecimal transferenciaAplicada = pagoAplicado.transferenciaAplicada();
+            BigDecimal montoAbono = efectivoAplicado.add(transferenciaAplicada);
+            log.info("[ABONO_INICIAL] ventaId={} clienteId={} monto={} efectivo={} transferencia={}",
+                    ventaGuardada.getId(), ventaGuardada.getCliente().getId(), montoAbono, efectivoAplicado, transferenciaAplicada);
+
+            FormaPago formaPagoAbono = transferenciaAplicada.compareTo(BigDecimal.ZERO) > 0
+                    && efectivoAplicado.compareTo(BigDecimal.ZERO) == 0
+                    ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+
+            abonoFiadoRepository.save(
+                    AbonoFiado.builder()
+                            .fecha(LocalDateTime.now())
+                            .monto(montoAbono)
+                            .montoEfectivo(efectivoAplicado)
+                            .montoTransferencia(transferenciaAplicada)
+                            .formaPago(formaPagoAbono)
+                            .cliente(ventaGuardada.getCliente())
+                            .usuario(usuario)
+                            .turno(turno)
+                            .build()
+            );
+        }
+
         auditService.record(
                 esFiado ? "VENTA_FIADA_REGISTRADA" : "VENTA_REGISTRADA",
                 "Venta",
@@ -462,6 +500,10 @@ public class VentaService {
                 ? PagoAplicado.cero()
                 : calcularPagoAplicado(venta.getTotal(), pagoEfectivo, pagoTransferencia, "El pago es insuficiente para despachar la venta");
 
+        log.info("[DESPACHO] ventaId={} esFiado={} total={} efectivo={} transf={} saldoPendiente={}",
+                venta.getId(), esFiado, venta.getTotal(), pagoEfectivo, pagoTransferencia,
+                esFiado ? venta.getTotal() : BigDecimal.ZERO);
+
         venta.setEstado(EstadoVenta.DESPACHADA);
         venta.setFormaPago(esFiado ? FormaPago.FIADO
                 : resolverFormaPago(dto.formaPago(), pagoEfectivo, pagoTransferencia));
@@ -526,41 +568,80 @@ public class VentaService {
 
         Cliente cliente;
         if (venta.getCliente() != null) {
-            // Ya tiene cliente asociado desde la creación del domicilio → reutilizar
             cliente = venta.getCliente();
-            // Opcional: actualizar nombre si el DTO trae uno distinto (por si hubo corrección manual)
-            if (dto.clienteNombre() != null && !dto.clienteNombre().isBlank() 
+            if (dto.clienteNombre() != null && !dto.clienteNombre().isBlank()
                     && !dto.clienteNombre().equals(cliente.getNombre())) {
                 cliente.setNombre(dto.clienteNombre());
             }
         } else {
-            // Venta legacy o sin cliente previo → resolver/crear
             cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(), dto.clienteTelefono());
         }
+
+        BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
+        BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
+        boolean hayAbono = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0;
+        TurnoCaja turno = venta.getTurno();
+
         venta.setCliente(cliente);
         venta.setCondicionPago(CondicionPago.FIADO);
         venta.setFormaPago(FormaPago.FIADO);
         venta.setEstado(EstadoVenta.DESPACHADA);
-        venta.setSaldoPendiente(venta.getTotal());
+
+        PagoAplicado pagoAplicado;
+        if (hayAbono) {
+            pagoAplicado = calcularPagoFiadoAbono(venta.getTotal(), pagoEfectivo, pagoTransferencia);
+            venta.setSaldoPendiente(venta.getTotal().subtract(pagoAplicado.totalAplicado()));
+            turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
+        } else {
+            pagoAplicado = PagoAplicado.cero();
+            venta.setSaldoPendiente(venta.getTotal());
+        }
 
         if (cliente != null) {
             venta.setClienteNombre(cliente.getNombre());
             venta.setTelefono(cliente.getTelefono());
         }
 
-        TurnoCaja turno = venta.getTurno();
-        turnoCajaRepository.save(turno);
+        log.info("[MARCAR_FIADO] ventaId={} clienteId={} total={} saldoPendiente={} abono={}",
+                venta.getId(), cliente != null ? cliente.getId() : null, venta.getTotal(),
+                venta.getSaldoPendiente(), pagoAplicado.totalAplicado());
 
+        turnoCajaRepository.save(turno);
         Venta ventaGuardada = ventaRepository.save(venta);
         ventaPagoDetalleService.guardar(
                 ventaGuardada.getId(),
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO
+                pagoAplicado.efectivoAplicado(),
+                pagoAplicado.transferenciaAplicada(),
+                pagoAplicado.efectivoRecibido(),
+                pagoAplicado.transferenciaRecibida(),
+                pagoAplicado.cambioEfectivo()
         );
-        movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+
+        if (hayAbono) {
+            movimientoFinancieroService.registrarVentaFiadaConAbono(ventaGuardada, usuario,
+                    pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
+            if (ventaGuardada.getCliente() != null) {
+                BigDecimal montoAbono = pagoAplicado.totalAplicado();
+                FormaPago formaPagoAbono = pagoAplicado.transferenciaAplicada().compareTo(BigDecimal.ZERO) > 0
+                        && pagoAplicado.efectivoAplicado().compareTo(BigDecimal.ZERO) == 0
+                        ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+                abonoFiadoRepository.save(
+                        AbonoFiado.builder()
+                                .fecha(LocalDateTime.now())
+                                .monto(montoAbono)
+                                .montoEfectivo(pagoAplicado.efectivoAplicado())
+                                .montoTransferencia(pagoAplicado.transferenciaAplicada())
+                                .formaPago(formaPagoAbono)
+                                .cliente(ventaGuardada.getCliente())
+                                .usuario(usuario)
+                                .turno(turno)
+                                .build()
+                );
+            }
+        } else {
+            movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
+        }
+
         auditService.record(
                 "VENTA_DOMICILIO_FIADO",
                 "Venta",
@@ -571,7 +652,7 @@ public class VentaService {
                 auditService.change("condicionPago", CondicionPago.CONTADO, CondicionPago.FIADO),
                 auditService.change("formaPago", null, FormaPago.FIADO),
                 auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
-                auditService.change("clienteId", null, cliente.getId())
+                auditService.change("clienteId", null, cliente != null ? cliente.getId() : null)
         );
         return ventaGuardada;
     }
@@ -628,19 +709,14 @@ public class VentaService {
             throw new BadRequestException("Solo CAJA puede anular ventas");
         }
 
-        if (venta.getCondicionPago() == CondicionPago.FIADO
-                && venta.getSaldoPendiente() != null
-                && venta.getSaldoPendiente().compareTo(venta.getTotal()) < 0) {
-            throw new BadRequestException("No puedes anular una venta fiada que ya tiene abonos registrados");
-        }
-
         TurnoCaja turno = venta.getTurno();
         VentaPagoDetalleDTO pago = ventaPagoDetalleService.obtener(venta.getId());
         BigDecimal efectivoAplicado = pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO;
         BigDecimal transferenciaAplicada = pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO;
-        if (venta.getCondicionPago() != CondicionPago.FIADO) {
-            turno.setTotalVentas(turno.getTotalVentas().subtract(efectivoAplicado.add(transferenciaAplicada)));
-        }
+
+        // Siempre ajustar turno y registrar movimiento (incluye fiados con abono)
+        turno.setTotalVentas(turno.getTotalVentas().subtract(efectivoAplicado.add(transferenciaAplicada)));
+        turnoCajaRepository.save(turno);
 
         devolverInventario(venta);
 
@@ -649,9 +725,8 @@ public class VentaService {
         venta.setMotivoAnulacion(normalizeMotivoAnulacion(motivo));
         venta.setSaldoPendiente(BigDecimal.ZERO);
 
-        turnoCajaRepository.save(turno);
         Venta guardada = ventaRepository.save(venta);
-        if (guardada.getCondicionPago() != CondicionPago.FIADO) {
+        if (efectivoAplicado.compareTo(BigDecimal.ZERO) > 0 || transferenciaAplicada.compareTo(BigDecimal.ZERO) > 0) {
             movimientoFinancieroService.registrarAnulacionVenta(guardada, usuario, efectivoAplicado, transferenciaAplicada);
         }
         auditService.record(
@@ -875,6 +950,26 @@ public class VentaService {
         }
         String clean = motivo.trim().replace("\r", " ").replace("\n", " ");
         return clean.length() > 255 ? clean.substring(0, 255) : clean;
+    }
+
+    /**
+     * Cálculo específico para abono parcial en venta fiada.
+     * No exige que el pago cubra el total — el restante queda como saldo pendiente.
+     */
+    private PagoAplicado calcularPagoFiadoAbono(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+        BigDecimal totalVenta = total == null ? BigDecimal.ZERO : total;
+        BigDecimal efectivoRecibido = nonNegative(pagoEfectivo);
+        BigDecimal transferenciaRecibida = nonNegative(pagoTransferencia);
+
+        if (transferenciaRecibida.compareTo(totalVenta) > 0) {
+            throw new BadRequestException("La transferencia no puede superar el total de la venta");
+        }
+
+        BigDecimal faltante = totalVenta.subtract(transferenciaRecibida);
+        BigDecimal efectivoAplicado = efectivoRecibido.min(faltante);
+        BigDecimal cambio = efectivoRecibido.subtract(efectivoAplicado);
+
+        return new PagoAplicado(efectivoAplicado, transferenciaRecibida, efectivoRecibido, transferenciaRecibida, cambio);
     }
 
     private PagoAplicado calcularPagoAplicado(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia, String mensajeInsuficiente) {

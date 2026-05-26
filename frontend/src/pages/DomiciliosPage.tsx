@@ -5,7 +5,8 @@ import { posApi } from "../shared/api/posApi";
 import { ClienteSearch } from "../shared/ClienteSearch";
 import { useAuthStore } from "../shared/store/authStore";
 import { useTurnoStore } from "../shared/store/turnoStore";
-import { getErrorMessage, money } from "../shared/utils";
+import { getErrorMessage, getErrorMessages, money } from "../shared/utils";
+import { useCurrencyInput } from "../shared/hooks";
 import type { ClienteSearch as ClienteSearchType } from "../types";
 
 function estadoClass(estado: string): string {
@@ -24,6 +25,14 @@ export function DomiciliosPage() {
   const [nuevoDomicilio, setNuevoDomicilio] = useState<string>("0");
   const [confirm, setConfirm] = useState<{ id: number; action: "cancelar" | "anular" } | null>(null);
   const [convertToFiado, setConvertToFiado] = useState<{ ventaId: number } | null>(null);
+  const [confirmFiado, setConfirmFiado] = useState<{
+    ventaId: number;
+    clienteId?: number;
+    clienteNombre: string;
+    clienteTelefono: string;
+  } | null>(null);
+  const fiadoEfectivo = useCurrencyInput("", { maxDigits: 9, allowZero: true });
+  const fiadoTransferencia = useCurrencyInput("", { maxDigits: 9, allowZero: true });
   const [showCobro, setShowCobro] = useState(false);
   const [pagoEfectivo, setPagoEfectivo] = useState<string>("");
   const [pagoTransferencia, setPagoTransferencia] = useState<string>("");
@@ -329,17 +338,14 @@ export function DomiciliosPage() {
                      <button
                        className="btn-ghost w-full text-orange-700"
                        onClick={() => {
-                         if (selected.clienteId) {
-                           // Ya tiene cliente asociado → conversión directa sin pedir selección
-                          marcarFiadoM.mutate({
-                            id: selected.id,
-                            clienteId: selected.clienteId,
-                            clienteNombre: selected.clienteNombre || '',
-                            clienteTelefono: selected.telefono || ''
-                          });
-                         } else {
-                           setConvertToFiado({ ventaId: selected.id });
-                         }
+                         fiadoEfectivo.setValue("0");
+                         fiadoTransferencia.setValue("0");
+                         setConfirmFiado({
+                           ventaId: selected.id,
+                           clienteId: selected.clienteId,
+                           clienteNombre: selected.clienteNombre || '',
+                           clienteTelefono: selected.telefono || ''
+                         });
                        }}
                      >
                        <BsCashStack size={16} className="mr-1" /> Pasar a fiado
@@ -391,8 +397,14 @@ export function DomiciliosPage() {
       {confirm && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-md p-5">
-            <h3 className="text-lg font-semibold">Confirmar accion</h3>
-            <p className="mt-2 text-sm text-pos-muted">Esta accion devolvera inventario. Deseas continuar?</p>
+            <h3 className="text-lg font-semibold">
+              {confirm.action === "cancelar" ? "Cancelar pedido" : "Anular venta"}
+            </h3>
+            <p className="mt-2 text-sm text-pos-muted">
+              {confirm.action === "cancelar"
+                ? "Se cancelara el pedido y se devolvera el inventario. Esta seguro?"
+                : "Se anulara la venta y se devolvera el inventario. Esta seguro?"}
+            </p>
             <div className="mt-4 flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setConfirm(null)}>No</button>
               <button
@@ -403,7 +415,7 @@ export function DomiciliosPage() {
                   setConfirm(null);
                 }}
               >
-                Si, continuar
+                Si, {confirm.action === "cancelar" ? "cancelar" : "anular"}
               </button>
             </div>
           </div>
@@ -430,12 +442,15 @@ export function DomiciliosPage() {
               autoFocus={true}
               showDebt={true}
               onSelect={(cliente: ClienteSearchType) => {
-                marcarFiadoM.mutate({
-                  id: convertToFiado.ventaId,
+                fiadoEfectivo.setValue("0");
+                fiadoTransferencia.setValue("0");
+                setConfirmFiado({
+                  ventaId: convertToFiado.ventaId,
                   clienteId: cliente.id,
                   clienteNombre: cliente.nombre,
                   clienteTelefono: cliente.telefono
                 });
+                setConvertToFiado(null);
               }}
               className="w-full"
             />
@@ -448,6 +463,71 @@ export function DomiciliosPage() {
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {confirmFiado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-sm p-5">
+            <h3 className="text-lg font-semibold">Confirmar fiado</h3>
+            <p className="mt-2 text-sm text-pos-muted">
+              Esta seguro de marcar este pedido como fiado{confirmFiado.clienteNombre ? ` para ${confirmFiado.clienteNombre}` : ''}?
+              {fiadoEfectivo.numericValue > 0 || fiadoTransferencia.numericValue > 0 && ' Se registrara un abono.'}
+            </p>
+
+            <div className="mt-4 space-y-2">
+              <div>
+                <label className="text-xs text-pos-muted">Abono efectivo (opcional)</label>
+                <input
+                  ref={fiadoEfectivo.inputRef}
+                  className="input mt-1"
+                  inputMode="decimal"
+                  value={fiadoEfectivo.displayValue}
+                  onChange={fiadoEfectivo.handleChange}
+                  placeholder="0"
+                />
+                {fiadoEfectivo.error && <p className="text-xs text-orange-700">{fiadoEfectivo.error}</p>}
+              </div>
+              <div>
+                <label className="text-xs text-pos-muted">Abono transferencia (opcional)</label>
+                <input
+                  ref={fiadoTransferencia.inputRef}
+                  className="input mt-1"
+                  inputMode="decimal"
+                  value={fiadoTransferencia.displayValue}
+                  onChange={fiadoTransferencia.handleChange}
+                  placeholder="0"
+                />
+                {fiadoTransferencia.error && <p className="text-xs text-orange-700">{fiadoTransferencia.error}</p>}
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button className="btn-ghost flex-1" onClick={() => setConfirmFiado(null)}>Cancelar</button>
+              <button
+                className="btn-primary flex-1"
+                disabled={marcarFiadoM.isPending}
+                onClick={() => {
+                  marcarFiadoM.mutate({
+                    id: confirmFiado.ventaId,
+                    clienteId: confirmFiado.clienteId,
+                    clienteNombre: confirmFiado.clienteNombre,
+                    clienteTelefono: confirmFiado.clienteTelefono,
+                    pagoEfectivo: fiadoEfectivo.numericValue,
+                    pagoTransferencia: fiadoTransferencia.numericValue
+                  });
+                  setConfirmFiado(null);
+                }}
+              >
+                {marcarFiadoM.isPending ? "Procesando..." : "Si, pasar a fiado"}
+              </button>
+            </div>
+            {marcarFiadoM.isError && (
+              <ul className="mt-2 text-sm text-red-600">
+                {getErrorMessages(marcarFiadoM.error).map((msg) => <li key={msg}>- {msg}</li>)}
+              </ul>
+            )}
           </div>
         </div>
       )}
@@ -500,16 +580,14 @@ export function DomiciliosPage() {
                     <button
                       className="btn-ghost w-full text-orange-700"
                       onClick={() => {
-                        if (selected.clienteId) {
-                          marcarFiadoM.mutate({
-                            id: selected.id,
-                            clienteId: selected.clienteId,
-                            clienteNombre: selected.clienteNombre || '',
-                            clienteTelefono: selected.telefono || ''
-                          });
-                        } else {
-                          setConvertToFiado({ ventaId: selected.id });
-                        }
+                        fiadoEfectivo.setValue("0");
+                        fiadoTransferencia.setValue("0");
+                        setConfirmFiado({
+                          ventaId: selected.id,
+                          clienteId: selected.clienteId,
+                          clienteNombre: selected.clienteNombre || '',
+                          clienteTelefono: selected.telefono || ''
+                        });
                       }}
                     >
                       <BsCashStack size={16} className="mr-1" /> Pasar a fiado

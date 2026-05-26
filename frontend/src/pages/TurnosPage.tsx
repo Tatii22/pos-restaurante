@@ -93,12 +93,14 @@ export function TurnosPage() {
       <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
         <p>Ventas efectivo: <span className="font-semibold text-green-700">{summaryNumber(data?.totalEfectivo)}</span></p>
         <p>Ventas transferencia: <span className="font-semibold text-green-700">{summaryNumber(data?.totalTransferencia)}</span></p>
+        <p>Abonos efectivo: <span className="font-semibold text-green-600">{summaryNumber(data?.totalAbonosEfectivo)}</span></p>
+        <p>Abonos transferencia: <span className="font-semibold text-green-600">{summaryNumber(data?.totalAbonosTransferencia)}</span></p>
         <p>Gastos efectivo: <span className="font-semibold text-red-700">{summaryNumber(data?.totalGastosEfectivo)}</span></p>
         <p>Gastos transferencia: <span className="font-semibold text-red-700">{summaryNumber(data?.totalGastosTransferencia)}</span></p>
-        <p>Ventas realizadas (efectivo): <span className="font-semibold">{summaryNumber(data?.totalEfectivo)}</span></p>
-        <p>Ingresos recibidos (efectivo): <span className="font-semibold">{summaryNumber(data?.gananciaEfectivo)}</span></p>
-        <p>Gastos registrados (efectivo): <span className="font-semibold">{summaryNumber(data?.totalGastosEfectivo)}</span></p>
-        <p>Balance final del turno (efectivo): <span className="font-semibold text-emerald-700">{summaryNumber(data?.gananciaEfectivo)}</span></p>
+        <div className="border-t pt-2">
+          <p>Ingresos netos (efectivo): <span className="font-semibold text-emerald-700">{summaryNumber(data?.gananciaEfectivo)}</span></p>
+          <p>Ingresos netos (transferencia): <span className="font-semibold text-emerald-700">{summaryNumber(data?.gananciaTransferencia)}</span></p>
+        </div>
       </div>
     );
   }
@@ -215,8 +217,8 @@ export function TurnosPage() {
                   {summaryNumber(turnoActual.totalVentas)}
                 </div>
               <div className="mt-1.5 text-xs text-pos-muted space-x-3">
-                <span>Efec: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalEfectivo)}</span></span>
-                <span>Transf: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber(reporte?.totalTransferencia)}</span></span>
+                <span>Efec: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber((reporte?.totalEfectivo ?? 0) + (reporte?.totalAbonosEfectivo ?? 0))}</span></span>
+                <span>Transf: <span className="font-medium text-neutral-700 dark:text-neutral-300">{summaryNumber((reporte?.totalTransferencia ?? 0) + (reporte?.totalAbonosTransferencia ?? 0))}</span></span>
               </div>
             </div>
 
