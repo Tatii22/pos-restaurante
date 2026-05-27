@@ -24,8 +24,9 @@ public class UsuarioService {
     private final ActorResolver actorResolver;
 
     public UsuarioResponseDTO crearUsuario(UsuarioCreateDTO dto) {
+        String username = dto.getUsername().trim();
 
-        if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
+        if (usuarioRepository.findByUsername(username).isPresent()) {
             throw new BadRequestException("El usuario ya existe");
         }
 
@@ -37,7 +38,7 @@ public class UsuarioService {
         }
 
         Usuario usuario = Usuario.builder()
-                .username(dto.getUsername())
+                .username(username)
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .rol(rol)
                 .activo(true)
@@ -98,6 +99,9 @@ public class UsuarioService {
         }
         if (usuarioActualEsAdmin && !"ADMIN".equals(rol.getNombre())) {
             throw new BadRequestException("No se puede cambiar el rol de un usuario ADMIN");
+        }
+        if (usuarioActualEsAdmin && Boolean.FALSE.equals(dto.getActivo())) {
+            throw new BadRequestException("No se puede desactivar un usuario ADMIN");
         }
 
         String usernameAnterior = usuario.getUsername();
