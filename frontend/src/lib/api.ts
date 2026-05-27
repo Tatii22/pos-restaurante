@@ -208,7 +208,7 @@ export async function eliminarCategoria(token: string, id: number): Promise<void
 
 export function crearUsuario(
   token: string,
-  payload: { username: string; password: string; rol: "ADMIN" | "CAJA" | "DOMI" }
+  payload: { username: string; password: string; rol: "CAJA" | "DOMI" }
 ): Promise<UsuarioCreado> {
   return jsonRequest<UsuarioCreado>("/api/v1/usuarios", {
     method: "POST",

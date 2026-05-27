@@ -23,11 +23,18 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log full error for debugging
+    if (error.response?.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem("pos_username");
+      localStorage.removeItem("pos_role");
+      localStorage.removeItem("pos_turno_actual");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 400) {
       console.error("[API 400 ERROR] Status:", error.response.status);
       console.error("[API 400 ERROR] Data:", error.response.data);
-      console.error("[API 400 ERROR] Full error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     }
     
     if (error.response?.data) {

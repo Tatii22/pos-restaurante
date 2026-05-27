@@ -57,7 +57,7 @@ export function UsuariosPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["usuarios-admin"] })
   });
 
-  const usernameValido = /^[a-zA-Z0-9._-]{4,30}$/.test(form.username.trim());
+  const usernameValido = form.username.trim().length >= 3 && form.username.trim().length <= 100;
   const passwordValida = form.password.length >= 6;
 
   const usuariosFiltrados = useMemo(() => {
@@ -89,7 +89,7 @@ export function UsuariosPage() {
   function submitEdit(e: FormEvent) {
     e.preventDefault();
     if (!edit) return;
-    const editUsernameValido = /^[a-zA-Z0-9._-]{4,30}$/.test(edit.username.trim());
+              const editUsernameValido = edit.username.trim().length >= 3 && edit.username.trim().length <= 100;
     if (!editUsernameValido) return;
     if (edit.password && edit.password.length < 6) return;
     updateM.mutate(edit);
@@ -106,11 +106,11 @@ export function UsuariosPage() {
             className="input mt-1"
             placeholder="ej: caja.noche"
             value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value.slice(0, 30) })}
+            onChange={(e) => setForm({ ...form, username: e.target.value.slice(0, 100) })}
             required
           />
           {form.username.length > 0 && !usernameValido && (
-            <p className="mt-1 text-xs text-orange-700">Usa 4-30 caracteres: letras, numeros, punto, guion o guion bajo.</p>
+            <p className="mt-1 text-xs text-orange-700">El usuario debe tener al menos 3 caracteres.</p>
           )}
         </label>
 
@@ -291,7 +291,7 @@ export function UsuariosPage() {
               <input
                 className="input mt-1"
                 value={edit.username}
-                onChange={(e) => setEdit({ ...edit, username: e.target.value.slice(0, 30) })}
+                onChange={(e) => setEdit({ ...edit, username: e.target.value.slice(0, 100) })}
                 required
               />
             </label>
