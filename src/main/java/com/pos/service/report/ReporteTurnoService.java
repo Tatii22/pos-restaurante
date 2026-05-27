@@ -7,14 +7,13 @@ import com.pos.entity.AbonoFiado;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.GastoCaja;
 import com.pos.entity.MedioFinanciero;
-import com.pos.entity.MovimientoFinancieroTipo;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import com.pos.repository.AbonoFiadoRepository;
 import com.pos.repository.GastoCajaRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.VentaRepository;
-import com.pos.service.MovimientoFinancieroService;
+import com.pos.service.CalculosFinancierosService;
 import com.pos.service.VentaService;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +29,7 @@ public class ReporteTurnoService {
     private final GastoCajaRepository gastoCajaRepository;
     private final AbonoFiadoRepository abonoFiadoRepository;
     private final VentaService ventaService;
-    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final CalculosFinancierosService calculosFinancierosService;
 
     public ReporteTurnoService(
             TurnoCajaRepository turnoCajaRepository,
@@ -38,14 +37,14 @@ public class ReporteTurnoService {
             GastoCajaRepository gastoCajaRepository,
             AbonoFiadoRepository abonoFiadoRepository,
             VentaService ventaService,
-            MovimientoFinancieroService movimientoFinancieroService
+            CalculosFinancierosService calculosFinancierosService
     ) {
         this.turnoCajaRepository = turnoCajaRepository;
         this.ventaRepository = ventaRepository;
         this.gastoCajaRepository = gastoCajaRepository;
         this.abonoFiadoRepository = abonoFiadoRepository;
         this.ventaService = ventaService;
-        this.movimientoFinancieroService = movimientoFinancieroService;
+        this.calculosFinancierosService = calculosFinancierosService;
     }
 
     public ReporteCierreTurnoDTO generarReporteTurno(Long turnoId) {
@@ -72,26 +71,10 @@ public class ReporteTurnoService {
                 .map(v -> v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.EFECTIVO,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
-        BigDecimal totalTransferencia = movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
-        BigDecimal totalGastosEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.EFECTIVO,
-                List.of(MovimientoFinancieroTipo.GASTO_CAJA, MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA)
-        ).abs();
-        BigDecimal totalGastosTransferencia = movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(MovimientoFinancieroTipo.GASTO_CAJA, MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA)
-        ).abs();
+        BigDecimal totalEfectivo = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal totalTransferencia = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal totalGastosEfectivo = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal totalGastosTransferencia = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.TRANSFERENCIA);
         BigDecimal totalGastos = totalGastosEfectivo.add(totalGastosTransferencia);
 
         BigDecimal totalAbonos = BigDecimal.ZERO;

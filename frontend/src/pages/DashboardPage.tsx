@@ -94,10 +94,14 @@ export function DashboardPage() {
     <div className="grid gap-4">
       <h2 className="text-2xl font-semibold">Panel administrativo</h2>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <div className="card p-4">
           <p className="text-sm text-pos-muted">Ventas del mes</p>
           <p className="text-2xl font-bold">{resumen?.totalVentas ?? 0}</p>
+        </div>
+        <div className="card p-4 bg-pos-accentSoft border-l-4 border-pos-accent shadow-pos">
+          <p className="text-sm text-pos-forest font-medium">Ganancia actual del mes</p>
+          <p className="text-2xl font-bold text-pos-forest">{money.format(rent?.gananciaNeta ?? 0)}</p>
         </div>
         <div className="card p-4">
           <p className="text-sm text-pos-muted">Recaudo real del mes</p>
