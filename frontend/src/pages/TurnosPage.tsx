@@ -249,7 +249,7 @@ export function TurnosPage() {
               <div className="text-[32px] font-medium tabular-nums tracking-[-1px] text-neutral-900 dark:text-white">
                 {summaryNumber(reporte?.totalOperativoTurno ?? turnoActual.totalOperativoTurno)}
               </div>
-              <div className="text-xs text-pos-muted mt-1">Ventas − Gastos (efectivo + transferencias)</div>
+              <div className="text-xs text-pos-muted mt-1">Base + Ingresos − Gastos (efectivo + transferencias)</div>
             </div>
 
             <div className="mt-5 pt-4 border-t border-pos-border/60 text-xs text-pos-muted">

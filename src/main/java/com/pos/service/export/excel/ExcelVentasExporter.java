@@ -59,7 +59,7 @@ public class ExcelVentasExporter {
                 Cell totalCell = row.createCell(5);
                 ExcelReportHelper.applyMoneyToCell(totalCell, v.total(), money);
 
-                String pago = (v.condicionPago() == com.pos.entity.CondicionPago.FIADO) ? "FIADO" : v.formaPago().name();
+                String pago = (v.condicionPago() == com.pos.entity.CondicionPago.FIADO) ? "Abono" : v.formaPago().name();
                 row.createCell(6).setCellValue(pago);
             }
 

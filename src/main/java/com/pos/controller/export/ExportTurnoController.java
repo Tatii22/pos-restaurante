@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/export/turnos")
-@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
+@PreAuthorize("hasRole('ADMIN')")
 public class ExportTurnoController {
 
     private final ReporteTurnoService reporteTurnoService;

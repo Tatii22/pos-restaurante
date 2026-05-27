@@ -41,4 +41,6 @@ public interface TurnoCajaRepository extends JpaRepository<TurnoCaja, Long> {
     boolean existsByEstado(EstadoTurno estado);
 
     List<TurnoCaja> findByFechaAperturaBetweenOrderByFechaAperturaDesc(LocalDateTime inicio, LocalDateTime fin);
+
+    List<TurnoCaja> findByEstadoAndFechaCierreBetween(EstadoTurno estado, LocalDateTime inicio, LocalDateTime fin);
 }

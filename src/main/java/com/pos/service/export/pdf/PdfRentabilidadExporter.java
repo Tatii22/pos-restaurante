@@ -65,7 +65,8 @@ public class PdfRentabilidadExporter {
                 tablaV.addCell(PdfReportHelper.createDataCell(v.estado().name(), false, zebra, false));
                 tablaV.addCell(PdfReportHelper.createDataCell(v.clienteNombre() != null ? v.clienteNombre() : "-", false, zebra, false));
                 tablaV.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(v.total()), true, zebra, true));
-                tablaV.addCell(PdfReportHelper.createDataCell(v.formaPago().name(), false, zebra, false));
+                String pago = v.formaPago() == com.pos.entity.FormaPago.FIADO ? "ABONO" : v.formaPago().name();
+                tablaV.addCell(PdfReportHelper.createDataCell(pago, false, zebra, false));
                 zebra = !zebra;
             }
             document.add(tablaV);

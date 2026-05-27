@@ -3,15 +3,18 @@ package com.pos.service.report;
 import com.pos.dto.gasto.GastoResponseDTO;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.GastoAdmin;
 import com.pos.entity.GastoCaja;
 import com.pos.entity.CondicionPago;
 import com.pos.entity.MedioFinanciero;
 import com.pos.entity.MovimientoFinancieroTipo;
+import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.GastoCajaRepository;
+import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.VentaRepository;
 import com.pos.service.MovimientoFinancieroService;
 import com.pos.service.VentaService;
@@ -22,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ReporteRentabilidadService {
@@ -29,6 +33,7 @@ public class ReporteRentabilidadService {
     private final VentaRepository ventaRepository;
     private final GastoCajaRepository gastoCajaRepository;
     private final GastoAdminRepository gastoAdminRepository;
+    private final TurnoCajaRepository turnoCajaRepository;
     private final VentaService ventaService;
     private final MovimientoFinancieroService movimientoFinancieroService;
 
@@ -36,12 +41,14 @@ public class ReporteRentabilidadService {
             VentaRepository ventaRepository,
             GastoCajaRepository gastoCajaRepository,
             GastoAdminRepository gastoAdminRepository,
+            TurnoCajaRepository turnoCajaRepository,
             VentaService ventaService,
             MovimientoFinancieroService movimientoFinancieroService
     ) {
         this.ventaRepository = ventaRepository;
         this.gastoCajaRepository = gastoCajaRepository;
         this.gastoAdminRepository = gastoAdminRepository;
+        this.turnoCajaRepository = turnoCajaRepository;
         this.ventaService = ventaService;
         this.movimientoFinancieroService = movimientoFinancieroService;
     }
@@ -52,26 +59,42 @@ public class ReporteRentabilidadService {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
+        List<TurnoCaja> turnosCerrados = turnoCajaRepository
+                .findByEstadoAndFechaCierreBetween(EstadoTurno.CERRADO, inicio, fin);
+
+        Set<Long> cerradosIds = turnosCerrados.stream()
+                .map(TurnoCaja::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
         List<Venta> ventas = ventaRepository.findByFechaBetweenAndEstadoIn(
                 inicio,
                 fin,
                 List.of(EstadoVenta.DESPACHADA)
-        );
-        List<GastoCaja> gastosCaja = gastoCajaRepository.findByFechaBetween(inicio, fin);
+        ).stream()
+                .filter(v -> v.getTurno() != null && cerradosIds.contains(v.getTurno().getId()))
+                .toList();
+
+        List<GastoCaja> gastosCaja = gastoCajaRepository.findByFechaBetween(inicio, fin)
+                .stream()
+                .filter(g -> g.getTurno() != null && cerradosIds.contains(g.getTurno().getId()))
+                .toList();
+
         List<GastoAdmin> gastosAdmin = gastoAdminRepository.findByFechaBetween(fechaInicio, fechaFin);
 
-        BigDecimal totalVentasEfectivo = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.EFECTIVO,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ABONO_FIADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
-        BigDecimal totalVentasTransferencia = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ABONO_FIADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
+        BigDecimal totalVentasEfectivo = BigDecimal.ZERO;
+        BigDecimal totalVentasTransferencia = BigDecimal.ZERO;
+        for (TurnoCaja turno : turnosCerrados) {
+            totalVentasEfectivo = totalVentasEfectivo.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.EFECTIVO,
+                    List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ABONO_FIADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+            ));
+            totalVentasTransferencia = totalVentasTransferencia.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.TRANSFERENCIA,
+                    List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ABONO_FIADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+            ));
+        }
         BigDecimal totalVentas = totalVentasEfectivo.add(totalVentasTransferencia);
         BigDecimal totalVentasComerciales = BigDecimal.ZERO;
         BigDecimal ventasContado = BigDecimal.ZERO;
@@ -86,28 +109,37 @@ public class ReporteRentabilidadService {
             }
         }
 
-        BigDecimal totalGastosEfectivo = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.EFECTIVO,
-                List.of(
-                        MovimientoFinancieroTipo.GASTO_CAJA,
-                        MovimientoFinancieroTipo.GASTO_ADMIN,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_ADMIN
-                )
+        BigDecimal totalGastosEfectivo = BigDecimal.ZERO;
+        BigDecimal totalGastosTransferencia = BigDecimal.ZERO;
+        for (TurnoCaja turno : turnosCerrados) {
+            totalGastosEfectivo = totalGastosEfectivo.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.EFECTIVO,
+                    List.of(
+                            MovimientoFinancieroTipo.GASTO_CAJA,
+                            MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA
+                    )
+            ));
+            totalGastosTransferencia = totalGastosTransferencia.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.TRANSFERENCIA,
+                    List.of(
+                            MovimientoFinancieroTipo.GASTO_CAJA,
+                            MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA
+                    )
+            ));
+        }
+        // Gastos administrativos no tienen turno, se suman por período
+        BigDecimal gastosAdminEfectivo = movimientoFinancieroService.sumarPeriodoMedioTipos(
+                inicio, fin, MedioFinanciero.EFECTIVO,
+                List.of(MovimientoFinancieroTipo.GASTO_ADMIN, MovimientoFinancieroTipo.ELIMINACION_GASTO_ADMIN)
         ).abs();
-        BigDecimal totalGastosTransferencia = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(
-                        MovimientoFinancieroTipo.GASTO_CAJA,
-                        MovimientoFinancieroTipo.GASTO_ADMIN,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_ADMIN
-                )
+        BigDecimal gastosAdminTransferencia = movimientoFinancieroService.sumarPeriodoMedioTipos(
+                inicio, fin, MedioFinanciero.TRANSFERENCIA,
+                List.of(MovimientoFinancieroTipo.GASTO_ADMIN, MovimientoFinancieroTipo.ELIMINACION_GASTO_ADMIN)
         ).abs();
+        totalGastosEfectivo = totalGastosEfectivo.add(gastosAdminEfectivo);
+        totalGastosTransferencia = totalGastosTransferencia.add(gastosAdminTransferencia);
         BigDecimal totalGastos = totalGastosEfectivo.add(totalGastosTransferencia);
 
         ReporteRentabilidadDTO reporte = new ReporteRentabilidadDTO();

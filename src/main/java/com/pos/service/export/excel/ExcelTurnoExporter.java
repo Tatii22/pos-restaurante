@@ -69,7 +69,8 @@ public class ExcelTurnoExporter {
                 r.createCell(4).setCellValue(v.clienteNombre() != null ? v.clienteNombre() : "-");
                 Cell t = r.createCell(5);
                 ExcelReportHelper.applyMoneyToCell(t, v.total(), money);
-                r.createCell(6).setCellValue(v.formaPago().name());
+                String pago = v.formaPago() == com.pos.entity.FormaPago.FIADO ? "ABONO" : v.formaPago().name();
+                r.createCell(6).setCellValue(pago);
             }
 
             fila++;

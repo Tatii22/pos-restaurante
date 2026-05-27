@@ -179,7 +179,7 @@ class VentaLocalPaymentIntegrationTest {
                         .with(user(usernameCaja).roles("CAJA"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "montoFinal": 100000 }
+                                 { "efectivoContado": 100000, "transferenciasVerificadas": 12000 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.esperado").value(100000))

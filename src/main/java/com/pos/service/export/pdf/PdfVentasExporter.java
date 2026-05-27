@@ -73,7 +73,7 @@ public class PdfVentasExporter {
                         PdfReportHelper.formatMoney(v.total()), true, zebra, true);
                 tabla.addCell(totalCell);
 
-                String pago = (v.condicionPago() == CondicionPago.FIADO) ? "FIADO" : v.formaPago().name();
+                String pago = (v.condicionPago() == CondicionPago.FIADO) ? "Abono" : v.formaPago().name();
                 tabla.addCell(PdfReportHelper.createDataCell(pago, false, zebra, false));
 
                 zebra = !zebra;

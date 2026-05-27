@@ -7,7 +7,12 @@ import { getErrorMessage, money } from "../shared/utils";
 
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
-const tabs = ["Ventas", "Rentabilidad", "Turnos"] as const;
+const tabs = ["Ventas", "Rentabilidad", "Turnos", "Cierre de Mes"] as const;
+
+const MONTHS = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -17,6 +22,19 @@ function startOfMonth() {
   const d = new Date();
   d.setDate(1);
   return d.toISOString().slice(0, 10);
+}
+
+function lastDayOfMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
+function mesKey(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function parseMesKey(key: string) {
+  const [y, m] = key.split("-").map(Number);
+  return { year: y, month: m };
 }
 
 function downloadBlob(blob: Blob, name: string) {
@@ -36,6 +54,12 @@ export function ReportesPage() {
   const [ff, setFf] = useState(today());
   const mesInicio = startOfMonth();
   const mesFin = today();
+
+  const ahora = new Date();
+  const [mesSel, setMesSel] = useState(mesKey(ahora.getFullYear(), ahora.getMonth() + 1));
+  const { year: mesYear, month: mesNum } = parseMesKey(mesSel);
+  const ciInicio = `${mesYear}-${String(mesNum).padStart(2, "0")}-01`;
+  const ciFin = `${mesYear}-${String(mesNum).padStart(2, "0")}-${String(lastDayOfMonth(mesYear, mesNum)).padStart(2, "0")}`;
 
   const reportQ = useQuery({
     queryKey: ["reportes-ventas", fi, ff],
@@ -57,6 +81,31 @@ export function ReportesPage() {
   const turnosQ = useQuery({
     queryKey: ["reportes-turnos-rango", fi, ff],
     queryFn: () => posApi.getTurnosByRango(fi, ff)
+  });
+
+  const ciVentasQ = useQuery({
+    queryKey: ["reportes-ventas-ci", ciInicio, ciFin],
+    queryFn: () => posApi.getReporteVentas(ciInicio, ciFin),
+    enabled: tab === "Cierre de Mes"
+  });
+  const ciRentQ = useQuery({
+    queryKey: ["reportes-rentabilidad-ci", ciInicio, ciFin],
+    queryFn: () => posApi.getReporteRentabilidad(ciInicio, ciFin),
+    enabled: tab === "Cierre de Mes"
+  });
+  const ciTurnosQ = useQuery({
+    queryKey: ["reportes-turnos-ci", ciInicio, ciFin],
+    queryFn: () => posApi.getTurnosByRango(ciInicio, ciFin),
+    enabled: tab === "Cierre de Mes"
+  });
+
+  const ciPdfM = useMutation({
+    mutationFn: () => posApi.exportRentabilidadPdf(ciInicio, ciFin),
+    onSuccess: (blob) => downloadBlob(blob, `cierre_mes_${ciInicio}_${ciFin}.pdf`)
+  });
+  const ciXlsM = useMutation({
+    mutationFn: () => posApi.exportRentabilidadExcel(ciInicio, ciFin),
+    onSuccess: (blob) => downloadBlob(blob, `cierre_mes_${ciInicio}_${ciFin}.xlsx`)
   });
 
   const pdfM = useMutation({
@@ -90,7 +139,7 @@ export function ReportesPage() {
       datasets: [
         {
           label: "COP",
-          data: [Number(r.totalBruto || 0), Number(r.totalDescuentos || 0), Number(r.recaudoReal || 0)],
+          data: [Number(r.totalBruto || 0), Number(r.totalDescuentos || 0), Number(r.totalNeto || 0)],
           backgroundColor: ["#0ea5e9", "#f59e0b", "#16a34a"]
         }
       ]
@@ -192,6 +241,94 @@ export function ReportesPage() {
             <p className="text-2xl font-bold">{margen}%</p>
           </div>
         </div>
+      )}
+
+      {tab === "Cierre de Mes" && (
+        <>
+          <div className="card grid gap-3 p-4 md:grid-cols-4">
+            <label className="text-sm">
+              Mes
+              <select className="input mt-1" value={mesSel} onChange={(e) => setMesSel(e.target.value)}>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const y = ahora.getFullYear();
+                  const m = i + 1;
+                  const key = mesKey(y, m);
+                  return <option key={key} value={key}>{MONTHS[i]} {y}</option>;
+                })}
+                {Array.from({ length: 12 }, (_, i) => {
+                  const y = ahora.getFullYear() - 1;
+                  const m = i + 1;
+                  const key = mesKey(y, m);
+                  return <option key={key} value={key}>{MONTHS[i]} {y}</option>;
+                })}
+              </select>
+            </label>
+            <div className="flex flex-wrap items-end gap-2">
+              <button className="btn-primary" onClick={() => ciPdfM.mutate()} disabled={ciPdfM.isPending}>Export PDF </button>
+              <button className="btn-ghost" onClick={() => ciXlsM.mutate()} disabled={ciXlsM.isPending}>Export Excel </button>
+            </div>
+          </div>
+
+          {(ciVentasQ.isError || ciRentQ.isError) && (
+            <p className="text-sm text-red-600">{getErrorMessage(ciVentasQ.error || ciRentQ.error)}</p>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Ventas realizadas</p>
+              <p className="text-2xl font-bold">{ciVentasQ.data?.totalVentas ?? "—"}</p>
+              <p className="text-xs text-pos-muted mt-1">Total de ventas del mes</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Total bruto</p>
+              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalBruto || 0)}</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Descuentos</p>
+              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalDescuentos || 0)}</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Total neto</p>
+              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalNeto || 0)}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Ingresos recibidos</p>
+              <p className="text-2xl font-bold">{money.format(ciRentQ.data?.recaudoReal || 0)}</p>
+              <div className="mt-2 text-xs text-pos-muted space-x-3">
+                <span>Efectivo: <span className="font-medium">{money.format(ciRentQ.data?.totalVentasEfectivo || 0)}</span></span>
+                <span>Transferencia: <span className="font-medium">{money.format(ciRentQ.data?.totalVentasTransferencia || 0)}</span></span>
+              </div>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Gastos registrados</p>
+              <p className="text-2xl font-bold text-red-600">{money.format(ciRentQ.data?.totalGastos || 0)}</p>
+              <div className="mt-2 text-xs text-pos-muted space-x-3">
+                <span>Efectivo: <span className="font-medium">{money.format(ciRentQ.data?.totalGastosEfectivo || 0)}</span></span>
+                <span>Transferencia: <span className="font-medium">{money.format(ciRentQ.data?.totalGastosTransferencia || 0)}</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-4 border-2 border-emerald-300 bg-emerald-50">
+            <p className="text-sm text-emerald-700 font-medium">GANANCIA NETA DEL MES</p>
+            <p className="text-4xl font-bold text-emerald-800">{money.format(ciRentQ.data?.gananciaNeta || 0)}</p>
+          </div>
+
+          {ciTurnosQ.data && ciTurnosQ.data.length > 0 && (
+            <div className="card p-4">
+              <p className="text-sm font-medium text-pos-muted mb-2">Turnos del mes</p>
+              <div className="grid gap-2 md:grid-cols-4">
+                <div><p className="text-xs text-pos-muted">Total turnos</p><p className="font-semibold">{ciTurnosQ.data.length}</p></div>
+                <div><p className="text-xs text-pos-muted">Suma ventas</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalVentas || 0), 0))}</p></div>
+                <div><p className="text-xs text-pos-muted">Suma gastos</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalGastos || 0), 0))}</p></div>
+                <div><p className="text-xs text-pos-muted">Total operativo neto</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalOperativoNeto || 0), 0))}</p></div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {tab === "Turnos" && (

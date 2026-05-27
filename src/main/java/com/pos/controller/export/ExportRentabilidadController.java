@@ -17,7 +17,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/export/rentabilidad")
-@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
+@PreAuthorize("hasRole('ADMIN')")
 public class ExportRentabilidadController {
 
     private final ReporteRentabilidadService reporteRentabilidadService;

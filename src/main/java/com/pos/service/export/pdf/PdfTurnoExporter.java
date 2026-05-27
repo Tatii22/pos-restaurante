@@ -85,7 +85,8 @@ public class PdfTurnoExporter {
                 tVentas.addCell(PdfReportHelper.createDataCell(v.estado().name(), false, z, false));
                 tVentas.addCell(PdfReportHelper.createDataCell(v.clienteNombre() != null ? v.clienteNombre() : "-", false, z, false));
                 tVentas.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(v.total()), true, z, true));
-                tVentas.addCell(PdfReportHelper.createDataCell(v.formaPago().name(), false, z, false));
+                String pago = v.formaPago() == com.pos.entity.FormaPago.FIADO ? "Abono" : v.formaPago().name();
+                tVentas.addCell(PdfReportHelper.createDataCell(pago, false, z, false));
                 z = !z;
             }
             document.add(tVentas);

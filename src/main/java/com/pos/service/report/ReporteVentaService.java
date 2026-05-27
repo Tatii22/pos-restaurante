@@ -4,11 +4,14 @@ import com.pos.dto.report.ReporteVentaDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.entity.AbonoFiado;
 import com.pos.entity.CondicionPago;
+import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.MedioFinanciero;
 import com.pos.entity.MovimientoFinancieroTipo;
+import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import com.pos.repository.AbonoFiadoRepository;
+import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.VentaRepository;
 import com.pos.service.MovimientoFinancieroService;
 import com.pos.service.VentaService;
@@ -18,23 +21,27 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ReporteVentaService {
 
     private final VentaRepository ventaRepository;
     private final AbonoFiadoRepository abonoFiadoRepository;
+    private final TurnoCajaRepository turnoCajaRepository;
     private final VentaService ventaService;
     private final MovimientoFinancieroService movimientoFinancieroService;
 
     public ReporteVentaService(
             VentaRepository ventaRepository,
             AbonoFiadoRepository abonoFiadoRepository,
+            TurnoCajaRepository turnoCajaRepository,
             VentaService ventaService,
             MovimientoFinancieroService movimientoFinancieroService
     ) {
         this.ventaRepository = ventaRepository;
         this.abonoFiadoRepository = abonoFiadoRepository;
+        this.turnoCajaRepository = turnoCajaRepository;
         this.ventaService = ventaService;
         this.movimientoFinancieroService = movimientoFinancieroService;
     }
@@ -43,11 +50,20 @@ public class ReporteVentaService {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
+        List<TurnoCaja> turnosCerrados = turnoCajaRepository
+                .findByEstadoAndFechaCierreBetween(EstadoTurno.CERRADO, inicio, fin);
+
+        Set<Long> cerradosIds = turnosCerrados.stream()
+                .map(TurnoCaja::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
         List<Venta> ventas = ventaRepository.findByFechaBetweenAndEstadoIn(
                 inicio,
                 fin,
                 List.of(EstadoVenta.DESPACHADA)
-        );
+        ).stream()
+                .filter(v -> v.getTurno() != null && cerradosIds.contains(v.getTurno().getId()))
+                .toList();
 
         BigDecimal totalBruto = BigDecimal.ZERO;
         BigDecimal totalDescuentos = BigDecimal.ZERO;
@@ -77,24 +93,29 @@ public class ReporteVentaService {
             }
         }
 
-        BigDecimal totalEfectivo = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.EFECTIVO,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
-        BigDecimal totalTransferencia = movimientoFinancieroService.sumarPeriodoMedioTipos(
-                inicio,
-                fin,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
-        );
+        BigDecimal totalEfectivo = BigDecimal.ZERO;
+        BigDecimal totalTransferencia = BigDecimal.ZERO;
+        for (TurnoCaja turno : turnosCerrados) {
+            totalEfectivo = totalEfectivo.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.EFECTIVO,
+                    List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+            ));
+            totalTransferencia = totalTransferencia.add(movimientoFinancieroService.sumarTurnoMedioTipos(
+                    turno,
+                    MedioFinanciero.TRANSFERENCIA,
+                    List.of(MovimientoFinancieroTipo.VENTA_CONTADO, MovimientoFinancieroTipo.ANULACION_VENTA)
+            ));
+        }
 
         List<VentaResponseDTO> ventasDTO = ventas.stream()
                 .map(ventaService::construirRespuesta)
                 .toList();
 
-        List<AbonoFiado> abonosPeriodo = abonoFiadoRepository.findByFechaBetweenOrderByFechaAsc(inicio, fin);
+        List<AbonoFiado> abonosPeriodo = abonoFiadoRepository.findByFechaBetweenOrderByFechaAsc(inicio, fin)
+                .stream()
+                .filter(a -> a.getTurno() != null && cerradosIds.contains(a.getTurno().getId()))
+                .toList();
         for (AbonoFiado a : abonosPeriodo) {
             BigDecimal monto = a.getMonto() != null ? a.getMonto() : BigDecimal.ZERO;
             BigDecimal montoE = a.getMontoEfectivo() != null ? a.getMontoEfectivo() : BigDecimal.ZERO;

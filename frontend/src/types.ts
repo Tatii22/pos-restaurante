@@ -256,12 +256,16 @@ export type ReporteRentabilidad = {
   fechaInicio: string;
   fechaFin: string;
   totalVentas: number;
+  totalVentasEfectivo?: number;
+  totalVentasTransferencia?: number;
   totalVentasComerciales?: number;
   ventasContado?: number;
   ventasFiadas?: number;
   carteraGenerada?: number;
   recaudoReal?: number;
   totalGastos: number;
+  totalGastosEfectivo?: number;
+  totalGastosTransferencia?: number;
   gananciaNeta: number;
   ventas: Venta[];
   gastos: GastoReporte[];

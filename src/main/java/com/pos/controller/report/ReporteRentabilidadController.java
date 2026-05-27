@@ -13,7 +13,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/reportes/rentabilidad")
-@PreAuthorize("hasAnyRole('ADMIN','CAJA')")
+@PreAuthorize("hasRole('ADMIN')")
 public class ReporteRentabilidadController {
 
     private final ReporteRentabilidadService reporteRentabilidadService;

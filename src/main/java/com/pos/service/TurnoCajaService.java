@@ -270,7 +270,7 @@ public class TurnoCajaService {
         }
         BigDecimal cajaFisica = calcularEfectivoEsperado(turno);
         BigDecimal transferencias = calcularTransferenciasNetas(turno);
-        turno.setEsperado(turno.getEsperado() != null ? turno.getEsperado() : cajaFisica);
+        turno.setEsperado(cajaFisica);
         turno.setTransferenciasNetas(transferencias);
         turno.setTotalOperativoTurno(cajaFisica.add(transferencias));
         return turno;
