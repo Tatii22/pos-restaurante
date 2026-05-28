@@ -49,8 +49,9 @@ public class ReporteVentaService {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
+        // Filtra por fecha de APERTURA. Criterio unificado con Dashboard y listarPorRango.
         List<TurnoCaja> turnosCerrados = turnoCajaRepository
-                .findByEstadoAndFechaCierreBetween(EstadoTurno.CERRADO, inicio, fin);
+                .findByEstadoAndFechaAperturaBetween(EstadoTurno.CERRADO, inicio, fin);
 
         Set<Long> cerradosIds = turnosCerrados.stream()
                 .map(TurnoCaja::getId)

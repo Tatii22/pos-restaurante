@@ -43,4 +43,11 @@ public interface TurnoCajaRepository extends JpaRepository<TurnoCaja, Long> {
     List<TurnoCaja> findByFechaAperturaBetweenOrderByFechaAperturaDesc(LocalDateTime inicio, LocalDateTime fin);
 
     List<TurnoCaja> findByEstadoAndFechaCierreBetween(EstadoTurno estado, LocalDateTime inicio, LocalDateTime fin);
+
+    /**
+     * Turnos cerrados cuya apertura cae en el rango.
+     * Criterio unificado con listarPorRango para que Dashboard y Turnos
+     * sumen exactamente los mismos turnos dado el mismo rango de fechas.
+     */
+    List<TurnoCaja> findByEstadoAndFechaAperturaBetween(EstadoTurno estado, LocalDateTime inicio, LocalDateTime fin);
 }

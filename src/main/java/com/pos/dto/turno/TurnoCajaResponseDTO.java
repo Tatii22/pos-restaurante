@@ -16,20 +16,33 @@ public class TurnoCajaResponseDTO {
     private LocalDateTime fechaCierre;
 
     private BigDecimal montoInicial;
-    private BigDecimal totalVentas;
+
+    // Recaudo bruto del turno: todo el dinero recibido, sin descontar gastos
+    private BigDecimal recaudoBruto;
+
+    // Gastos solo de caja (del ledger del turno)
     private BigDecimal totalGastos;
+
+    // Gastos admin del período del turno (por fecha, no por turno_id)
+    private BigDecimal totalGastosAdmin;
+
+    // Gastos totales = totalGastos + totalGastosAdmin
+    private BigDecimal totalGastosCombinados;
+
+    // Ganancia neta real = totalVentas - totalGastosCombinados
+    private BigDecimal gananciaNeta;
+
     private BigDecimal esperado;
     private BigDecimal faltante;
     private BigDecimal transferenciasNetas;
     private BigDecimal totalOperativoTurno;
 
-    // === Métricas operativas puras (sin baseCaja) para reportes históricos ===
-    // Efectivo operativo = (ventasEfectivo + abonosE - gastosE) = esperado - montoInicial
+    // Métricas operativas puras (sin base de caja)
     private BigDecimal efectivoOperativo;
-    private BigDecimal transferenciasOperativas; // = transferenciasNetas (ya es neto)
-    private BigDecimal totalOperativoNeto;       // = efectivoOperativo + transferenciasOperativas
+    private BigDecimal transferenciasOperativas;
+    private BigDecimal totalOperativoNeto;
 
-    // Conciliación dual (arqueo y cierre) - NO usar en tabla principal de reportes
+    // Conciliación dual (arqueo y cierre)
     private BigDecimal efectivoContado;
     private BigDecimal transferenciasVerificadas;
     private BigDecimal diferenciaEfectivo;
@@ -38,6 +51,5 @@ public class TurnoCajaResponseDTO {
     private BigDecimal diferenciaTotal;
 
     private EstadoTurno estado;
-
     private String usuario;
 }

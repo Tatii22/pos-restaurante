@@ -58,8 +58,10 @@ public class ReporteRentabilidadService {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);
 
+        // Filtra por fecha de APERTURA, igual que listarPorRango en TurnoCajaService.
+        // Criterio unificado: un turno pertenece al período en que inició, no en que cerró.
         List<TurnoCaja> turnosCerrados = turnoCajaRepository
-                .findByEstadoAndFechaCierreBetween(EstadoTurno.CERRADO, inicio, fin);
+                .findByEstadoAndFechaAperturaBetween(EstadoTurno.CERRADO, inicio, fin);
 
         Set<Long> cerradosIds = turnosCerrados.stream()
                 .map(TurnoCaja::getId)

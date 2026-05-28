@@ -78,4 +78,16 @@ public class TurnoCaja {
 
     @Transient
     private BigDecimal totalOperativoTurno;
+
+    /** Gastos administrativos del período del turno (por fecha). Calculado en memoria, no persistido. */
+    @Transient
+    private BigDecimal totalGastosAdmin;
+
+    /** Recaudo bruto: todo el dinero recibido sin descontar gastos. Calculado en memoria. */
+    @Transient
+    private BigDecimal recaudoBruto;
+
+    /** Ganancia financiera neta: recaudoBruto − gastosCaja − gastosAdmin. Calculado en memoria. */
+    @Transient
+    private BigDecimal gananciaNeta;
 }

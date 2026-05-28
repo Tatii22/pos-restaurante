@@ -30,8 +30,16 @@ public class CalculosFinancierosService {
             MovimientoFinancieroTipo.ELIMINACION_GASTO_ADMIN
     );
 
+    /**
+     * Recaudo real por turno: todo el dinero que físicamente entró en caja.
+     * Incluye ventas contado, abonos de fiados anteriores, abonos simultáneos
+     * con venta fiada, y reversa de anulaciones.
+     * Es idéntico a TIPOS_RECAUDO: no existe razón para que el turno
+     * excluya los abonos de deudas anteriores — ese dinero entró en ese turno.
+     */
     public static final List<MovimientoFinancieroTipo> TIPOS_RECAUDO_TURNO = List.of(
             MovimientoFinancieroTipo.VENTA_CONTADO,
+            MovimientoFinancieroTipo.ABONO_FIADO,
             MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA,
             MovimientoFinancieroTipo.ANULACION_VENTA
     );

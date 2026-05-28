@@ -96,29 +96,32 @@ export function DashboardPage() {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <div className="card p-4">
-          <p className="text-sm text-pos-muted">Ventas del mes</p>
-          <p className="text-2xl font-bold">{resumen?.totalVentas ?? 0}</p>
-        </div>
-        <div className="card p-4 bg-pos-accentSoft border-l-4 border-pos-accent shadow-pos">
-          <p className="text-sm text-pos-forest font-medium">Ganancia actual del mes</p>
-          <p className="text-2xl font-bold text-pos-forest">{money.format(rent?.gananciaNeta ?? 0)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-pos-muted">Recaudo real del mes</p>
-          <p className="text-2xl font-bold">{money.format(resumen?.recaudoReal ?? rent?.recaudoReal ?? 0)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-pos-muted">Efectivo</p>
-          <p className="text-2xl font-bold">{money.format(resumen?.totalEfectivo ?? 0)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-pos-muted">Transferencia</p>
-          <p className="text-2xl font-bold">{money.format(resumen?.totalTransferencia ?? 0)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-sm text-pos-muted">Gastos globales (mes)</p>
-          <p className="text-2xl font-bold">{money.format(rent?.totalGastos ?? 0)}</p>
-        </div>
+              <p className="text-sm text-pos-muted">Ventas del mes</p>
+              <p className="text-2xl font-bold">{resumen?.totalVentas ?? 0}</p>
+            </div>
+            <div className="card p-4 bg-pos-accentSoft border-l-4 border-pos-accent shadow-pos">
+              <p className="text-sm text-pos-forest font-medium">Ganancia del mes</p>
+              <p className="text-2xl font-bold text-pos-forest">{money.format(rent?.gananciaNeta ?? 0)}</p>
+              <p className="text-xs text-pos-forest opacity-70 mt-0.5">Recaudo real − gastos totales</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Recaudo real</p>
+              <p className="text-2xl font-bold">{money.format(rent?.recaudoReal ?? 0)}</p>
+              <p className="text-xs text-pos-muted mt-0.5">Contado + abonos cobrados</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Efectivo</p>
+              <p className="text-2xl font-bold">{money.format(rent?.totalVentasEfectivo ?? 0)}</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Transferencia</p>
+              <p className="text-2xl font-bold">{money.format(rent?.totalVentasTransferencia ?? 0)}</p>
+            </div>
+            <div className="card p-4">
+              <p className="text-sm text-pos-muted">Gastos totales</p>
+              <p className="text-2xl font-bold">{money.format(rent?.totalGastos ?? 0)}</p>
+              <p className="text-xs text-pos-muted mt-0.5">Caja + administrativos</p>
+            </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
@@ -134,14 +137,15 @@ export function DashboardPage() {
 
         <div className="card p-4">
           <h3 className="mb-3 text-lg font-semibold">Resumen del mes</h3>
-          <div className="space-y-2 text-sm">
-            <p className="flex justify-between"><span className="text-pos-muted">Bruto</span><span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Descuentos</span><span className="font-semibold">{money.format(resumen?.totalDescuentos ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Neto</span><span className="font-semibold">{money.format(resumen?.totalNeto ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Fiado generado</span><span className="font-semibold">{money.format(resumen?.carteraGenerada ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Recaudo real</span><span className="font-semibold">{money.format(resumen?.recaudoReal ?? rent?.recaudoReal ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Gastos globales</span><span className="font-semibold">{money.format(rent?.totalGastos ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Ganancia neta</span><span className="font-semibold">{money.format(rent?.gananciaNeta ?? 0)}</span></p>
+            <div className="space-y-2 text-sm">
+            <p className="flex justify-between"><span className="text-pos-muted">Bruto vendido</span><span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Descuentos</span><span className="font-semibold">-{money.format(resumen?.totalDescuentos ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Neto comercial</span><span className="font-semibold">{money.format(resumen?.totalNeto ?? 0)}</span></p>
+            <p className="flex justify-between text-pos-muted text-xs italic"><span>(↳ de esto {money.format(resumen?.totalMontoFiado ?? 0)} es cartera, aún no es dinero)</span></p>
+            <hr className="border-pos-border my-1" />
+            <p className="flex justify-between"><span className="text-pos-muted">Recaudo real</span><span className="font-semibold text-green-700">{money.format(rent?.recaudoReal ?? 0)}</span></p>
+            <p className="flex justify-between"><span className="text-pos-muted">Gastos totales</span><span className="font-semibold text-red-600">-{money.format(rent?.totalGastos ?? 0)}</span></p>
+            <p className="flex justify-between font-bold border-t border-pos-border pt-1"><span>Ganancia neta</span><span className="text-green-700">{money.format(rent?.gananciaNeta ?? 0)}</span></p>
           </div>
         </div>
       </div>

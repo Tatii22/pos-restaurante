@@ -3,12 +3,12 @@ package com.pos.service;
 import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.MedioFinanciero;
-import com.pos.entity.MovimientoFinancieroTipo;
 import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.TurnoCajaRepository;
+import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.UsuarioRepository;
 import com.pos.repository.VentaRepository;
 import jakarta.transaction.Transactional;
@@ -27,7 +27,8 @@ public class TurnoCajaService {
     private final TurnoCajaRepository turnoCajaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VentaRepository ventaRepository;
-    private final MovimientoFinancieroService movimientoFinancieroService;
+    private final GastoAdminRepository gastoAdminRepository;
+    private final CalculosFinancierosService calculosFinancierosService;
     private final AuditService auditService;
     private final MenuDiarioService menuDiarioService;
     @Transactional
@@ -83,24 +84,20 @@ public class TurnoCajaService {
                 .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
                 .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
 
-        BigDecimal esperadoFisico = calcularEfectivoEsperado(turno);
-        BigDecimal transferenciasNetas = calcularTransferenciasNetas(turno);
-        BigDecimal totalOperativo = esperadoFisico.add(transferenciasNetas);
+        decorarMetricasCierre(turno);
+        BigDecimal esperadoFisico       = turno.getEsperado();
+        BigDecimal transferenciasNetas   = turno.getTransferenciasNetas();
+        BigDecimal totalOperativo       = turno.getTotalOperativoTurno();
 
         BigDecimal diferenciaEfectivo = efectivoContado.subtract(esperadoFisico);
         BigDecimal diferenciaTransferencias = transferenciasVerificadas.subtract(transferenciasNetas);
         BigDecimal totalVerificado = efectivoContado.add(transferenciasVerificadas);
         BigDecimal diferenciaTotal = totalVerificado.subtract(totalOperativo);
 
-        // Mantener compatibilidad con campo legacy "faltante" (diferencia físico)
         BigDecimal faltanteFisico = diferenciaEfectivo;
 
-        turno.setEsperado(esperadoFisico);
         turno.setFaltante(faltanteFisico);
-        turno.setTransferenciasNetas(transferenciasNetas);
-        turno.setTotalOperativoTurno(totalOperativo);
 
-        // Conciliación dual
         turno.setEfectivoContado(efectivoContado);
         turno.setTransferenciasVerificadas(transferenciasVerificadas);
         turno.setDiferenciaEfectivo(diferenciaEfectivo);
@@ -108,7 +105,6 @@ public class TurnoCajaService {
         turno.setTotalVerificado(totalVerificado);
         turno.setDiferenciaTotal(diferenciaTotal);
 
-        // La simulacion solo recalcula cifras; el turno debe seguir operativo.
         turno.setEstado(EstadoTurno.ABIERTO);
 
         TurnoCaja guardado = turnoCajaRepository.save(turno);
@@ -155,25 +151,21 @@ public class TurnoCajaService {
             throw new BadRequestException("Las transferencias verificadas no pueden ser negativas");
         }
 
-        BigDecimal esperadoFisico = calcularEfectivoEsperado(turno);
-        BigDecimal transferenciasNetas = calcularTransferenciasNetas(turno);
-        BigDecimal totalOperativo = esperadoFisico.add(transferenciasNetas);
+        decorarMetricasCierre(turno);
+        BigDecimal esperadoFisico     = turno.getEsperado();
+        BigDecimal transferenciasNetas = turno.getTransferenciasNetas();
+        BigDecimal totalOperativo     = turno.getTotalOperativoTurno();
 
         BigDecimal diferenciaEfectivo = efectivoContado.subtract(esperadoFisico);
         BigDecimal diferenciaTransferencias = transferenciasVerificadas.subtract(transferenciasNetas);
         BigDecimal totalVerificado = efectivoContado.add(transferenciasVerificadas);
         BigDecimal diferenciaTotal = totalVerificado.subtract(totalOperativo);
 
-        // Compatibilidad legacy
         BigDecimal faltanteFisico = diferenciaEfectivo;
 
-        turno.setEsperado(esperadoFisico);
-        turno.setMontoFinal(efectivoContado); // legacy: usamos el físico como "montoFinal" para reportes antiguos
+        turno.setMontoFinal(efectivoContado);
         turno.setFaltante(faltanteFisico);
-        turno.setTransferenciasNetas(transferenciasNetas);
-        turno.setTotalOperativoTurno(totalOperativo);
 
-        // Conciliación dual
         turno.setEfectivoContado(efectivoContado);
         turno.setTransferenciasVerificadas(transferenciasVerificadas);
         turno.setDiferenciaEfectivo(diferenciaEfectivo);
@@ -233,46 +225,46 @@ public class TurnoCajaService {
                 .toList();
     }
 
-    private BigDecimal calcularEfectivoEsperado(TurnoCaja turno) {
-        BigDecimal movimientosEfectivo = movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.EFECTIVO,
-                List.of(
-                        MovimientoFinancieroTipo.VENTA_CONTADO,
-                        MovimientoFinancieroTipo.ABONO_FIADO,
-                        MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA,
-                        MovimientoFinancieroTipo.GASTO_CAJA,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
-                        MovimientoFinancieroTipo.ANULACION_VENTA
-                )
-        );
-        return turno.getMontoInicial().add(movimientosEfectivo);
-    }
-
-    private BigDecimal calcularTransferenciasNetas(TurnoCaja turno) {
-        return movimientoFinancieroService.sumarTurnoMedioTipos(
-                turno,
-                MedioFinanciero.TRANSFERENCIA,
-                List.of(
-                        MovimientoFinancieroTipo.VENTA_CONTADO,
-                        MovimientoFinancieroTipo.ABONO_FIADO,
-                        MovimientoFinancieroTipo.ABONO_CON_VENTA_FIADA,
-                        MovimientoFinancieroTipo.GASTO_CAJA,
-                        MovimientoFinancieroTipo.ELIMINACION_GASTO_CAJA,
-                        MovimientoFinancieroTipo.ANULACION_VENTA
-                )
-        );
-    }
-
     private TurnoCaja decorarMetricasCierre(TurnoCaja turno) {
-        if (turno == null || turno.getId() == null) {
-            return turno;
-        }
-        BigDecimal cajaFisica = calcularEfectivoEsperado(turno);
-        BigDecimal transferencias = calcularTransferenciasNetas(turno);
-        turno.setEsperado(cajaFisica);
-        turno.setTransferenciasNetas(transferencias);
-        turno.setTotalOperativoTurno(cajaFisica.add(transferencias));
+        if (turno == null || turno.getId() == null) return turno;
+
+        // ── 1. Datos brutos del ledger financiero ───────────────────────────
+        BigDecimal recaudoEfe     = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal recaudoTransf  = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal gastosEfe      = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal gastosTransf   = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.TRANSFERENCIA);
+
+        // ── 2. Métricas financieras (independientes de montoInicial) ────────
+        BigDecimal recaudoBruto   = recaudoEfe.add(recaudoTransf);
+        BigDecimal gastosCaja     = gastosEfe.add(gastosTransf);
+
+        LocalDate desdeFecha = turno.getFechaApertura().toLocalDate();
+        LocalDate hastaFecha = turno.getFechaCierre() != null
+                ? turno.getFechaCierre().toLocalDate()
+                : LocalDate.now();
+        BigDecimal gastosAdmin = gastoAdminRepository
+                .findByFechaBetween(desdeFecha, hastaFecha)
+                .stream()
+                .map(g -> g.getMonto() != null ? g.getMonto() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal gananciaFinanciera = recaudoBruto.subtract(gastosCaja).subtract(gastosAdmin);
+
+        // ── 3. Métricas operativas (conciliación de caja con montoInicial) ──
+        BigDecimal saldoCajaEsperado   = turno.getMontoInicial().add(recaudoEfe).subtract(gastosEfe);
+        BigDecimal transferenciasNetas = recaudoTransf.subtract(gastosTransf);
+        BigDecimal totalOperativoTurno = saldoCajaEsperado.add(transferenciasNetas);
+
+        // ── 4. Volcar al entity ──────────────────────────────────────────────
+        turno.setRecaudoBruto(recaudoBruto);
+        turno.setTotalGastos(gastosCaja);
+        turno.setTotalGastosAdmin(gastosAdmin);
+        turno.setGananciaNeta(gananciaFinanciera);
+
+        turno.setEsperado(saldoCajaEsperado);
+        turno.setTransferenciasNetas(transferenciasNetas);
+        turno.setTotalOperativoTurno(totalOperativoTurno);
+
         return turno;
     }
 }

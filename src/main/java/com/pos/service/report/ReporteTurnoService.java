@@ -67,12 +67,17 @@ public class ReporteTurnoService {
 
         List<GastoCaja> gastos = gastoCajaRepository.findByTurnoAndFechaBetween(turno, inicio, fin);
 
-        BigDecimal totalVentas = ventas.stream()
+        // totalVentasComercial: suma del valor de todas las ventas despachadas en el turno.
+        // Incluye fiados (que no son dinero real todavía).
+        // totalEfectivo + totalTransferencia es el recaudo real del ledger.
+        BigDecimal totalVentasComercial = ventas.stream()
                 .map(v -> v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalEfectivo = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.EFECTIVO);
         BigDecimal totalTransferencia = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.TRANSFERENCIA);
+        // recaudoReal = dinero que físicamente entró en el turno (incluye abonos, excluye fiados pendientes)
+        BigDecimal recaudoReal = totalEfectivo.add(totalTransferencia);
         BigDecimal totalGastosEfectivo = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.EFECTIVO);
         BigDecimal totalGastosTransferencia = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.TRANSFERENCIA);
         BigDecimal totalGastos = totalGastosEfectivo.add(totalGastosTransferencia);
@@ -94,7 +99,10 @@ public class ReporteTurnoService {
         reporte.setTurnoId(turno.getId());
         reporte.setApertura(turno.getFechaApertura());
         reporte.setCierre(turno.getFechaCierre());
-        reporte.setTotalVentas(totalVentas);
+        // totalVentas en el DTO = recaudo real (dinero que entró), no valor comercial.
+        // El campo se llama totalVentas por compatibilidad con el frontend,
+        // pero semánticamente es recaudoReal del turno.
+        reporte.setTotalVentas(recaudoReal);
         reporte.setTotalEfectivo(totalEfectivo);
         reporte.setTotalTransferencia(totalTransferencia);
         reporte.setTotalGastos(totalGastos);
@@ -103,12 +111,13 @@ public class ReporteTurnoService {
         reporte.setTotalAbonos(totalAbonos);
         reporte.setTotalAbonosEfectivo(totalAbonosEfectivo);
         reporte.setTotalAbonosTransferencia(totalAbonosTransferencia);
+        // cajaFisicaEsperada = monto inicial + todo el recaudo en efectivo - gastos en efectivo
+        // totalEfectivo ya incluye ABONO_FIADO y ABONO_CON_VENTA_FIADA desde TIPOS_RECAUDO_TURNO.
+        // totalAbonosEfectivo se expone para desglose informativo pero NO se suma de nuevo aquí.
         BigDecimal cajaFisicaEsperada = turno.getMontoInicial()
                 .add(totalEfectivo)
-                .add(totalAbonosEfectivo)
                 .subtract(totalGastosEfectivo);
         BigDecimal transferenciasNetas = totalTransferencia
-                .add(totalAbonosTransferencia)
                 .subtract(totalGastosTransferencia);
         BigDecimal totalOperativoTurno = cajaFisicaEsperada.add(transferenciasNetas);
         BigDecimal cajaContada = turno.getMontoFinal();
