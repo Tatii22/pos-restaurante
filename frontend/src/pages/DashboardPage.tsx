@@ -137,15 +137,33 @@ export function DashboardPage() {
 
         <div className="card p-4">
           <h3 className="mb-3 text-lg font-semibold">Resumen del mes</h3>
-            <div className="space-y-2 text-sm">
-            <p className="flex justify-between"><span className="text-pos-muted">Bruto vendido</span><span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Descuentos</span><span className="font-semibold">-{money.format(resumen?.totalDescuentos ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Neto comercial</span><span className="font-semibold">{money.format(resumen?.totalNeto ?? 0)}</span></p>
-            <p className="flex justify-between text-pos-muted text-xs italic"><span>(↳ de esto {money.format(resumen?.totalMontoFiado ?? 0)} es cartera, aún no es dinero)</span></p>
+          <div className="space-y-2 text-sm">
+            <p className="flex justify-between">
+              <span className="text-pos-muted">Vendido total</span>
+              <span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span>
+            </p>
+            <p className="flex justify-between text-xs text-pos-muted italic">
+              <span>⚠︎ {money.format(resumen?.totalMontoFiado ?? 0)} quedó fiado — aún no se cobró</span>
+            </p>
             <hr className="border-pos-border my-1" />
-            <p className="flex justify-between"><span className="text-pos-muted">Recaudo real</span><span className="font-semibold text-green-700">{money.format(rent?.recaudoReal ?? 0)}</span></p>
-            <p className="flex justify-between"><span className="text-pos-muted">Gastos totales</span><span className="font-semibold text-red-600">-{money.format(rent?.totalGastos ?? 0)}</span></p>
-            <p className="flex justify-between font-bold border-t border-pos-border pt-1"><span>Ganancia neta</span><span className="text-green-700">{money.format(rent?.gananciaNeta ?? 0)}</span></p>
+            <p className="flex justify-between">
+              <span className="text-pos-muted">Dinero real que entró a caja</span>
+              <span className="font-semibold text-green-700">{money.format(rent?.recaudoReal ?? 0)}</span>
+            </p>
+            <p className="flex justify-between">
+              <span className="text-pos-muted">Gastos totales</span>
+              <span className="font-semibold text-red-600">{money.format(rent?.totalGastos ?? 0)}</span>
+            </p>
+            <hr className="border-pos-border my-1" />
+            <p className="flex justify-between font-bold text-base">
+              <span>Ganancia neta</span>
+              <span className="text-green-700">{money.format(rent?.gananciaNeta ?? 0)}</span>
+            </p>
+            {(resumen?.totalAbonos ?? 0) > 0 && (
+              <p className="text-[11px] text-pos-muted italic leading-relaxed">
+                El ingreso a caja incluyen {money.format(resumen?.totalAbonos ?? 0)} de abonos de fiados anteriores.
+              </p>
+            )}
           </div>
         </div>
       </div>
