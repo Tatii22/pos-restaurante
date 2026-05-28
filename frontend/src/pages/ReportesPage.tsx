@@ -161,16 +161,17 @@ export function ReportesPage() {
   const ciFlowChart = useMemo(() => {
     const r = ciRentQ.data;
     if (!r) return null;
+    const sDiff = (ciTurnosQ.data ?? []).reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0);
     return {
-      labels: ["Ingresos", "Gastos", "Ganancia"],
+      labels: ["Ingresos", "Gastos", "Ganancia", "Descuadre"],
       datasets: [{
         label: "Flujo del mes",
-        data: [Number(r.recaudoReal || 0), Number(r.totalGastos || 0), Number(r.gananciaNeta || 0)],
-        backgroundColor: ["#3EB489", "#dc2626", "#2A7B5E"],
+        data: [Number(r.recaudoReal || 0), Number(r.totalGastos || 0), Number(r.gananciaNeta || 0), sDiff],
+        backgroundColor: ["#3EB489", "#dc2626", "#2A7B5E", sDiff < 0 ? "#f59e0b" : "#a78bfa"],
         borderRadius: 4
       }]
     };
-  }, [ciRentQ.data]);
+  }, [ciRentQ.data, ciTurnosQ.data]);
 
   const insights = useMemo(() => {
     const r = reportMesQ.data;
@@ -385,20 +386,7 @@ export function ReportesPage() {
           </div>
 
           {/* ── Fila 1 — Métricas principales ──────────────────────── */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="card p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pos-accentSoft">
-                  <svg className="h-5 w-5 text-pos-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-pos-muted">Ventas netas</p>
-                  <p className="text-2xl font-bold text-pos-text tabular-nums">{money.format(ciVentasQ.data?.totalNeto || 0)}</p>
-                </div>
-              </div>
-            </div>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
             <div className="card p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pos-accentSoft">
@@ -427,9 +415,6 @@ export function ReportesPage() {
               </div>
             </div>
             <div className="relative overflow-hidden rounded-2xl bg-[#50C4A0] p-5 shadow-pos">
-              <div className="absolute right-2 top-2 opacity-10">
-                <svg className="h-20 w-20 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" /></svg>
-              </div>
               <div className="relative">
                 <div className="flex items-center gap-2">
                   <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -441,10 +426,38 @@ export function ReportesPage() {
                 <p className="mt-1 text-[11px] leading-relaxed tracking-wide text-white/80">Resultado final después de gastos y movimientos del período.</p>
               </div>
             </div>
+            <div className="relative overflow-hidden rounded-2xl bg-[#2D3E50] p-5 shadow-pos">
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white">Resultado real ajustado</p>
+                </div>
+                {(() => {
+                  const sDiff = (ciTurnosQ.data ?? []).reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0);
+                  const ganancia = Number(ciRentQ.data?.gananciaNeta || 0);
+                  const real = ganancia + sDiff;
+                  return (
+                    <>
+                      <p className="mt-2 text-3xl font-bold text-white tabular-nums">{money.format(real)}</p>
+                      <p className="mt-1 text-[11px] leading-relaxed tracking-wide text-white/80">
+                        {sDiff === 0
+                          ? "Sin diferencias de caja. Coincide con la ganancia del sistema."
+                          : sDiff < 0
+                            ? `Ganancia del sistema ${money.format(ganancia)} menos ${money.format(Math.abs(sDiff))} de descuadres.`
+                            : `Ganancia del sistema ${money.format(ganancia)} más ${money.format(sDiff)} de sobrantes.`
+                        }
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
 
           {/* ── Fila 2 — Detalles operativos ────────────────────────── */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
               <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Ventas realizadas</p>
               <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{ciVentasQ.data?.totalVentas ?? "—"}</p>
@@ -460,6 +473,12 @@ export function ReportesPage() {
             <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
               <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Descuentos</p>
               <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciVentasQ.data?.totalDescuentos || 0)}</p>
+            </div>
+            <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Diferencia caja</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums" style={{ color: (ciTurnosQ.data?.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0) || 0) >= 0 ? "#16a34a" : "#dc2626" }}>
+                {money.format(ciTurnosQ.data?.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0) || 0)}
+              </p>
             </div>
           </div>
 
@@ -491,42 +510,12 @@ export function ReportesPage() {
             </div>
           </div>
 
-          {/* ── Fila 4 — Turnos ─────────────────────────────────────── */}
-          {ciTurnosQ.data && ciTurnosQ.data.length > 0 && (
-            <div className="card p-4">
-              <p className="mb-3 text-sm font-semibold text-pos-text">Resumen operativo por turnos</p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Turnos</p>
-                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{ciTurnosQ.data.length}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Recaudo operativo</p>
-                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.recaudoBruto || 0), 0))}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Gastos operativos</p>
-                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalGastosCombinados || 0), 0))}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Total operativo</p>
-                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalOperativoNeto || 0), 0))}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Diferencia caja</p>
-                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums" style={{ color: ciTurnosQ.data.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0) === 0 ? "#3EB489" : "#dc2626" }}>
-                    {money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0))}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
 
       {tab === "Turnos" && (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
             <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
               <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Turnos</p>
               <p className="mt-1 text-2xl font-semibold text-slate-800">{sortedTurnos.length}</p>
@@ -548,6 +537,13 @@ export function ReportesPage() {
               <p className="mt-1 text-2xl font-semibold text-emerald-800">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.gananciaNeta || 0), 0))}</p>
               <p className="text-[10px] text-emerald-600 mt-0.5">Recaudo − caja − admin</p>
             </div>
+            <div className="rounded-xl border border-orange-100 bg-orange-50 p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-orange-600">Diferencias acumuladas</p>
+              <p className="mt-1 text-2xl font-semibold text-orange-800">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.diferenciaTotal || 0), 0))}</p>
+              <p className="text-[10px] text-orange-600 mt-0.5">
+                Efec: {money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.diferenciaEfectivo || 0), 0))} · Transf: {money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.diferenciaTransferencias || 0), 0))}
+              </p>
+            </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -562,9 +558,11 @@ export function ReportesPage() {
                 <div className="flex items-center gap-2 text-sm text-slate-400">
                   <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
                   Cargando turnos...
-                </div>
               </div>
-            )}
+            </div>
+          )}
+
+
             {!turnosQ.isLoading && sortedTurnos.length === 0 && (
               <div className="px-5 py-12 text-center text-sm text-slate-400">No hay turnos en ese rango.</div>
             )}
@@ -648,7 +646,7 @@ export function ReportesPage() {
                             <td className="px-4 py-3 text-right tabular-nums text-amber-700 font-medium">{money.format(t.totalGastosAdmin || 0)}</td>
                             <td className="px-4 py-3 text-right tabular-nums text-slate-600">{money.format(t.efectivoOperativo || 0)}</td>
                             <td className="px-4 py-3 text-right tabular-nums text-slate-600">{money.format(t.transferenciasOperativas || 0)}</td>
-                            <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">{money.format(t.gananciaNeta || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">{money.format(Number(t.recaudoBruto || 0) - Number(t.totalGastos || 0))}</td>
                             <td className={`px-4 py-3 text-right tabular-nums font-semibold ${difClass}`}>{money.format(dif)}</td>
                           </tr>
                         );
