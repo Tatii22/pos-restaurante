@@ -25,10 +25,12 @@ public class TurnoCajaMapper {
 
         return new TurnoCajaResponseDTO(
                 turno.getId(),
+                turno.getNumeroTurno(),
                 turno.getFechaApertura(),
                 turno.getFechaCierre(),
                 montoInicial,
                 recaudoBruto,
+                safe(turno.getTotalVentas()),
                 gastosCaja,
                 gastosAdmin,
                 totalGastosCombinados,
@@ -47,7 +49,9 @@ public class TurnoCajaMapper {
                 safe(turno.getTotalVerificado()),
                 safe(turno.getDiferenciaTotal()),
                 turno.getEstado(),
-                turno.getUsuario() != null ? turno.getUsuario().getUsername() : "—"
+                turno.getUsuario() != null ? turno.getUsuario().getUsername() : "—",
+                safe(turno.getUmbralDescuadre()),
+                turno.getObservacionCierre()
         );
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
@@ -25,11 +25,13 @@ export function TurnosPage() {
   const montoInicial = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const efectivoContado = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const transferenciasVerificadas = useCurrencyInput("", { maxDigits: 9, allowZero: true });
-  const montoFinal = useCurrencyInput("", { maxDigits: 9, allowZero: false });
   const [showSimModal, setShowSimModal] = useState(false);
   const [simResult, setSimResult] = useState<Turno | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closeResult, setCloseResult] = useState<Turno | null>(null);
+  const [valoresArqueo, setValoresArqueo] = useState<{ ef: number; trans: number } | null>(null);
+  const [observacionCierre, setObservacionCierre] = useState("");
+  const obsInputRef = useRef<HTMLTextAreaElement>(null);
 
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-layout"],
@@ -63,15 +65,24 @@ export function TurnosPage() {
     onSuccess: (data) => {
       setTurno(data);
       setSimResult(data);
+      setValoresArqueo({ ef: efectivoContado.numericValue, trans: transferenciasVerificadas.numericValue });
+      setObservacionCierre("");
       setShowSimModal(true);
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["reporte-turno-activo", data.id] });
     }
   });
-  const closeM = useMutation({
-    mutationFn: () => posApi.cerrarTurno(efectivoContado.numericValue, transferenciasVerificadas.numericValue),
+  const confirmarCierreM = useMutation({
+    mutationFn: () => {
+      const v = valoresArqueo!;
+      return posApi.cerrarTurno(v.ef, v.trans, observacionCierre || undefined);
+    },
     onSuccess: (data) => {
       setTurno(data);
+      setShowSimModal(false);
+      setSimResult(null);
+      setValoresArqueo(null);
+      setObservacionCierre("");
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["reporte-turno-activo", data.id] });
       if (data.estado === "CERRADO") {
@@ -82,7 +93,7 @@ export function TurnosPage() {
   });
 
   const openErrors = openM.isError ? getErrorMessages(openM.error) : [];
-  const closeErrors = simM.isError || closeM.isError ? getErrorMessages(simM.error || closeM.error) : [];
+  const closeErrors = simM.isError || confirmarCierreM.isError ? getErrorMessages(simM.error || confirmarCierreM.error) : [];
   const turnoBase = turnoActivoQ.data ?? turno;
   const reporte = reporteQ.data;
   const turnoResumen =
@@ -150,13 +161,11 @@ export function TurnosPage() {
     if (turno && turno.estado !== "CERRADO") {
       const fisico = String(Math.round(esperado));
       efectivoContado.setValue(fisico);
-      montoFinal.setValue(fisico);
 
-      // Prefill transferencias con lo que el sistema espera (puede ser 0)
       const transEsperadas = Number(reporte?.transferenciasNetas ?? turnoActual.transferenciasNetas ?? 0);
       transferenciasVerificadas.setValue(String(Math.round(transEsperadas)));
     }
-  }, [turno?.id, esperado, reporte?.transferenciasNetas, transferenciasVerificadas.setValue, efectivoContado.setValue, montoFinal.setValue]);
+  }, [turno?.id, esperado, reporte?.transferenciasNetas, transferenciasVerificadas.setValue, efectivoContado.setValue]);
 
   // Cálculos en vivo para el Resumen Total (se actualizan mientras se escribe)
   const fisicoContado = Number(efectivoContado.numericValue) || 0;
@@ -186,7 +195,7 @@ export function TurnosPage() {
                 </span>
               </div>
                <div className="text-[52px] font-medium tracking-tighter text-neutral-900 dark:text-white mt-1">
-                 #{turnoActual.id}
+                  #{turnoActual.numeroTurno ?? turnoActual.id}
                </div>
             </div>
 
@@ -356,20 +365,13 @@ export function TurnosPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-1 gap-2">
             <button
-              className="btn-soft"
+              className="btn-primary"
               onClick={() => simM.mutate()}
               disabled={simM.isPending || !efectivoContado.isValid}
             >
-              {simM.isPending ? "Simulando..." : "Simular Cierre"}
-            </button>
-            <button
-              className="btn-primary"
-              onClick={() => closeM.mutate()}
-              disabled={closeM.isPending || !efectivoContado.isValid}
-            >
-              {closeM.isPending ? "Cerrando..." : "Cerrar Turno"}
+              {simM.isPending ? "Simulando..." : "Simular y Confirmar Cierre"}
             </button>
           </div>
         </div>
@@ -383,17 +385,23 @@ export function TurnosPage() {
         </ul>
       )}
 
-      {showSimModal && simResult && (
+      {showSimModal && simResult && (() => {
+        const umbral = simResult.umbralDescuadre;
+        const difAbs = Math.abs(simResult.diferenciaTotal ?? 0);
+        const obsRequerida = umbral != null && difAbs > umbral;
+        const obsValida = !obsRequerida || observacionCierre.trim().length > 0;
+
+        return (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-lg p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Simulacion de Cierre</h3>
-              <button className="btn-ghost p-1" onClick={() => setShowSimModal(false)}>
+              <button className="btn-ghost p-1" onClick={() => { setShowSimModal(false); setSimResult(null); setValoresArqueo(null); }}>
                 <X size={14} />
               </button>
             </div>
             <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
-              <p>Turno: <span className="font-semibold">#{simResult.id}</span></p>
+               <p>Turno: <span className="font-semibold">#{simResult.numeroTurno ?? simResult.id}</span></p>
               <p>Estado: <span className="font-semibold">{simResult.estado}</span></p>
 
               <div className="mt-2">
@@ -411,14 +419,53 @@ export function TurnosPage() {
               </div>
             </div>
             <div className="mt-3">{renderResumenFinanciero(reporte)}</div>
-            <div className="mt-3 flex justify-end">
-              <button className="btn-primary" onClick={() => setShowSimModal(false)}>
-                Entendido
+
+            <div className="mt-4 space-y-2">
+              <label className="block text-sm font-medium text-pos-muted">
+                Observación del cajero
+                {obsRequerida && (
+                  <span className="ml-1 text-orange-600 font-semibold">(requerida — descuadre supera el umbral)</span>
+                )}
+              </label>
+              <textarea
+                ref={obsInputRef}
+                className="input w-full resize-none"
+                rows={2}
+                maxLength={500}
+                placeholder="Ingresa una observación sobre el descuadre..."
+                value={observacionCierre}
+                onChange={(e) => setObservacionCierre(e.target.value)}
+              />
+            </div>
+
+            {confirmarCierreM.isError && (
+              <ul className="mt-2 text-sm text-red-600">
+                {getErrorMessages(confirmarCierreM.error).map((msg) => (
+                  <li key={msg}>- {msg}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                className="btn-soft"
+                onClick={() => { setShowSimModal(false); setSimResult(null); setValoresArqueo(null); }}
+                disabled={confirmarCierreM.isPending}
+              >
+                Volver
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => confirmarCierreM.mutate()}
+                disabled={confirmarCierreM.isPending || !obsValida}
+              >
+                {confirmarCierreM.isPending ? "Cerrando..." : "Confirmar cierre definitivo"}
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {showCloseModal && closeResult && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
@@ -438,7 +485,7 @@ export function TurnosPage() {
               </button>
             </div>
             <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
-              <p>Turno: <span className="font-semibold">#{closeResult.id}</span></p>
+               <p>Turno: <span className="font-semibold">#{closeResult.numeroTurno ?? closeResult.id}</span></p>
               <p>Estado final: <span className="font-semibold">{closeResult.estado}</span></p>
               <p>Fecha cierre: <span className="font-semibold">{closeResult.fechaCierre ? new Date(closeResult.fechaCierre).toLocaleString() : "-"}</span></p>
 

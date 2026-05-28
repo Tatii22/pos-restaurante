@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class TurnoCajaResponseDTO {
 
     private Long id;
+    private Integer numeroTurno;
     private LocalDateTime fechaApertura;
     private LocalDateTime fechaCierre;
 
@@ -19,6 +20,9 @@ public class TurnoCajaResponseDTO {
 
     // Recaudo bruto del turno: todo el dinero recibido, sin descontar gastos
     private BigDecimal recaudoBruto;
+
+    // Total ventas del turno (alias de recaudoBruto para compatibilidad frontend)
+    private BigDecimal totalVentas;
 
     // Gastos solo de caja (del ledger del turno)
     private BigDecimal totalGastos;
@@ -52,4 +56,10 @@ public class TurnoCajaResponseDTO {
 
     private EstadoTurno estado;
     private String usuario;
+
+    // Umbral de descuadre del servidor (para validación en frontend)
+    private BigDecimal umbralDescuadre;
+
+    // Justificación del cajero cuando el turno cerró descuadrado
+    private String observacionCierre;
 }

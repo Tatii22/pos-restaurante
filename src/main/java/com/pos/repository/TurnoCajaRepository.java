@@ -6,6 +6,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -50,4 +51,7 @@ public interface TurnoCajaRepository extends JpaRepository<TurnoCaja, Long> {
      * sumen exactamente los mismos turnos dado el mismo rango de fechas.
      */
     List<TurnoCaja> findByEstadoAndFechaAperturaBetween(EstadoTurno estado, LocalDateTime inicio, LocalDateTime fin);
+
+    @Query(value = "SELECT COALESCE(MAX(numero_turno), 0) FROM turnos_caja WHERE YEAR(fecha_apertura) = :year AND MONTH(fecha_apertura) = :month", nativeQuery = true)
+    Integer findMaxNumeroTurnoPorMes(@Param("year") int year, @Param("month") int month);
 }

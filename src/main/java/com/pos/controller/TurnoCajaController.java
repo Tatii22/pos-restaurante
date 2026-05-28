@@ -57,7 +57,7 @@ public class TurnoCajaController {
             Authentication auth
     ) {
         Usuario usuario = usuarioService.obtenerPorUsername(auth.getName());
-        TurnoCaja turno = turnoCajaService.cerrarTurno(dto.efectivoContado(), dto.transferenciasVerificadas(), usuario);
+        TurnoCaja turno = turnoCajaService.cerrarTurno(dto.efectivoContado(), dto.transferenciasVerificadas(), dto.observacionCierre(), usuario);
         return ResponseEntity.ok(TurnoCajaMapper.toDTO(turno));
     }
 

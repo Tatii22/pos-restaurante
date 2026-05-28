@@ -164,7 +164,7 @@ export function HistorialVentasPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-xl font-semibold">Historial de Ventas del Turno</h1>
-            <p className="text-sm text-pos-muted">Turno #{turno.id}. Total Ventas: <span className="font-semibold text-pos-text">{ventas.length}</span></p>
+            <p className="text-sm text-pos-muted">Turno #{turno.numeroTurno ?? turno.id}. Total Ventas: <span className="font-semibold text-pos-text">{ventas.length}</span></p>
           </div>
           <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-pos-muted">
             <BsFilter size={14} />

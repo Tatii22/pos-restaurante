@@ -155,8 +155,8 @@ export const posApi = {
     const { data } = await http.post<Turno>("/api/v1/turnos/simular-cierre", { efectivoContado, transferenciasVerificadas });
     return data;
   },
-  cerrarTurno: async (efectivoContado: number, transferenciasVerificadas: number) => {
-    const { data } = await http.post<Turno>("/api/v1/turnos/cerrar", { efectivoContado, transferenciasVerificadas });
+  cerrarTurno: async (efectivoContado: number, transferenciasVerificadas: number, observacionCierre?: string) => {
+    const { data } = await http.post<Turno>("/api/v1/turnos/cerrar", { efectivoContado, transferenciasVerificadas, observacionCierre });
     return data;
   },
   getReporteVentas: async (fechaInicio: string, fechaFin: string) => {

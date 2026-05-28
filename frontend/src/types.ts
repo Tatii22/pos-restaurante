@@ -200,6 +200,7 @@ export type InventarioDiario = {
 
 export type Turno = {
   id: number;
+  numeroTurno?: number | null;
   fechaApertura: string;
   fechaCierre: string | null;
   montoInicial: number;
@@ -224,6 +225,8 @@ export type Turno = {
   diferenciaTotal?: number | null;
   estado: "ABIERTO" | "SIMULADO" | "CERRADO";
   usuario: string;
+  umbralDescuadre?: number;
+  observacionCierre?: string | null;
 };
 
 export type ReporteVentas = {
