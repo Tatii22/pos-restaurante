@@ -60,22 +60,15 @@ public class MenuDiarioService {
                         .activo(true)
                         .build()));
 
-        var inventarios = inventarioDiarioRepository.findByMenuDiarioWithProducto(menu);
-        for (var inv : inventarios) {
-            Integer stockAnterior = inv.getStockActual();
-            inv.setStockActual(inv.getStockInicial());
-            inv.setAgotado(inv.getStockInicial() <= 0);
-            inventarioDiarioRepository.save(inv);
-            auditService.record(
-                    "MENU_TURNO_REINICIADO",
-                    "InventarioDiario",
-                    inv.getId(),
-                    usuario,
-                    null,
-                    "Apertura de turno",
-                    auditService.change("stockActual", stockAnterior, inv.getStockActual()),
-                    auditService.change("agotado", null, inv.getAgotado())
-            );
-        }
+        inventarioDiarioRepository.deleteByMenuDiario(menu);
+        auditService.record(
+                "MENU_TURNO_REINICIADO",
+                "MenuDiario",
+                menu.getId(),
+                usuario,
+                null,
+                "Apertura de turno — inventario limpiado",
+                auditService.change("activo", null, menu.getActivo())
+        );
     }
 }
