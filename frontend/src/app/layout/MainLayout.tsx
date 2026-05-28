@@ -216,6 +216,15 @@ export function MainLayout() {
     clearTurno();
   }, [resolvedRole, turnoActivoQ.data, setTurno, clearTurno]);
 
+  useEffect(() => {
+    if (resolvedRole !== "CAJA") return;
+    if (!turno) return;
+    if (turno.estado !== "ABIERTO" && turno.estado !== "SIMULADO") return;
+    if (!inventarioQ.isSuccess) return;
+    if ((inventarioQ.data ?? []).length > 0) return;
+    setMenuSetupLocked(true);
+  }, [resolvedRole, turno, inventarioQ.isSuccess, inventarioQ.data, setMenuSetupLocked]);
+
   const turnoClass =
     turno?.estado === "ABIERTO"
       ? "bg-green-100 text-green-700"
@@ -268,9 +277,10 @@ export function MainLayout() {
     setShowAlerts(false);
   }, [lowStockAlerts.length, showAlerts]);
 
-  const needsTurno = resolvedRole === "CAJA" && !turno;
+  const needsTurno = resolvedRole === "CAJA" && !turno && turnoActivoQ.isSuccess && turnoActivoQ.data === null;
   const needsMenu = resolvedRole === "CAJA" && !!turno && menuSetupLocked;
-  const blockCajaNavigation = needsTurno || needsMenu;
+  const verifyingTurno = resolvedRole === "CAJA" && turnoActivoQ.isPending && !turno;
+  const blockCajaNavigation = needsTurno || needsMenu || verifyingTurno;
 
   const productosDisponiblesMenu = useMemo(() => {
     const inventarioProductoIds = new Set((inventarioQ.data || []).map((i) => i.productoId));
@@ -683,6 +693,11 @@ export function MainLayout() {
       )}
 
       <main className="mx-auto w-full max-w-7xl p-4 md:p-6">
+        {verifyingTurno && (
+          <div className="grid min-h-[70vh] place-items-center">
+            <p className="text-sm text-pos-muted">Verificando turno activo...</p>
+          </div>
+        )}
         {needsTurno && (
           <div className="grid min-h-[70vh] place-items-center">
             <div className="card w-full max-w-xl p-6 text-center">
@@ -692,9 +707,9 @@ export function MainLayout() {
               <div className="mt-4 grid gap-2">
                 <input
                   className="input"
-                  value={montoInicial}
-                  onChange={(e) => setMontoInicial(e.target.value)}
-                  inputMode="decimal"
+                  value={montoInicial ? Number(montoInicial).toLocaleString("es-CO") : ""}
+                  onChange={(e) => setMontoInicial(e.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
                   placeholder="Monto inicial"
                 />
                 {!montoInicialValido && (
@@ -779,6 +794,7 @@ export function MainLayout() {
                     queryClient.invalidateQueries({ queryKey: ["inventario-ventas"] });
                     queryClient.refetchQueries({ queryKey: ["catalogo-hoy"], type: "active" });
                     queryClient.refetchQueries({ queryKey: ["inventario-ventas"], type: "active" });
+                    navigate("/ventas");
                   }}
                 >
                   Finalizar menu del dia

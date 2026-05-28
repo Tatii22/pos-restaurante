@@ -58,6 +58,7 @@ export function TurnosPage() {
       setTurno(data);
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["reporte-turno-activo"] });
+      qc.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
     }
   });
   const simM = useMutation({
@@ -98,6 +99,19 @@ export function TurnosPage() {
   const reporte = reporteQ.data;
   const turnoResumen =
     closeResult?.id === turnoBase?.id ? closeResult : simResult?.id === turnoBase?.id ? simResult : turnoBase;
+
+  const turnoActual = (turnoResumen ?? turno)!;
+  const esperado = reporte?.cajaFisicaEsperada ?? turnoActual?.esperado ?? (turnoActual?.montoInicial || 0);
+
+  useEffect(() => {
+    if (turno && turno.estado !== "CERRADO") {
+      const fisico = String(Math.round(esperado));
+      efectivoContado.setValue(fisico);
+
+      const transEsperadas = Number(reporte?.transferenciasNetas ?? turnoActual?.transferenciasNetas ?? 0);
+      transferenciasVerificadas.setValue(String(Math.round(transEsperadas)));
+    }
+  }, [turno?.id, esperado, reporte?.transferenciasNetas, transferenciasVerificadas.setValue, efectivoContado.setValue]);
 
   function renderResumenFinanciero(data: ReporteCierreTurno | undefined) {
     return (
@@ -153,19 +167,6 @@ export function TurnosPage() {
       </div>
     );
   }
-
-  const turnoActual = turnoResumen ?? turno;
-  const esperado = reporte?.cajaFisicaEsperada ?? turnoActual.esperado ?? (turnoActual.montoInicial || 0);
-
-  useEffect(() => {
-    if (turno && turno.estado !== "CERRADO") {
-      const fisico = String(Math.round(esperado));
-      efectivoContado.setValue(fisico);
-
-      const transEsperadas = Number(reporte?.transferenciasNetas ?? turnoActual.transferenciasNetas ?? 0);
-      transferenciasVerificadas.setValue(String(Math.round(transEsperadas)));
-    }
-  }, [turno?.id, esperado, reporte?.transferenciasNetas, transferenciasVerificadas.setValue, efectivoContado.setValue]);
 
   // Cálculos en vivo para el Resumen Total (se actualizan mientras se escribe)
   const fisicoContado = Number(efectivoContado.numericValue) || 0;

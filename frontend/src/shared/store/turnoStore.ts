@@ -7,7 +7,9 @@ function loadTurno(): Turno | null {
   const raw = localStorage.getItem(TURN_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as Turno;
+    const t = JSON.parse(raw) as Turno;
+    if (t.estado === "ABIERTO" || t.estado === "SIMULADO") return t;
+    return null;
   } catch {
     return null;
   }
