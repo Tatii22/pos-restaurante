@@ -1,6 +1,7 @@
 package com.pos.service.report;
 
 import com.pos.dto.gasto.GastoResponseDTO;
+import com.pos.dto.report.DescuadreReporteDTO;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.entity.EstadoTurno;
@@ -22,8 +23,12 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -119,6 +124,38 @@ public class ReporteRentabilidadService {
         reporte.setVentasFiadas(ventasFiadas);
         reporte.setCarteraGenerada(ventasFiadas);
         reporte.setRecaudoReal(totalVentas);
+
+        // ── Descuadres de caja ──────────────────────────────────────
+        BigDecimal diffAcum = BigDecimal.ZERO;
+        List<DescuadreReporteDTO> descuadres = new ArrayList<>();
+
+        // Ordenar turnos por fechaApertura para asignar numeroTurno secuencial por mes
+        List<TurnoCaja> turnosOrdenados = turnosCerrados.stream()
+                .sorted(Comparator.comparing(TurnoCaja::getFechaApertura))
+                .toList();
+
+        Map<YearMonth, Integer> contadorPorMes = new HashMap<>();
+        for (TurnoCaja t : turnosOrdenados) {
+            YearMonth ym = YearMonth.from(t.getFechaApertura());
+            int nro = contadorPorMes.merge(ym, 1, (prev, one) -> prev + 1);
+            Integer nt = t.getNumeroTurno();
+            if (nt == null) nt = nro;
+
+            BigDecimal dif = t.getDiferenciaTotal() != null ? t.getDiferenciaTotal() : BigDecimal.ZERO;
+            if (dif.compareTo(BigDecimal.ZERO) != 0) {
+                descuadres.add(new DescuadreReporteDTO(
+                        t.getId(),
+                        nt,
+                        t.getFechaApertura(),
+                        dif,
+                        t.getObservacionCierre()
+                ));
+            }
+            diffAcum = diffAcum.add(dif);
+        }
+        reporte.setDiferenciaAcumulada(diffAcum);
+        reporte.setResultadoRealAjustado(reporte.getGananciaNeta().add(diffAcum));
+        reporte.setDescuadres(descuadres);
         reporte.setVentas(mapVentas(ventas));
         reporte.setGastos(mapGastos(gastosCaja, gastosAdmin));
 

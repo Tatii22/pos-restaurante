@@ -1,5 +1,6 @@
 package com.pos.service.export.excel;
 
+import com.pos.dto.report.DescuadreReporteDTO;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.dto.gasto.GastoResponseDTO;
@@ -58,6 +59,29 @@ public class ExcelRentabilidadExporter {
 
             // Ganancia neta — fila completa destacada
             ExcelReportHelper.addKpiRow(sheet, fila++, "Ganancia neta del mes", reporte.getGananciaNeta(), money, true);
+
+            fila++;
+
+            // Descuadres de caja
+            ExcelReportHelper.addSectionHeader(sheet, fila++, "DESCUADRES DE CAJA");
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Diferencia acumulada", reporte.getDiferenciaAcumulada(), money);
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Resultado real ajustado", reporte.getResultadoRealAjustado(), money);
+
+            if (reporte.getDescuadres() != null && !reporte.getDescuadres().isEmpty()) {
+                fila++;
+                String[] colsD = {"#", "Fecha Apertura", "Diferencia", "Observación"};
+                ExcelReportHelper.addTableHeader(sheet, fila++, colsD, header);
+                int idxD = 1;
+                for (DescuadreReporteDTO d : reporte.getDescuadres()) {
+                    Row r = sheet.createRow(fila++);
+                    r.createCell(0).setCellValue(idxD++);
+                    r.createCell(1).setCellValue(d.fechaApertura().format(FECHA_FORMATO));
+                    Cell dif = r.createCell(2);
+                    ExcelReportHelper.applyMoneyToCell(dif, d.diferenciaTotal(), money);
+                    r.createCell(3).setCellValue(d.observacionCierre() != null ? d.observacionCierre() : "-");
+                }
+                fila++;
+            }
 
             fila++;
 

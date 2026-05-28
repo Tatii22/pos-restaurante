@@ -32,8 +32,12 @@ public class ReporteRentabilidadDTO {
     private BigDecimal carteraGenerada = BigDecimal.ZERO;
     private BigDecimal recaudoReal = BigDecimal.ZERO;
 
+    private BigDecimal diferenciaAcumulada = BigDecimal.ZERO;
+    private BigDecimal resultadoRealAjustado = BigDecimal.ZERO;
+    private List<DescuadreReporteDTO> descuadres;
+
     private List<VentaResponseDTO> ventas;
-    private List<GastoResponseDTO> gastos; 
+    private List<GastoResponseDTO> gastos;
 
     
 }

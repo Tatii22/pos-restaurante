@@ -10,6 +10,7 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.pos.dto.report.DescuadreReporteDTO;
 import com.pos.dto.report.ReporteRentabilidadDTO;
 import com.pos.dto.gasto.GastoResponseDTO;
 import com.pos.dto.venta.VentaResponseDTO;
@@ -56,6 +57,33 @@ public class PdfRentabilidadExporter {
             resumen.put("Gastos registrados", reporte.getTotalGastos());
             resumen.put("Ganancia neta del mes", reporte.getGananciaNeta());
             PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
+
+            // === DESCUADRES DE CAJA ===
+            Paragraph secDesc = new Paragraph("DESCUADRES DE CAJA")
+                    .setFontSize(13).setBold().setMarginTop(8).setMarginBottom(6)
+                    .setFontColor(new com.itextpdf.kernel.colors.DeviceRgb(38, 64, 115));
+            document.add(secDesc);
+
+            Map<String, BigDecimal> descMap = new LinkedHashMap<>();
+            descMap.put("Diferencia acumulada", reporte.getDiferenciaAcumulada());
+            descMap.put("Resultado real ajustado", reporte.getResultadoRealAjustado());
+            PdfReportHelper.addSummarySection(document, "", descMap);
+
+            if (reporte.getDescuadres() != null && !reporte.getDescuadres().isEmpty()) {
+                float[] anchosD = {8, 22, 18, 52};
+                Table tablaD = PdfReportHelper.createStyledTable(anchosD);
+                PdfReportHelper.addTableHeader(tablaD, new String[]{"#", "Fecha Apertura", "Diferencia", "Observación"});
+                int idxD = 1;
+                boolean zebraD = false;
+                for (DescuadreReporteDTO d : reporte.getDescuadres()) {
+                    tablaD.addCell(PdfReportHelper.createDataCell(String.valueOf(idxD++), false, zebraD, false));
+                    tablaD.addCell(PdfReportHelper.createDataCell(d.fechaApertura().format(FECHA_FORMATO), false, zebraD, false));
+                    tablaD.addCell(PdfReportHelper.createDataCell(PdfReportHelper.formatMoney(d.diferenciaTotal()), true, zebraD, true));
+                    tablaD.addCell(PdfReportHelper.createDataCell(d.observacionCierre() != null ? d.observacionCierre() : "-", false, zebraD, false));
+                    zebraD = !zebraD;
+                }
+                document.add(tablaD);
+            }
 
             // === DETALLE VENTAS ===
             Paragraph sec1 = new Paragraph("DETALLE DE VENTAS")
