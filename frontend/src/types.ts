@@ -203,8 +203,12 @@ export type Turno = {
   fechaApertura: string;
   fechaCierre: string | null;
   montoInicial: number;
-  totalVentas: number;
+  recaudoBruto: number;
+  totalVentas?: number | null;
   totalGastos: number;
+  totalGastosAdmin?: number | null;
+  totalGastosCombinados?: number | null;
+  gananciaNeta?: number | null;
   esperado: number | null;
   faltante: number | null;
   transferenciasNetas?: number | null;

@@ -1,41 +1,20 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Bar, Doughnut } from "react-chartjs-2";
-import { ArcElement, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Tooltip } from "chart.js";
+import { ArcElement, BarElement, CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Tooltip } from "chart.js";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage, money } from "../shared/utils";
+import { today, startOfMonth, lastDayOfMonth } from "../shared/dateUtils";
+import { DateRangePicker } from "../shared/DateRangePicker";
 
-ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend, Filler);
 
-const tabs = ["Ventas", "Rentabilidad", "Turnos", "Cierre de Mes"] as const;
+const tabs = ["Ventas", "Turnos", "Cierre de Mes"] as const;
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ];
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function startOfMonth() {
-  const d = new Date();
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
-
-function lastDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
-
-function mesKey(year: number, month: number) {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function parseMesKey(key: string) {
-  const [y, m] = key.split("-").map(Number);
-  return { year: y, month: m };
-}
 
 function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -50,38 +29,35 @@ function downloadBlob(blob: Blob, name: string) {
 
 export function ReportesPage() {
   const [tab, setTab] = useState<(typeof tabs)[number]>("Ventas");
-  const [fi, setFi] = useState(today());
+  const [fi, setFi] = useState(startOfMonth());
   const [ff, setFf] = useState(today());
   const mesInicio = startOfMonth();
   const mesFin = today();
 
   const ahora = new Date();
-  const [mesSel, setMesSel] = useState(mesKey(ahora.getFullYear(), ahora.getMonth() + 1));
-  const { year: mesYear, month: mesNum } = parseMesKey(mesSel);
-  const ciInicio = `${mesYear}-${String(mesNum).padStart(2, "0")}-01`;
-  const ciFin = `${mesYear}-${String(mesNum).padStart(2, "0")}-${String(lastDayOfMonth(mesYear, mesNum)).padStart(2, "0")}`;
+  const [ciMes, setCiMes] = useState({ month: ahora.getMonth(), year: ahora.getFullYear() });
+  const [monthOpen, setMonthOpen] = useState(false);
+  const [yearOpen, setYearOpen] = useState(false);
+  const monthRef = useRef<HTMLDivElement>(null);
+  const yearRef = useRef<HTMLDivElement>(null);
 
-  const reportQ = useQuery({
-    queryKey: ["reportes-ventas", fi, ff],
-    queryFn: () => posApi.getReporteVentas(fi, ff)
-  });
-  const rentQ = useQuery({
-    queryKey: ["reportes-rentabilidad", fi, ff],
-    queryFn: () => posApi.getReporteRentabilidad(fi, ff)
-  });
+  const closeDropdowns = useCallback((e: MouseEvent) => {
+    if (monthRef.current && !monthRef.current.contains(e.target as Node)) setMonthOpen(false);
+    if (yearRef.current && !yearRef.current.contains(e.target as Node)) setYearOpen(false);
+  }, []);
+  useEffect(() => { document.addEventListener("mousedown", closeDropdowns); return () => document.removeEventListener("mousedown", closeDropdowns); }, [closeDropdowns]);
+  const ciInicio = `${ciMes.year}-${String(ciMes.month + 1).padStart(2, "0")}-01`;
+  const ciFin = `${ciMes.year}-${String(ciMes.month + 1).padStart(2, "0")}-${String(lastDayOfMonth(ciMes.year, ciMes.month + 1)).padStart(2, "0")}`;
 
   const reportMesQ = useQuery({
     queryKey: ["reportes-ventas-mes", mesInicio, mesFin],
     queryFn: () => posApi.getReporteVentas(mesInicio, mesFin)
   });
-  const rentMesQ = useQuery({
-    queryKey: ["reportes-rentabilidad-mes", mesInicio, mesFin],
-    queryFn: () => posApi.getReporteRentabilidad(mesInicio, mesFin)
-  });
   const turnosQ = useQuery({
     queryKey: ["reportes-turnos-rango", fi, ff],
     queryFn: () => posApi.getTurnosByRango(fi, ff)
   });
+  const sortedTurnos = useMemo(() => [...(turnosQ.data || [])].sort((a, b) => new Date(a.fechaApertura).getTime() - new Date(b.fechaApertura).getTime()), [turnosQ.data]);
 
   const ciVentasQ = useQuery({
     queryKey: ["reportes-ventas-ci", ciInicio, ciFin],
@@ -101,20 +77,12 @@ export function ReportesPage() {
 
   const ciPdfM = useMutation({
     mutationFn: () => posApi.exportRentabilidadPdf(ciInicio, ciFin),
-    onSuccess: (blob) => downloadBlob(blob, `cierre_mes_${ciInicio}_${ciFin}.pdf`)
-  });
-  const ciXlsM = useMutation({
-    mutationFn: () => posApi.exportRentabilidadExcel(ciInicio, ciFin),
-    onSuccess: (blob) => downloadBlob(blob, `cierre_mes_${ciInicio}_${ciFin}.xlsx`)
+    onSuccess: (blob) => downloadBlob(blob, `informe_cierre_${MONTHS[ciMes.month].toLowerCase()}_${ciMes.year}.pdf`)
   });
 
-  const pdfM = useMutation({
-    mutationFn: () => posApi.exportRentabilidadPdf(fi, ff),
-    onSuccess: (blob) => downloadBlob(blob, `reporte_rentabilidad_${fi}_${ff}.pdf`)
-  });
-  const xlsM = useMutation({
-    mutationFn: () => posApi.exportRentabilidadExcel(fi, ff),
-    onSuccess: (blob) => downloadBlob(blob, `reporte_rentabilidad_${fi}_${ff}.xlsx`)
+  const ciXlsM = useMutation({
+    mutationFn: () => posApi.exportRentabilidadExcel(ciInicio, ciFin),
+    onSuccess: (blob) => downloadBlob(blob, `informe_cierre_${MONTHS[ciMes.month].toLowerCase()}_${ciMes.year}.xlsx`)
   });
 
   const payChart = useMemo(() => {
@@ -131,27 +99,90 @@ export function ReportesPage() {
     };
   }, [reportMesQ.data]);
 
-  const salesChart = useMemo(() => {
-    const r = reportMesQ.data;
-    if (!r) return null;
+  const trendQ = useQuery({
+    queryKey: ["ventas-trend-v2", mesInicio, mesFin],
+    queryFn: async () => {
+      const start = new Date(mesInicio + "T00:00:00");
+      const end = new Date(mesFin + "T00:00:00");
+      const days: string[] = [];
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        days.push(cursor.toISOString().slice(0, 10));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      if (days.length > 62) return { days: [], ventas: [], rents: [] };
+      const results = await Promise.all(days.map(async (d) => {
+        const [venta, rent] = await Promise.all([
+          posApi.getReporteVentas(d, d),
+          posApi.getReporteRentabilidad(d, d)
+        ]);
+        return { venta, rent };
+      }));
+      return { days, ventas: results.map(r => r.venta), rents: results.map(r => r.rent) };
+    },
+    enabled: tab === "Ventas"
+  });
+
+  const trendChart = useMemo(() => {
+    const d = trendQ.data;
+    if (!d || d.days.length === 0) return null;
     return {
-      labels: ["Bruto", "Descuentos", "Neto"],
+      labels: d.days.map((day) => String(Number(day.slice(8, 10)))),
       datasets: [
         {
-          label: "COP",
-          data: [Number(r.totalBruto || 0), Number(r.totalDescuentos || 0), Number(r.totalNeto || 0)],
-          backgroundColor: ["#0ea5e9", "#f59e0b", "#16a34a"]
+          label: "Dinero que entra",
+          data: (d.ventas || []).map((v) => Number(v.recaudoReal || 0)),
+          backgroundColor: "#16a34a",
+          borderRadius: 4
+        },
+        {
+          label: "Dinero que sale",
+          data: (d.rents || []).map((r) => Number(r.totalGastos || 0)),
+          backgroundColor: "#dc2626",
+          borderRadius: 4
         }
       ]
     };
-  }, [reportMesQ.data]);
+  }, [trendQ.data]);
 
-  const margen = useMemo(() => {
-    const r = rentQ.data;
-    const ventas = Number(r?.totalVentas || 0);
-    if (!r || ventas <= 0) return 0;
-    return Math.round((Number(r.gananciaNeta || 0) / ventas) * 100);
-  }, [rentQ.data]);
+  const ciPayChart = useMemo(() => {
+    const r = ciRentQ.data;
+    if (!r) return null;
+    return {
+      labels: ["Efectivo", "Transferencia"],
+      datasets: [{
+        data: [Number(r.totalVentasEfectivo || 0), Number(r.totalVentasTransferencia || 0)],
+        backgroundColor: ["#3EB489", "#2A7B5E"],
+        borderWidth: 0
+      }]
+    };
+  }, [ciRentQ.data]);
+
+  const ciFlowChart = useMemo(() => {
+    const r = ciRentQ.data;
+    if (!r) return null;
+    return {
+      labels: ["Ingresos", "Gastos", "Ganancia"],
+      datasets: [{
+        label: "Flujo del mes",
+        data: [Number(r.recaudoReal || 0), Number(r.totalGastos || 0), Number(r.gananciaNeta || 0)],
+        backgroundColor: ["#3EB489", "#dc2626", "#2A7B5E"],
+        borderRadius: 4
+      }]
+    };
+  }, [ciRentQ.data]);
+
+  const insights = useMemo(() => {
+    const r = reportMesQ.data;
+    if (!r) return [];
+    const list: { icon: string; text: string; color: string }[] = [];
+    const abonos = r.totalAbonos ?? 0;
+    const cartera = r.carteraPendiente ?? 0;
+    if (abonos > 0) list.push({ icon: "✅", text: `Recuperaste ${money.format(abonos)} en pagos de deudas`, color: "text-emerald-700" });
+    if (cartera > 0) list.push({ icon: "⚠️", text: `Hay ${money.format(cartera)} pendientes por cobrar`, color: "text-amber-700" });
+    if (!cartera && !abonos && (r.totalVentas ?? 0) > 0) list.push({ icon: "📈", text: "Buen movimiento de ventas este período", color: "text-blue-700" });
+    return list;
+  }, [reportMesQ.data]);
 
   return (
     <div className="grid gap-4">
@@ -164,167 +195,329 @@ export function ReportesPage() {
         ))}
       </div>
 
-      <div className="card grid gap-3 p-4 md:grid-cols-4">
-        <label className="text-sm">
-          Fecha inicio
-          <input className="input mt-1" type="date" value={fi} onChange={(e) => setFi(e.target.value)} />
-        </label>
-        <label className="text-sm">
-          Fecha fin
-          <input className="input mt-1" type="date" value={ff} onChange={(e) => setFf(e.target.value)} />
-        </label>
-        <div className="flex flex-wrap items-end gap-2">
-          <button className="btn-primary" onClick={() => pdfM.mutate()} disabled={pdfM.isPending}>Export PDF </button>
-          <button className="btn-ghost" onClick={() => xlsM.mutate()} disabled={xlsM.isPending}>Export Excel </button>
-        </div>
-      </div>
-
-      {(reportQ.isError || rentQ.isError || reportMesQ.isError || rentMesQ.isError || turnosQ.isError) && (
-        <p className="text-sm text-red-600">{getErrorMessage(reportQ.error || rentQ.error || reportMesQ.error || rentMesQ.error || turnosQ.error)}</p>
+      {(reportMesQ.isError || turnosQ.isError || trendQ.isError || ciPdfM.isError || ciXlsM.isError) && (
+        <p className="text-sm text-red-600">{getErrorMessage(reportMesQ.error || turnosQ.error || trendQ.error || ciPdfM.error || ciXlsM.error)}</p>
       )}
-      {(pdfM.isError || xlsM.isError) && <p className="text-sm text-red-600">{getErrorMessage(pdfM.error || xlsM.error)}</p>}
 
       {tab === "Ventas" && (
         <>
-          <div className="grid gap-4 xl:grid-cols-2">
+          <p className="text-lg font-semibold text-pos-muted">
+            {MONTHS[ahora.getMonth()]} {ahora.getFullYear()}
+          </p>
+          <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
             <div className="card p-4">
-              <h3 className="mb-3 font-semibold">Ventas del mes</h3>
-              {salesChart ? <Bar data={salesChart} /> : <p>Cargando...</p>}
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-pos-muted">Total vendido este período</p>
+                  <p className="text-xl font-bold tabular-nums">{money.format(reportMesQ.data?.totalNeto ?? 0)}</p>
+                </div>
+              </div>
             </div>
             <div className="card p-4">
-              <h3 className="mb-3 font-semibold">Ventas por metodo de pago (mes)</h3>
-              {payChart ? (
-                <div className="mx-auto w-full max-w-[240px]">
-                  <Doughnut data={payChart} />
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
                 </div>
-              ) : <p>Cargando...</p>}
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-pos-muted">Dinero recibido</p>
+                  <p className="text-xl font-bold tabular-nums">{money.format(reportMesQ.data?.recaudoReal ?? 0)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                  <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-pos-muted">Ventas fiadas pendientes</p>
+                  <p className="text-xl font-bold tabular-nums">{money.format(reportMesQ.data?.carteraPendiente ?? 0)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                  <svg className="h-5 w-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-pos-muted">Ventas registradas</p>
+                  <p className="text-xl font-bold tabular-nums">{reportMesQ.data?.totalVentas ?? 0}</p>
+                </div>
+              </div>
             </div>
           </div>
-          {reportMesQ.data && (
-            <div className="card grid gap-2 p-4 md:grid-cols-4">
-              <div><p className="text-sm text-pos-muted">Total ventas (mes)</p><p className="font-semibold">{reportMesQ.data.totalVentas}</p></div>
-              <div><p className="text-sm text-pos-muted">Bruto (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.totalBruto || 0)}</p></div>
-              <div><p className="text-sm text-pos-muted">Descuentos (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.totalDescuentos || 0)}</p></div>
-              <div><p className="text-sm text-pos-muted">Recaudo real (mes)</p><p className="font-semibold">{money.format(reportMesQ.data.recaudoReal || 0)}</p></div>
-              <div><p className="text-sm text-pos-muted">Cartera generada</p><p className="font-semibold">{money.format(reportMesQ.data.carteraGenerada || 0)}</p></div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="card p-4">
+              <h3 className="mb-3 text-sm font-semibold">Ventas por método de pago (mes)</h3>
+              {payChart ? (
+                <div className="mx-auto w-full max-w-[200px]">
+                  <Doughnut data={payChart} />
+                </div>
+              ) : <p className="text-sm text-pos-muted">Cargando...</p>}
             </div>
-          )}
-          {rentMesQ.data && (
-            <div className="card grid gap-2 p-4 md:grid-cols-2">
-              <div><p className="text-sm text-pos-muted">Gastos globales (mes)</p><p className="font-semibold">{money.format(rentMesQ.data.totalGastos || 0)}</p></div>
-              <div><p className="text-sm text-pos-muted">Ganancia neta global (mes)</p><p className="font-semibold">{money.format(rentMesQ.data.gananciaNeta || 0)}</p></div>
+            <div className="card p-4">
+              <h3 className="mb-3 text-sm font-semibold">Tendencia de ventas</h3>
+              {trendChart ? (
+                <Bar data={trendChart} />
+              ) : trendQ.isLoading ? <p className="text-sm text-pos-muted">Cargando...</p> : <p className="text-sm text-pos-muted">Sin datos para el período actual</p>}
+            </div>
+          </div>
+
+          {insights.length > 0 && (
+            <div className="card p-3">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                {insights.map((ins, i) => (
+                  <span key={i} className={ins.color}>{ins.icon} {ins.text}</span>
+                ))}
+              </div>
             </div>
           )}
         </>
       )}
 
-      {tab === "Rentabilidad" && (
-        <div className="grid gap-4 md:grid-cols-3">
-           <div className="card p-4">
-             <p className="text-sm text-pos-muted">Ventas realizadas</p>
-             <p className="text-2xl font-bold">{money.format(rentQ.data?.totalVentas || 0)}</p>
-           </div>
-           <div className="card p-4">
-             <p className="text-sm text-pos-muted">Ingresos recibidos</p>
-             <p className="text-2xl font-bold">{money.format(rentQ.data?.recaudoReal || 0)}</p>
-           </div>
-           <div className="card p-4">
-             <p className="text-sm text-pos-muted">Gastos registrados</p>
-             <p className="text-2xl font-bold">{money.format(rentQ.data?.totalGastos || 0)}</p>
-           </div>
-           <div className="card p-4 border-2 border-emerald-300 bg-emerald-50">
-             <p className="text-sm text-emerald-700 font-medium">Balance final del turno</p>
-             <p className="text-3xl font-bold text-emerald-800">{money.format(rentQ.data?.gananciaNeta || 0)}</p>
-           </div>
-          <div className="card p-4">
-            <p className="text-sm text-pos-muted">Margen neto (%)</p>
-            <p className="text-2xl font-bold">{margen}%</p>
-          </div>
-        </div>
-      )}
-
       {tab === "Cierre de Mes" && (
         <>
-          <div className="card grid gap-3 p-4 md:grid-cols-4">
-            <label className="text-sm">
-              Mes
-              <select className="input mt-1" value={mesSel} onChange={(e) => setMesSel(e.target.value)}>
-                {Array.from({ length: 12 }, (_, i) => {
-                  const y = ahora.getFullYear();
-                  const m = i + 1;
-                  const key = mesKey(y, m);
-                  return <option key={key} value={key}>{MONTHS[i]} {y}</option>;
-                })}
-                {Array.from({ length: 12 }, (_, i) => {
-                  const y = ahora.getFullYear() - 1;
-                  const m = i + 1;
-                  const key = mesKey(y, m);
-                  return <option key={key} value={key}>{MONTHS[i]} {y}</option>;
-                })}
-              </select>
-            </label>
-            <div className="flex flex-wrap items-end gap-2">
-              <button className="btn-primary" onClick={() => ciPdfM.mutate()} disabled={ciPdfM.isPending}>Export PDF </button>
-              <button className="btn-ghost" onClick={() => ciXlsM.mutate()} disabled={ciXlsM.isPending}>Export Excel </button>
-            </div>
-          </div>
-
           {(ciVentasQ.isError || ciRentQ.isError) && (
             <p className="text-sm text-red-600">{getErrorMessage(ciVentasQ.error || ciRentQ.error)}</p>
           )}
 
+          {/* ── Header ─────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xl font-semibold text-pos-text">Resumen financiero de {MONTHS[ciMes.month]} {ciMes.year}</p>
+              <p className="mt-0.5 text-sm text-pos-muted">Información consolidada del período seleccionado.</p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="relative" ref={monthRef}>
+                <button
+                  type="button"
+                  onClick={() => { setMonthOpen((o) => !o); setYearOpen(false); }}
+                  className="flex h-9 items-center gap-1 rounded-lg border border-pos-border bg-pos-card px-3 text-sm font-medium text-pos-text shadow-sm transition-all hover:border-pos-border focus:border-pos-accent focus:outline-none"
+                >
+                  {MONTHS[ciMes.month]}
+                  <svg className={`h-3.5 w-3.5 text-pos-muted transition-transform ${monthOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                {monthOpen && (
+                  <div className="absolute right-0 z-20 mt-1 w-full min-w-[140px] overflow-hidden rounded-lg border border-pos-border bg-pos-card shadow-pos">
+                    {MONTHS.map((name, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                          i === ciMes.month
+                            ? "bg-pos-accentSoft font-medium text-pos-forest"
+                            : "text-pos-text hover:bg-pos-accentSoft hover:text-pos-forest"
+                        }`}
+                        onClick={() => { setCiMes((p) => ({ ...p, month: i })); setMonthOpen(false); }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="relative" ref={yearRef}>
+                <button
+                  type="button"
+                  onClick={() => { setYearOpen((o) => !o); setMonthOpen(false); }}
+                  className="flex h-9 items-center gap-1 rounded-lg border border-pos-border bg-pos-card px-3 text-sm font-medium text-pos-text shadow-sm transition-all hover:border-pos-border focus:border-pos-accent focus:outline-none"
+                >
+                  {ciMes.year}
+                  <svg className={`h-3.5 w-3.5 text-pos-muted transition-transform ${yearOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                {yearOpen && (
+                  <div className="absolute right-0 z-20 mt-1 w-full min-w-[100px] overflow-hidden rounded-lg border border-pos-border bg-pos-card shadow-pos">
+                    {Array.from({ length: 5 }, (_, i) => ahora.getFullYear() - 2 + i).map((y) => (
+                      <button
+                        key={y}
+                        type="button"
+                        className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                          y === ciMes.year
+                            ? "bg-pos-accentSoft font-medium text-pos-forest"
+                            : "text-pos-text hover:bg-pos-accentSoft hover:text-pos-forest"
+                        }`}
+                        onClick={() => { setCiMes((p) => ({ ...p, year: y })); setYearOpen(false); }}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-pos-border bg-pos-card px-3 py-2 text-sm font-medium text-pos-text shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => ciPdfM.mutate()}
+                disabled={ciPdfM.isPending}
+              >
+                {ciPdfM.isPending ? (
+                  <svg className="h-4 w-4 animate-spin text-pos-muted" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" /></svg>
+                )}
+                {ciPdfM.isPending ? "PDF…" : "PDF"}
+              </button>
+              <button
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-pos-border bg-pos-card px-3 py-2 text-sm font-medium text-pos-text shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => ciXlsM.mutate()}
+                disabled={ciXlsM.isPending}
+              >
+                {ciXlsM.isPending ? (
+                  <svg className="h-4 w-4 animate-spin text-pos-muted" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" /></svg>
+                )}
+                {ciXlsM.isPending ? "Excel…" : "Excel"}
+              </button>
+            </div>
+          </div>
+
+          {/* ── Fila 1 — Métricas principales ──────────────────────── */}
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Ventas realizadas</p>
-              <p className="text-2xl font-bold">{ciVentasQ.data?.totalVentas ?? "—"}</p>
-              <p className="text-xs text-pos-muted mt-1">Total de ventas del mes</p>
+            <div className="card p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pos-accentSoft">
+                  <svg className="h-5 w-5 text-pos-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-pos-muted">Ventas netas</p>
+                  <p className="text-2xl font-bold text-pos-text tabular-nums">{money.format(ciVentasQ.data?.totalNeto || 0)}</p>
+                </div>
+              </div>
             </div>
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Total bruto</p>
-              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalBruto || 0)}</p>
+            <div className="card p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pos-accentSoft">
+                  <svg className="h-5 w-5 text-pos-forest" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-pos-muted">Dinero recibido</p>
+                  <p className="text-2xl font-bold text-pos-text tabular-nums">{money.format(ciRentQ.data?.recaudoReal || 0)}</p>
+                  <p className="text-[10px] text-pos-muted/80">Incluye pagos de ventas y abonos a fiados.</p>
+                </div>
+              </div>
             </div>
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Descuentos</p>
-              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalDescuentos || 0)}</p>
+            <div className="card p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                  <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-pos-muted">Gastos</p>
+                  <p className="text-2xl font-bold text-pos-text tabular-nums">{money.format(ciRentQ.data?.totalGastos || 0)}</p>
+                </div>
+              </div>
             </div>
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Total neto</p>
-              <p className="text-2xl font-bold">{money.format(ciVentasQ.data?.totalNeto || 0)}</p>
+            <div className="relative overflow-hidden rounded-2xl bg-[#50C4A0] p-5 shadow-pos">
+              <div className="absolute right-2 top-2 opacity-10">
+                <svg className="h-20 w-20 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" /></svg>
+              </div>
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white">Ganancia neta del mes</p>
+                </div>
+                <p className="mt-2 text-3xl font-bold text-white tabular-nums">{money.format(ciRentQ.data?.gananciaNeta || 0)}</p>
+                <p className="mt-1 text-[11px] leading-relaxed tracking-wide text-white/80">Resultado final después de gastos y movimientos del período.</p>
+              </div>
             </div>
           </div>
 
+          {/* ── Fila 2 — Detalles operativos ────────────────────────── */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Ventas realizadas</p>
+              <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{ciVentasQ.data?.totalVentas ?? "—"}</p>
+            </div>
+            <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Efectivo</p>
+              <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciRentQ.data?.totalVentasEfectivo || 0)}</p>
+            </div>
+            <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Transferencia</p>
+              <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciRentQ.data?.totalVentasTransferencia || 0)}</p>
+            </div>
+            <div className="rounded-xl border border-pos-border bg-pos-card p-3 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Descuentos</p>
+              <p className="mt-1 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciVentasQ.data?.totalDescuentos || 0)}</p>
+            </div>
+          </div>
+
+          {/* ── Fila 3 — Gráficos ───────────────────────────────────── */}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Ingresos recibidos</p>
-              <p className="text-2xl font-bold">{money.format(ciRentQ.data?.recaudoReal || 0)}</p>
-              <div className="mt-2 text-xs text-pos-muted space-x-3">
-                <span>Efectivo: <span className="font-medium">{money.format(ciRentQ.data?.totalVentasEfectivo || 0)}</span></span>
-                <span>Transferencia: <span className="font-medium">{money.format(ciRentQ.data?.totalVentasTransferencia || 0)}</span></span>
-              </div>
+            <div className="card p-5">
+              <h3 className="mb-1 text-sm font-semibold text-pos-text">Distribución de ingresos</h3>
+              <p className="mb-4 text-xs text-pos-muted">Método de pago utilizado en el período</p>
+              {ciPayChart ? (
+                <div className="mx-auto w-full max-w-[220px]">
+                  <Doughnut data={ciPayChart} />
+                </div>
+              ) : ciRentQ.isLoading ? (
+                <p className="py-8 text-center text-sm text-pos-muted">Cargando...</p>
+              ) : (
+                <p className="py-8 text-center text-sm text-pos-muted">Sin datos</p>
+              )}
             </div>
-            <div className="card p-4">
-              <p className="text-sm text-pos-muted">Gastos registrados</p>
-              <p className="text-2xl font-bold text-red-600">{money.format(ciRentQ.data?.totalGastos || 0)}</p>
-              <div className="mt-2 text-xs text-pos-muted space-x-3">
-                <span>Efectivo: <span className="font-medium">{money.format(ciRentQ.data?.totalGastosEfectivo || 0)}</span></span>
-                <span>Transferencia: <span className="font-medium">{money.format(ciRentQ.data?.totalGastosTransferencia || 0)}</span></span>
-              </div>
+            <div className="card p-5">
+              <h3 className="mb-1 text-sm font-semibold text-pos-text">Flujo del mes</h3>
+              <p className="mb-4 text-xs text-pos-muted">Comparación de ingresos, gastos y ganancia</p>
+              {ciFlowChart ? (
+                <Bar data={ciFlowChart} />
+              ) : ciRentQ.isLoading ? (
+                <p className="py-8 text-center text-sm text-pos-muted">Cargando...</p>
+              ) : (
+                <p className="py-8 text-center text-sm text-pos-muted">Sin datos</p>
+              )}
             </div>
           </div>
 
-          <div className="card p-4 border-2 border-emerald-300 bg-emerald-50">
-            <p className="text-sm text-emerald-700 font-medium">GANANCIA NETA DEL MES</p>
-            <p className="text-4xl font-bold text-emerald-800">{money.format(ciRentQ.data?.gananciaNeta || 0)}</p>
-          </div>
-
+          {/* ── Fila 4 — Turnos ─────────────────────────────────────── */}
           {ciTurnosQ.data && ciTurnosQ.data.length > 0 && (
             <div className="card p-4">
-              <p className="text-sm font-medium text-pos-muted mb-2">Turnos del mes</p>
-              <div className="grid gap-2 md:grid-cols-4">
-                <div><p className="text-xs text-pos-muted">Total turnos</p><p className="font-semibold">{ciTurnosQ.data.length}</p></div>
-                <div><p className="text-xs text-pos-muted">Suma ventas</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalVentas || 0), 0))}</p></div>
-                <div><p className="text-xs text-pos-muted">Suma gastos</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalGastos || 0), 0))}</p></div>
-                <div><p className="text-xs text-pos-muted">Total operativo neto</p><p className="font-semibold">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalOperativoNeto || 0), 0))}</p></div>
+              <p className="mb-3 text-sm font-semibold text-pos-text">Resumen operativo por turnos</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Turnos</p>
+                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{ciTurnosQ.data.length}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Recaudo operativo</p>
+                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.recaudoBruto || 0), 0))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Gastos operativos</p>
+                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalGastosCombinados || 0), 0))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Total operativo</p>
+                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums">{money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.totalOperativoNeto || 0), 0))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-pos-muted">Diferencia caja</p>
+                  <p className="mt-0.5 text-lg font-semibold text-pos-text tabular-nums" style={{ color: ciTurnosQ.data.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0) === 0 ? "#3EB489" : "#dc2626" }}>
+                    {money.format(ciTurnosQ.data.reduce((a, t) => a + Number(t.diferenciaTotal || 0), 0))}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -333,107 +526,137 @@ export function ReportesPage() {
 
       {tab === "Turnos" && (
         <>
-          <div className="card grid gap-2 p-4 md:grid-cols-4">
-            <div>
-              <p className="text-sm text-pos-muted">Turnos</p>
-              <p className="font-semibold">{turnosQ.data?.length || 0}</p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Turnos</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-800">{sortedTurnos.length}</p>
             </div>
-            <div>
-              <p className="text-sm text-pos-muted">Total ventas</p>
-              <p className="font-semibold">
-                {money.format((turnosQ.data || []).reduce((acc, t) => acc + Number(t.totalVentas || 0), 0))}
-              </p>
+            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Recaudo real</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-800">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.recaudoBruto || 0), 0))}</p>
             </div>
-            <div>
-              <p className="text-sm text-pos-muted">Total gastos</p>
-              <p className="font-semibold">
-                {money.format((turnosQ.data || []).reduce((acc, t) => acc + Number(t.totalGastos || 0), 0))}
-              </p>
+            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Gastos caja</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-800">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.totalGastos || 0), 0))}</p>
             </div>
-            <div>
-              <p className="text-sm text-pos-muted">Total neto operativo acumulado</p>
-              <p className="font-semibold">
-                {money.format((turnosQ.data || []).reduce((acc, t) => acc + Number(t.totalOperativoNeto || 0), 0))}
-              </p>
+            <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Gastos admin</p>
+              <p className="mt-1 text-2xl font-semibold text-amber-700">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.totalGastosAdmin || 0), 0))}</p>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-600">Ganancia neta</p>
+              <p className="mt-1 text-2xl font-semibold text-emerald-800">{money.format(sortedTurnos.reduce((acc, t) => acc + Number(t.gananciaNeta || 0), 0))}</p>
+              <p className="text-[10px] text-emerald-600 mt-0.5">Recaudo − caja − admin</p>
             </div>
           </div>
 
-            <div className="card p-4">
-            <div className="mb-3 text-sm font-medium text-pos-muted">Histórico de turnos · Métricas operativas reales</div>
-            {turnosQ.isLoading && <p className="text-sm text-pos-muted">Cargando turnos...</p>}
-            {!turnosQ.isLoading && (turnosQ.data?.length || 0) === 0 && (
-              <p className="text-sm text-pos-muted">No hay turnos en ese rango.</p>
-            )}
-            {(turnosQ.data?.length || 0) > 0 && (
-              <div className="grid gap-2 md:hidden">
-                {(turnosQ.data || []).map((t) => {
-                  const d = Number(t.diferenciaTotal || 0);
-                  const dClass = d === 0 ? "text-emerald-600" : d < 0 ? "text-red-600" : "text-amber-600";
-                  return (
-                    <div key={t.id} className="rounded-xl border border-pos-border p-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">Turno #{t.id}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-pos-muted">{t.estado}</span>
-                      </div>
-                      <p className="text-xs text-pos-muted">{t.usuario} · {new Date(t.fechaApertura).toLocaleString()}{t.fechaCierre ? ` → ${new Date(t.fechaCierre).toLocaleString()}` : ""}</p>
-                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div>Ventas: <span className="font-medium">{money.format(t.totalVentas || 0)}</span></div>
-                        <div>Gastos: <span className="font-medium">{money.format(t.totalGastos || 0)}</span></div>
-                        <div>Efectivo (neto op.): <span className="font-medium">{money.format(t.efectivoOperativo || 0)}</span></div>
-                        <div>Transferencias (neto op.): <span className="font-medium">{money.format(t.transferenciasOperativas || 0)}</span></div>
-                        <div>Total operativo: <span className="font-medium">{money.format(t.totalOperativoNeto || 0)}</span></div>
-                        <div className="col-span-2">Diferencia (cierre): <span className={`font-semibold ${dClass}`}>{money.format(d)}</span></div>
-                      </div>
-                    </div>
-                  );
-                })}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+              <p className="text-sm font-medium text-slate-700">Histórico de turnos</p>
+              <div className="min-w-0 flex-1 sm:max-w-xs">
+                <DateRangePicker fi={fi} ff={ff} onRangeChange={(newFi, newFf) => { setFi(newFi); setFf(newFf); }} />
+              </div>
+            </div>
+            {turnosQ.isLoading && (
+              <div className="flex items-center justify-center px-5 py-12">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                  Cargando turnos...
+                </div>
               </div>
             )}
-            {(turnosQ.data?.length || 0) > 0 && (
-              <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[1080px] text-sm">
-                <thead>
-                  <tr className="border-b border-pos-border text-xs uppercase tracking-wider text-pos-muted">
-                    <th className="p-2 text-left w-12">Turno</th>
-                    <th className="p-2 text-left">Apertura</th>
-                    <th className="p-2 text-left">Cierre</th>
-                    <th className="p-2 text-left">Usuario</th>
-                    <th className="p-2 text-left">Estado</th>
-                    <th className="p-2 text-right">Total ventas</th>
-                    <th className="p-2 text-right">Total gastos</th>
-                    <th className="p-2 text-right">Efectivo</th>
-                    <th className="p-2 text-right">Transferencias</th>
-                    <th className="p-2 text-right">Total</th>
-                    <th className="p-2 text-right">Diferencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(turnosQ.data || []).map((t) => {
-                    const dif = Number(t.diferenciaTotal || 0);
-                    const difClass = dif === 0 ? "text-emerald-600" : dif < 0 ? "text-red-600" : "text-amber-600";
+            {!turnosQ.isLoading && sortedTurnos.length === 0 && (
+              <div className="px-5 py-12 text-center text-sm text-slate-400">No hay turnos en ese rango.</div>
+            )}
+            {sortedTurnos.length > 0 && (
+              <>
+                <div className="grid gap-2 p-4 md:hidden">
+                  {sortedTurnos.map((t, i) => {
+                    const d = Number(t.diferenciaTotal || 0);
+                    const dClass = d === 0 ? "text-emerald-600" : d < 0 ? "text-red-500" : "text-amber-500";
                     return (
-                      <tr key={t.id} className="border-b border-pos-border/70 hover:bg-pos-bg/50">
-                        <td className="p-2 font-medium">#{t.id}</td>
-                        <td className="p-2 text-xs">{new Date(t.fechaApertura).toLocaleString()}</td>
-                        <td className="p-2 text-xs">{t.fechaCierre ? new Date(t.fechaCierre).toLocaleString() : "—"}</td>
-                        <td className="p-2 text-xs">{t.usuario}</td>
-                        <td className="p-2">
-                          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] ${t.estado === "CERRADO" ? "bg-emerald-100 text-emerald-700" : t.estado === "ABIERTO" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
-                            {t.estado}
-                          </span>
-                        </td>
-                        <td className="p-2 text-right tabular-nums">{money.format(t.totalVentas || 0)}</td>
-                        <td className="p-2 text-right tabular-nums">{money.format(t.totalGastos || 0)}</td>
-                        <td className="p-2 text-right tabular-nums">{money.format(t.efectivoOperativo || 0)}</td>
-                        <td className="p-2 text-right tabular-nums">{money.format(t.transferenciasOperativas || 0)}</td>
-                        <td className="p-2 text-right tabular-nums font-medium">{money.format(t.totalOperativoNeto || 0)}</td>
-                        <td className={`p-2 text-right tabular-nums font-semibold ${difClass}`}>{money.format(dif)}</td>
-                      </tr>
+                      <div key={t.id} className="rounded-xl border border-slate-100 bg-white p-4 text-sm shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-800">Turno #{i + 1}</span>
+                          <span className={`rounded-md px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${t.estado === "CERRADO" ? "bg-emerald-50 text-emerald-700" : t.estado === "ABIERTO" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>{t.estado}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">{new Date(t.fechaApertura).toLocaleString()}{t.fechaCierre ? ` → ${new Date(t.fechaCierre).toLocaleString()}` : ""} · {t.usuario}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-400">Recaudo</p>
+                            <p className="font-medium text-slate-700">{money.format(t.recaudoBruto || 0)}</p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-400">Gastos</p>
+                            <p className="font-medium text-slate-700">{money.format(t.totalGastos || 0)}</p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-400">Efectivo</p>
+                            <p className="font-medium text-slate-700">{money.format(t.efectivoOperativo || 0)}</p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-400">Transf.</p>
+                            <p className="font-medium text-slate-700">{money.format(t.transferenciasOperativas || 0)}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between rounded-lg bg-slate-50 p-2">
+                          <span className="text-[10px] uppercase tracking-wide text-slate-400">Total operativo</span>
+                          <span className="font-semibold text-slate-800">{money.format(t.totalOperativoNeto || 0)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between rounded-lg p-2">
+                          <span className="text-[10px] uppercase tracking-wide text-slate-400">Diferencia</span>
+                          <span className={`font-semibold ${dClass}`}>{money.format(d)}</span>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-              </div>
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">Turno</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">Apertura</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">Cierre</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-300">Usuario</th>
+                        <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-slate-400">Estado</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-slate-400">Recaudo</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-slate-400">G. Caja</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-amber-500">G. Admin</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-slate-400">Efectivo</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-slate-400">Transf.</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-emerald-600">Ganancia</th>
+                        <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-slate-600">Diferencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedTurnos.map((t, i) => {
+                        const dif = Number(t.diferenciaTotal || 0);
+                        const difClass = dif === 0 ? "text-emerald-600" : dif < 0 ? "text-red-500" : "text-amber-500";
+                        return (
+                          <tr key={t.id} className="border-b border-slate-50 transition-colors hover:bg-slate-50/80">
+                            <td className="px-4 py-3 font-medium text-slate-800">#{i + 1}</td>
+                            <td className="px-4 py-3 text-xs text-slate-500">{new Date(t.fechaApertura).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-xs text-slate-500">{t.fechaCierre ? new Date(t.fechaCierre).toLocaleString() : "—"}</td>
+                            <td className="px-4 py-3 text-xs text-slate-400">{t.usuario}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-medium ${t.estado === "CERRADO" ? "bg-emerald-50 text-emerald-700" : t.estado === "ABIERTO" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>{t.estado}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-700">{money.format(t.recaudoBruto || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-700">{money.format(t.totalGastos || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-amber-700 font-medium">{money.format(t.totalGastosAdmin || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-600">{money.format(t.efectivoOperativo || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-slate-600">{money.format(t.transferenciasOperativas || 0)}</td>
+                            <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">{money.format(t.gananciaNeta || 0)}</td>
+                            <td className={`px-4 py-3 text-right tabular-nums font-semibold ${difClass}`}>{money.format(dif)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </>
