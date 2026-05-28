@@ -44,7 +44,7 @@ public class PdfTurnoExporter {
             BigDecimal balanceTurno = (reporte.getGananciaEfectivo() != null && reporte.getGananciaTransferencia() != null)
                     ? reporte.getGananciaEfectivo().add(reporte.getGananciaTransferencia()).subtract(reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO)
                     : BigDecimal.ZERO;
-            resumen.put("Balance final del turno", balanceTurno);
+            resumen.put("Ganancia neta del mes", balanceTurno);
             PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
 
             // === ARQUEO (con base) - tabla simple de 2 columnas ===
@@ -105,7 +105,7 @@ public class PdfTurnoExporter {
             }
             document.add(tGastos);
 
-            PdfReportHelper.addFooter(document, "POS Restaurante • Cierre de Turno");
+            PdfReportHelper.addFooter(document, "MentaPOS • Cierre de Turno");
 
             document.close();
             return baos.toByteArray();

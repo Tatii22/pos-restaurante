@@ -42,7 +42,7 @@ public class ExcelTurnoExporter {
             ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos(), money);
 
             BigDecimal balanceTurno = ingresosTurno.subtract(reporte.getTotalGastos() != null ? reporte.getTotalGastos() : java.math.BigDecimal.ZERO);
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", balanceTurno, money, true); // destacado premium
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ganancia neta del mes", balanceTurno, money, true); // destacado premium
 
             fila++;
 
@@ -88,7 +88,7 @@ public class ExcelTurnoExporter {
             }
 
             ExcelReportHelper.autoSizeAll(sheet, 7);
-            ExcelReportHelper.addFooter(sheet, fila + 2, "POS Restaurante - Cierre Turno");
+            ExcelReportHelper.addFooter(sheet, fila + 2, "MentaPOS - Cierre Turno");
 
             workbook.write(baos);
             return baos.toByteArray();

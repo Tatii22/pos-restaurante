@@ -39,7 +39,7 @@ public class ExcelVentasExporter {
             ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO, money);
             BigDecimal balV = (reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null) 
                     ? reporte.getRecaudoReal().subtract(reporte.getTotalGastos()) : BigDecimal.ZERO;
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", balV, money, true); // destacado
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ganancia neta del mes", balV, money, true); // destacado
 
             fila++;
 
@@ -64,7 +64,7 @@ public class ExcelVentasExporter {
             }
 
             ExcelReportHelper.autoSizeAll(sheet, 7);
-            ExcelReportHelper.addFooter(sheet, fila + 2, "POS Restaurante");
+            ExcelReportHelper.addFooter(sheet, fila + 2, "MentaPOS");
 
             workbook.write(baos);
             return baos.toByteArray();

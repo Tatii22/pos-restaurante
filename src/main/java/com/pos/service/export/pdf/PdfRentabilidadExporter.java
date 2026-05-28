@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,15 @@ public class PdfRentabilidadExporter {
     private static final DateTimeFormatter FECHA_FORMATO =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    private static final String[] MESES = {
+        "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+        "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+    };
+
+    private String mesAnio(LocalDate d) {
+        return MESES[d.getMonthValue() - 1] + " " + d.getYear();
+    }
+
     public byte[] exportar(ReporteRentabilidadDTO reporte) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
@@ -36,15 +46,15 @@ public class PdfRentabilidadExporter {
             Document document = new Document(pdf);
             document.setMargins(36, 36, 36, 36);
 
+            String periodo = mesAnio(reporte.getFechaInicio());
             String rango = "Período: " + reporte.getFechaInicio() + " → " + reporte.getFechaFin();
-            PdfReportHelper.addProfessionalHeader(document, "REPORTE DE RENTABILIDAD", rango, "Usuario: Sistema POS");
+            PdfReportHelper.addProfessionalHeader(document, "INFORME DE CIERRE DE MES — " + periodo.toUpperCase(), rango, "Usuario: MentaPOS");
 
             // === RESUMEN OPERATIVO (usando "Resultado Operativo" en lugar de Ganancia Neta) ===
             Map<String, BigDecimal> resumen = new LinkedHashMap<>();
-            resumen.put("Ventas realizadas", reporte.getTotalVentas());
             resumen.put("Ingresos recibidos", reporte.getRecaudoReal());
             resumen.put("Gastos registrados", reporte.getTotalGastos());
-            resumen.put("Balance final del turno", reporte.getGananciaNeta());
+            resumen.put("Ganancia neta del mes", reporte.getGananciaNeta());
             PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
 
             // === DETALLE VENTAS ===
@@ -91,7 +101,7 @@ public class PdfRentabilidadExporter {
             }
             document.add(tablaG);
 
-            PdfReportHelper.addFooter(document, "POS Restaurante • Reporte de Rentabilidad");
+            PdfReportHelper.addFooter(document, "MentaPOS • Cierre de Mes — " + periodo);
 
             document.close();
             return baos.toByteArray();

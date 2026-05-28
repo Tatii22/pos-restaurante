@@ -35,14 +35,14 @@ public class PdfVentasExporter {
 
             // === HEADER PROFESIONAL ===
             String rango = "Período: " + reporte.getFechaInicio() + " → " + reporte.getFechaFin();
-            PdfReportHelper.addProfessionalHeader(document, "REPORTE DE VENTAS", rango, "Usuario: Sistema POS");
+            PdfReportHelper.addProfessionalHeader(document, "REPORTE DE VENTAS", rango, "Usuario: MentaPOS");
 
             // === RESUMEN (KPI dashboard style) ===
             Map<String, BigDecimal> resumen = new LinkedHashMap<>();
             resumen.put("Ventas realizadas", reporte.getTotalVentas() != null ? BigDecimal.valueOf(reporte.getTotalVentas()) : BigDecimal.ZERO);
             resumen.put("Ingresos recibidos", reporte.getRecaudoReal());
             resumen.put("Gastos registrados", reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO);
-            resumen.put("Balance final del turno", reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null ? 
+            resumen.put("Ganancia neta del mes", reporte.getRecaudoReal() != null && reporte.getTotalGastos() != null ? 
                     reporte.getRecaudoReal().subtract(reporte.getTotalGastos() != null ? reporte.getTotalGastos() : BigDecimal.ZERO) : BigDecimal.ZERO);
             PdfReportHelper.addSummarySection(document, "RESUMEN FINANCIERO", resumen);
 
@@ -82,7 +82,7 @@ public class PdfVentasExporter {
             document.add(tabla);
 
             // === FOOTER ===
-            PdfReportHelper.addFooter(document, "POS Restaurante • Reporte Financiero");
+            PdfReportHelper.addFooter(document, "MentaPOS • Reporte Financiero");
 
             document.close();
             return baos.toByteArray();

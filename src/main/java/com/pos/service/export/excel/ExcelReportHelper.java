@@ -123,7 +123,7 @@ public final class ExcelReportHelper {
         valCell.setCellStyle(moneyStyle);
 
         if (destacado) {
-            // Estilo premium para "Balance final del turno"
+            // Estilo premium para "Ganancia neta del mes"
             CellStyle special = sheet.getWorkbook().createCellStyle();
             special.cloneStyleFrom(moneyStyle);
             Font f = sheet.getWorkbook().createFont();

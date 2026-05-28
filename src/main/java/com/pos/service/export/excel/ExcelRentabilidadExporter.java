@@ -8,6 +8,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -17,6 +18,15 @@ public class ExcelRentabilidadExporter {
     private static final DateTimeFormatter FECHA_FORMATO =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    private static final String[] MESES = {
+        "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+        "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+    };
+
+    private String mesAnio(LocalDate d) {
+        return MESES[d.getMonthValue() - 1] + " " + d.getYear();
+    }
+
     public byte[] exportar(ReporteRentabilidadDTO reporte) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -24,7 +34,9 @@ public class ExcelRentabilidadExporter {
             Sheet sheet = workbook.createSheet("Rentabilidad");
             int fila = 0;
 
-            ExcelReportHelper.addTitle(sheet, fila++, "REPORTE DE RENTABILIDAD");
+            String periodo = mesAnio(reporte.getFechaInicio());
+
+            ExcelReportHelper.addTitle(sheet, fila++, "INFORME DE CIERRE DE MES — " + periodo.toUpperCase());
             ExcelReportHelper.addSubtitle(sheet, fila++,
                     "Período: " + reporte.getFechaInicio() + " → " + reporte.getFechaFin());
 
@@ -33,11 +45,19 @@ public class ExcelRentabilidadExporter {
             CellStyle money = ExcelReportHelper.createMoneyStyle(workbook);
             CellStyle header = ExcelReportHelper.createHeaderStyle(workbook);
 
-            // KPIs - lenguaje humano premium
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Ventas realizadas", reporte.getTotalVentas(), money);
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Ingresos recibidos", reporte.getRecaudoReal(), money);
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Gastos registrados", reporte.getTotalGastos(), money);
-            ExcelReportHelper.addKpiRow(sheet, fila++, "Balance final del turno", reporte.getGananciaNeta(), money, true); // destacado
+            // KPIs — Ingresos y Gastos 50/50 en la misma fila
+            Row kpiRow = sheet.createRow(fila++);
+            Cell iLabel = kpiRow.createCell(0);
+            iLabel.setCellValue("Ingresos recibidos");
+            Cell iVal = kpiRow.createCell(1);
+            ExcelReportHelper.applyMoneyToCell(iVal, reporte.getRecaudoReal(), money);
+            Cell gLabel = kpiRow.createCell(2);
+            gLabel.setCellValue("Gastos registrados");
+            Cell gVal = kpiRow.createCell(3);
+            ExcelReportHelper.applyMoneyToCell(gVal, reporte.getTotalGastos(), money);
+
+            // Ganancia neta — fila completa destacada
+            ExcelReportHelper.addKpiRow(sheet, fila++, "Ganancia neta del mes", reporte.getGananciaNeta(), money, true);
 
             fila++;
 
@@ -74,7 +94,7 @@ public class ExcelRentabilidadExporter {
             }
 
             ExcelReportHelper.autoSizeAll(sheet, 7);
-            ExcelReportHelper.addFooter(sheet, fila + 2, "POS Restaurante");
+            ExcelReportHelper.addFooter(sheet, fila + 2, "MentaPOS • Cierre de Mes — " + periodo);
 
             workbook.write(baos);
             return baos.toByteArray();

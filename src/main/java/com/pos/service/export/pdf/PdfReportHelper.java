@@ -82,32 +82,35 @@ public final class PdfReportHelper {
                 .setFontColor(HEADER_BG);
         doc.add(seccion);
 
-        // Regular KPIs in 3 columns
-        Table tabla = new Table(UnitValue.createPercentArray(new float[]{33.3f, 33.3f, 33.3f}))
+        // Separar KPIs regulares del destacado
+        java.util.List<java.util.Map.Entry<String, BigDecimal>> regulares = new java.util.ArrayList<>();
+        BigDecimal balanceValue = null;
+        String balanceLabel = null;
+        for (java.util.Map.Entry<String, BigDecimal> entry : metricas.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase("Ganancia neta del mes")) {
+                balanceLabel = entry.getKey();
+                balanceValue = entry.getValue();
+            } else {
+                regulares.add(entry);
+            }
+        }
+
+        int n = regulares.size();
+        float[] pcts = new float[n];
+        for (int i = 0; i < n; i++) {
+            pcts[i] = 100f / n;
+        }
+
+        Table tabla = new Table(UnitValue.createPercentArray(pcts))
                 .useAllAvailableWidth()
                 .setMarginBottom(4);
 
-        int col = 0;
-        BigDecimal balanceValue = null;
-        String balanceLabel = null;
-
-        for (java.util.Map.Entry<String, BigDecimal> entry : metricas.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase("Balance final del turno")) {
-                balanceLabel = entry.getKey();
-                balanceValue = entry.getValue();
-                continue; // lo renderizamos después como destacado
-            }
-            Cell celda = createKpiCell(entry.getKey(), entry.getValue(), false);
-            tabla.addCell(celda);
-            col++;
-        }
-        while (col % 3 != 0) {
-            tabla.addCell(new Cell().setBorder(null));
-            col++;
+        for (java.util.Map.Entry<String, BigDecimal> entry : regulares) {
+            tabla.addCell(createKpiCell(entry.getKey(), entry.getValue(), false));
         }
         doc.add(tabla);
 
-        // Balance final del turno - KPI PRINCIPAL destacado
+        // Ganancia neta del mes - KPI PRINCIPAL destacado
         if (balanceLabel != null) {
             Cell balanceCell = createKpiCell(balanceLabel, balanceValue, true);
             Table balanceTable = new Table(UnitValue.createPercentArray(1))
