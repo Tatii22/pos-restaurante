@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Plus, Search, X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
-import { ClienteSearch } from "../shared/ClienteSearch";
 import { formatCurrencyInput, getErrorMessage, money, parseCurrencyInput } from "../shared/utils";
-import type { Cliente, ClienteDetalle, AbonoFiado, ClienteSearch as ClienteSearchType } from "../types";
+import type { Cliente, ClienteDetalle, AbonoFiado } from "../types";
 
 function formatDate(d: string) {
   const date = new Date(d);
@@ -29,6 +28,29 @@ export function ClientesPage() {
   const [abonoEfectivo, setAbonoEfectivo] = useState("0");
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
   const [abonoObservacion, setAbonoObservacion] = useState("");
+
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoTelefono, setNuevoTelefono] = useState("");
+  const [nuevoError, setNuevoError] = useState<string | null>(null);
+
+  const crearClienteM = useMutation({
+    mutationFn: () => posApi.crearCliente({ nombre: nuevoNombre.trim(), telefono: nuevoTelefono.replace(/\D/g, "") }),
+    onSuccess: () => {
+      setShowNuevoCliente(false);
+      setNuevoNombre("");
+      setNuevoTelefono("");
+      setNuevoError(null);
+      qc.invalidateQueries({ queryKey: ["clientes-page"] });
+    },
+    onError: (err) => {
+      const msg = getErrorMessage(err);
+      setNuevoError(
+        msg.toLowerCase().includes("duplicate") || msg.includes("ya está")
+          ? "Este teléfono ya está registrado"
+          : msg
+      );
+    },
+  });
 
   // Cambio estimado en tiempo real (solo orientativo; el servidor valida la cifra exacta)
   const abonoEfectivoNum      = parseCurrencyInput(abonoEfectivo);
@@ -215,22 +237,45 @@ export function ClientesPage() {
                 <X size={16} />
               </button>
             </div>
-            <ClienteSearch
-              onSelect={(cliente: ClienteSearchType) => {
-                setShowNuevoCliente(false);
-                qc.invalidateQueries({ queryKey: ["clientes-page"] });
-              }}
-              label="Buscar o crear cliente"
-              placeholder="Nombre o teléfono del nuevo cliente..."
-              allowCreate={true}
-              autoFocus={true}
-              showDebt={false}
-            />
-            <div className="mt-4">
-              <button className="btn-ghost w-full" onClick={() => setShowNuevoCliente(false)}>
-                Cancelar
-              </button>
-            </div>
+            <form onSubmit={(e) => { e.preventDefault(); if (!crearClienteM.isPending) crearClienteM.mutate(); }} className="grid gap-3">
+              <label className="text-sm">
+                Nombre *
+                <input
+                  className="input mt-1"
+                  value={nuevoNombre}
+                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  placeholder="Nombre del cliente"
+                  autoFocus
+                />
+              </label>
+              <label className="text-sm">
+                Teléfono *
+                <input
+                  className="input mt-1"
+                  value={nuevoTelefono}
+                  onChange={(e) => setNuevoTelefono(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                  placeholder="Ej: 3123456789"
+                  inputMode="numeric"
+                />
+              </label>
+              {nuevoError && <p className="text-sm text-red-600">{nuevoError}</p>}
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost flex-1"
+                  onClick={() => { setShowNuevoCliente(false); setNuevoError(null); setNuevoNombre(""); setNuevoTelefono(""); }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1"
+                  disabled={!nuevoNombre.trim() || nuevoTelefono.replace(/\D/g, "").length < 7 || crearClienteM.isPending}
+                >
+                  {crearClienteM.isPending ? "Creando..." : "Crear cliente"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
