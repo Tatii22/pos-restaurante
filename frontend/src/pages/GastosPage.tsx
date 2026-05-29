@@ -319,7 +319,7 @@ export function GastosPage() {
           </div>
 
           <label className="text-sm">
-            Concepto / Descripcion
+            Descripción
             <input
               className="input mt-1"
               value={descripcion}
@@ -401,7 +401,7 @@ export function GastosPage() {
                     {esAdmin && <th className="p-2 text-left">Tipo de gasto</th>}
                     <th className="p-2 text-left">Pago</th>
                     <th className="p-2 text-right">Monto</th>
-                    <th className="p-2 text-left">Concepto / Descripcion</th>
+                    <th className="p-2 text-left">Descripción</th>
                     {esAdmin && <th className="p-2 text-left">Acciones</th>}
                   </tr>
                 </thead>
