@@ -143,7 +143,7 @@ export function DashboardPage() {
               <span className="font-semibold">{money.format(resumen?.totalBruto ?? 0)}</span>
             </p>
             <p className="flex justify-between text-xs text-pos-muted italic">
-              <span>⚠︎ {money.format(resumen?.totalMontoFiado ?? 0)} quedó fiado — aún no se cobró</span>
+              <span>⚠︎ {money.format(resumen?.carteraPendienteTotal ?? 0)} en deudas — aún no se cobró</span>
             </p>
             <hr className="border-pos-border my-1" />
             <p className="flex justify-between">

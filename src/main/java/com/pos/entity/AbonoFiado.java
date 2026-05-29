@@ -44,6 +44,7 @@ public class AbonoFiado {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Usuario usuario;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "turno_id")
     private TurnoCaja turno;
 }

@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -218,9 +219,12 @@ public class FiadoService {
 
         PagoAbono pago = calcularPagoAbono(deudaActual, montoEfectivo, montoTransferencia);
 
-        TurnoCaja turno = turnoCajaRepository
-                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
-                .orElseThrow(() -> new BadRequestException("No hay turno activo para registrar el abono"));
+        Optional<TurnoCaja> optTurno = turnoCajaRepository
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO));
+        if (optTurno.isEmpty() && !"ADMIN".equals(usuario.getRol().getNombre())) {
+            throw new BadRequestException("No hay turno activo para registrar el abono");
+        }
+        TurnoCaja turno = optTurno.orElse(null);
 
         // FIFO: ventas más antiguas primero
         BigDecimal restante = pago.totalAplicado();
@@ -262,8 +266,10 @@ public class FiadoService {
                         .build()
         );
 
-        turno.setTotalVentas(turno.getTotalVentas().add(aplicadoTotal));
-        turnoCajaRepository.save(turno);
+        if (turno != null) {
+            turno.setTotalVentas(turno.getTotalVentas().add(aplicadoTotal));
+            turnoCajaRepository.save(turno);
+        }
         movimientoFinancieroService.registrarAbono(abono);
         auditService.record(
                 "ABONO_FIADO_REGISTRADO", "AbonoFiado", abono.getId(),

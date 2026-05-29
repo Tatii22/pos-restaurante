@@ -87,8 +87,8 @@ public class ReporteRentabilidadService {
 
         List<GastoAdmin> gastosAdmin = gastoAdminRepository.findByFechaBetween(fechaInicio, fechaFin);
 
-        BigDecimal totalVentasEfectivo = calculosFinancierosService.sumarRecaudoTotal(turnosCerrados, MedioFinanciero.EFECTIVO);
-        BigDecimal totalVentasTransferencia = calculosFinancierosService.sumarRecaudoTotal(turnosCerrados, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal totalVentasEfectivo = calculosFinancierosService.sumarRecaudoPorPeriodo(inicio, fin, MedioFinanciero.EFECTIVO);
+        BigDecimal totalVentasTransferencia = calculosFinancierosService.sumarRecaudoPorPeriodo(inicio, fin, MedioFinanciero.TRANSFERENCIA);
         BigDecimal totalVentas = totalVentasEfectivo.add(totalVentasTransferencia);
         BigDecimal totalVentasComerciales = BigDecimal.ZERO;
         BigDecimal ventasContado = BigDecimal.ZERO;

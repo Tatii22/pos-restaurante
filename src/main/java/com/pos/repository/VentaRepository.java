@@ -124,4 +124,13 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
         GROUP BY v.cliente.id
     """)
     List<Object[]> sumarDeudaAgrupadaPorCliente();
+
+    @Query("""
+        SELECT COALESCE(SUM(v.saldoPendiente), 0)
+        FROM Venta v
+        WHERE v.condicionPago = com.pos.entity.CondicionPago.FIADO
+          AND v.estado = com.pos.entity.EstadoVenta.DESPACHADA
+          AND v.saldoPendiente > 0
+    """)
+    BigDecimal sumarCarteraPendienteTotal();
 }

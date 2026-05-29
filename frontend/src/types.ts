@@ -247,6 +247,7 @@ export type ReporteVentas = {
   totalMontoFiado?: number;
   carteraGenerada?: number;
   carteraPendiente?: number;
+  carteraPendienteTotal?: number;
   recaudoReal?: number;
   ventas: Venta[];
 };

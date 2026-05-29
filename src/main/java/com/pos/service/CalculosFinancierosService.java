@@ -71,6 +71,16 @@ public class CalculosFinancierosService {
         return total;
     }
 
+    /**
+     * Recaudo real por período, filtrado por fecha del movimiento.
+     * Captura movimientos sin turno (ej: abonos registrados por ADMIN sin turno activo).
+     * Debe usarse en reportes de período (Dashboard, Rentabilidad) en lugar de
+     * sumarRecaudoTotal cuando puede haber movimientos huérfanos de turno.
+     */
+    public BigDecimal sumarRecaudoPorPeriodo(LocalDateTime inicio, LocalDateTime fin, MedioFinanciero medio) {
+        return repository.sumarNetoPorPeriodoMedioTipos(inicio, fin, medio, TIPOS_RECAUDO);
+    }
+
     public BigDecimal sumarGastosPorTurno(TurnoCaja turno, MedioFinanciero medio) {
         BigDecimal neto = repository.sumarNetoPorTurnoMedioTipos(turno, medio, TIPOS_GASTO_CAJA);
         return neto.negate();

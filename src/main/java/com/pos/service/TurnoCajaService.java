@@ -7,7 +7,6 @@ import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
-import com.pos.repository.GastoAdminRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.UsuarioRepository;
 import com.pos.repository.VentaRepository;
@@ -34,7 +33,6 @@ public class TurnoCajaService {
     private final TurnoCajaRepository turnoCajaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VentaRepository ventaRepository;
-    private final GastoAdminRepository gastoAdminRepository;
     private final CalculosFinancierosService calculosFinancierosService;
     private final AuditService auditService;
     private final MenuDiarioService menuDiarioService;
@@ -310,15 +308,19 @@ public class TurnoCajaService {
         BigDecimal recaudoBruto       = recaudoEfe.add(recaudoTransf);
         BigDecimal gastosCaja         = gastosEfe.add(gastosTransf);
 
-        LocalDate desdeFecha = turno.getFechaApertura().toLocalDate();
-        LocalDate hastaFecha = turno.getFechaCierre() != null
-                ? turno.getFechaCierre().toLocalDate()
-                : LocalDate.now();
-        BigDecimal gastosAdmin = gastoAdminRepository
-                .findByFechaBetween(desdeFecha, hastaFecha)
-                .stream()
-                .map(g -> g.getMonto() != null ? g.getMonto() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Para gastos admin: usar inicio del día de apertura, no la hora exacta.
+        // Los movimientos GASTO_ADMIN se guardan con atStartOfDay(), entonces
+        // un gasto del mismo día pero antes de la apertura quedaría fuera si
+        // usáramos turno.getFechaApertura() directo.
+        LocalDateTime desdeDateTime = turno.getFechaApertura().toLocalDate().atStartOfDay();
+        LocalDateTime hastaDateTime = turno.getFechaCierre() != null
+                ? turno.getFechaCierre()
+                : LocalDateTime.now();
+        BigDecimal gastosAdminEfe    = calculosFinancierosService
+                .sumarGastosAdminPeriodo(desdeDateTime, hastaDateTime, MedioFinanciero.EFECTIVO);
+        BigDecimal gastosAdminTransf = calculosFinancierosService
+                .sumarGastosAdminPeriodo(desdeDateTime, hastaDateTime, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal gastosAdmin = gastosAdminEfe.add(gastosAdminTransf);
 
         BigDecimal gananciaFinanciera    = recaudoBruto.subtract(gastosCaja).subtract(gastosAdmin);
         BigDecimal saldoCajaEsperado     = turno.getMontoInicial().add(recaudoEfe).subtract(gastosEfe);

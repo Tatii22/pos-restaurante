@@ -6,6 +6,18 @@ import { ClienteSearch } from "../shared/ClienteSearch";
 import { formatCurrencyInput, getErrorMessage, money, parseCurrencyInput } from "../shared/utils";
 import type { Cliente, ClienteDetalle, AbonoFiado, ClienteSearch as ClienteSearchType } from "../types";
 
+function formatDate(d: string) {
+  const date = new Date(d);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "p.m." : "a.m.";
+  hours = hours % 12 || 12;
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+}
+
 export function ClientesPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -104,69 +116,94 @@ export function ClientesPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Nombre</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Teléfono</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Deuda total</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Ventas pendientes</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clientesQ.isLoading && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-pos-muted">
-                  Cargando...
-                </td>
-              </tr>
-            )}
-            {clientesQ.isError && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-red-600">
-                  {getErrorMessage(clientesQ.error)}
-                </td>
-              </tr>
-            )}
-            {clientesQ.data && filteredClientes.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-pos-muted">
-                  No hay clientes registrados
-                </td>
-              </tr>
-            )}
-            {filteredClientes.map((cliente) => (
-              <tr key={cliente.id} className="border-t border-pos-border">
-                <td className="px-3 py-2">{cliente.nombre}</td>
-                <td className="px-3 py-2 font-mono text-sm">{cliente.telefono}</td>
-                <td className={`px-3 py-2 text-right font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {money.format(cliente.deudaTotal)}
-                </td>
-                <td className="px-3 py-2 text-right">{cliente.ventasPendientes}</td>
-                <td className="px-3 py-2 text-center">
-                  <button
-                    className="btn-ghost text-xs"
-                    onClick={() => {
-                      // Usar el query para obtener el detalle y evitar llamadas duplicadas
-                      setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle);
-                    }}
-                  >
-                    Ver detalle
-                  </button>
-                  {cliente.deudaTotal > 0 && (
-                    <button
-                      className="btn-ghost text-xs text-green-600"
-                      onClick={() => setShowAbono(cliente)}
-                    >
-                      Registrar abono
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {clientesQ.isLoading && (
+          <p className="px-3 py-8 text-center text-pos-muted">Cargando...</p>
+        )}
+        {clientesQ.isError && (
+          <p className="px-3 py-8 text-center text-red-600">{getErrorMessage(clientesQ.error)}</p>
+        )}
+        {clientesQ.data && filteredClientes.length === 0 && (
+          <p className="px-3 py-8 text-center text-pos-muted">No hay clientes registrados</p>
+        )}
+        {filteredClientes.length > 0 && (
+          <>
+            <div className="grid gap-2 p-3 md:hidden">
+              {filteredClientes.map((cliente) => (
+                <div key={cliente.id} className="rounded-xl border border-pos-border p-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold">{cliente.nombre}</p>
+                      <p className="font-mono text-sm text-pos-muted">{cliente.telefono}</p>
+                    </div>
+                    <p className={`font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
+                      {money.format(cliente.deudaTotal)}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-xs text-pos-muted">{cliente.ventasPendientes} ventas pendientes</p>
+                    <div className="flex gap-1">
+                      <button
+                        className="btn-ghost text-xs"
+                        onClick={() => setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle)}
+                      >
+                        Ver detalle
+                      </button>
+                      {cliente.deudaTotal > 0 && (
+                        <button
+                          className="btn-ghost text-xs text-green-600"
+                          onClick={() => setShowAbono(cliente)}
+                        >
+                          Abono
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <table className="hidden w-full md:table">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Nombre</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Teléfono</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Deuda total</th>
+                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Ventas pendientes</th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClientes.map((cliente) => (
+                  <tr key={cliente.id} className="border-t border-pos-border">
+                    <td className="px-3 py-2">{cliente.nombre}</td>
+                    <td className="px-3 py-2 font-mono text-sm">{cliente.telefono}</td>
+                    <td className={`px-3 py-2 text-right font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
+                      {money.format(cliente.deudaTotal)}
+                    </td>
+                    <td className="px-3 py-2 text-right">{cliente.ventasPendientes}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        className="btn-ghost text-xs"
+                        onClick={() => {
+                          setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle);
+                        }}
+                      >
+                        Ver detalle
+                      </button>
+                      {cliente.deudaTotal > 0 && (
+                        <button
+                          className="btn-ghost text-xs text-green-600"
+                          onClick={() => setShowAbono(cliente)}
+                        >
+                          Registrar abono
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
       {showNuevoCliente && (
@@ -225,7 +262,7 @@ export function ClientesPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-semibold">Venta #{v.id}</p>
-                              <p className="text-xs text-pos-muted">{new Date(v.fecha).toLocaleString()}</p>
+                              <p className="text-xs text-pos-muted">{formatDate(v.fecha)}</p>
                             </div>
                             <div className="text-right">
                               <p className="font-semibold">{money.format(v.total)}</p>
@@ -247,7 +284,7 @@ export function ClientesPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-semibold">{money.format(a.monto)}</p>
-                              <p className="text-xs text-pos-muted">{new Date(a.fecha).toLocaleString()}</p>
+                              <p className="text-xs text-pos-muted">{formatDate(a.fecha)}</p>
                               <p className="text-xs text-pos-muted">{a.formaPago}</p>
                             </div>
                             <div className="text-right">
@@ -339,7 +376,10 @@ export function ClientesPage() {
                 )}
               </div>
             </div>
-            <div className="mt-4 flex gap-2">
+              {abonoM.isError && (
+                <p className="text-sm text-red-600">{getErrorMessage(abonoM.error)}</p>
+              )}
+              <div className="mt-4 flex gap-2">
               <button className="btn-ghost flex-1" onClick={() => setShowAbono(null)}>
                 Cancelar
               </button>

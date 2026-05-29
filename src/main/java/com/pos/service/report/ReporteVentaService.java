@@ -93,8 +93,8 @@ public class ReporteVentaService {
             }
         }
 
-        BigDecimal totalEfectivo = calculosFinancierosService.sumarRecaudoTotal(turnosCerrados, MedioFinanciero.EFECTIVO);
-        BigDecimal totalTransferencia = calculosFinancierosService.sumarRecaudoTotal(turnosCerrados, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal totalEfectivo = calculosFinancierosService.sumarRecaudoPorPeriodo(inicio, fin, MedioFinanciero.EFECTIVO);
+        BigDecimal totalTransferencia = calculosFinancierosService.sumarRecaudoPorPeriodo(inicio, fin, MedioFinanciero.TRANSFERENCIA);
 
         List<VentaResponseDTO> ventasDTO = ventas.stream()
                 .map(ventaService::construirRespuesta)
@@ -102,7 +102,7 @@ public class ReporteVentaService {
 
         List<AbonoFiado> abonosPeriodo = abonoFiadoRepository.findByFechaBetweenOrderByFechaAsc(inicio, fin)
                 .stream()
-                .filter(a -> a.getTurno() != null && cerradosIds.contains(a.getTurno().getId()))
+                .filter(a -> a.getTurno() == null || cerradosIds.contains(a.getTurno().getId()))
                 .toList();
         for (AbonoFiado a : abonosPeriodo) {
             BigDecimal monto = a.getMonto() != null ? a.getMonto() : BigDecimal.ZERO;
@@ -131,6 +131,7 @@ public class ReporteVentaService {
         reporte.setTotalMontoFiado(totalMontoFiado);
         reporte.setCarteraGenerada(totalMontoFiado);
         reporte.setCarteraPendiente(carteraPendiente);
+        reporte.setCarteraPendienteTotal(ventaRepository.sumarCarteraPendienteTotal());
         reporte.setRecaudoReal(totalEfectivo.add(totalTransferencia));
         reporte.setVentas(ventasDTO);
 

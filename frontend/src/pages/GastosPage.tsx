@@ -4,15 +4,23 @@ import { posApi } from "../shared/api/posApi";
 import { useTurnoStore } from "../shared/store/turnoStore";
 import { useAuthStore } from "../shared/store/authStore";
 import { getErrorMessage, money } from "../shared/utils";
+import { DateRangePicker } from "../shared/DateRangePicker";
+
+function toYmd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function todayYmd() {
-  return new Date().toISOString().slice(0, 10);
+  return toYmd(new Date());
 }
 
 function monthStartYmd() {
   const d = new Date();
   d.setDate(1);
-  return d.toISOString().slice(0, 10);
+  return toYmd(d);
 }
 
 function parseMoneyInput(value: string) {
@@ -34,6 +42,18 @@ function sanitizePesoInput(value: string) {
     return { nextValue: null, error: "Solo se permiten numeros enteros" };
   }
   return { nextValue: normalized, error: "" };
+}
+
+function formatDate(d: string) {
+  const date = new Date(d);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "p.m." : "a.m.";
+  hours = hours % 12 || 12;
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
 }
 
 function resolvePagoLabel(montoEfectivo: number, montoTransferencia: number) {
@@ -331,15 +351,12 @@ export function GastosPage() {
           {esAdmin ? "Historial de gastos" : "Historial de gastos de caja"}
         </h3>
         {esAdmin && (
-          <div className="mb-3 grid gap-2 md:grid-cols-2">
-            <label className="text-sm">
-              Fecha inicio
-              <input className="input mt-1" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-            </label>
-            <label className="text-sm">
-              Fecha fin
-              <input className="input mt-1" type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
-            </label>
+          <div className="mb-3 grid gap-3 md:grid-cols-2">
+            <DateRangePicker fi={fechaInicio} ff={fechaFin} onRangeChange={(fi, ff) => { setFechaInicio(fi); setFechaFin(ff); }} />
+            <div className="flex flex-col items-center justify-center rounded-xl border border-red-100 bg-red-50 px-9 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-red-600">Total gastos</p>
+              <p className="text-base font-bold text-red-800 -mt-0.5">{money.format(historialData.reduce((sum, g) => sum + g.monto, 0))}</p>
+            </div>
           </div>
         )}
         {historialLoading && <p className="text-sm text-pos-muted">Cargando gastos...</p>}
@@ -353,12 +370,12 @@ export function GastosPage() {
             <div className="grid gap-2 md:hidden">
               {historialData.map((g) => (
                 <div key={`${g.origen}-${g.id}`} className="rounded-xl border border-pos-border p-3">
-                  <p className="text-xs text-pos-muted">{new Date(g.fecha).toLocaleString()}</p>
+                  <p className="text-xs text-pos-muted">{formatDate(g.fecha)}</p>
                   {esAdmin && <p className="text-xs">Origen: {g.origen}</p>}
                   {esAdmin && <p className="text-xs">Tipo: {g.tipoNombre}</p>}
-                  <p className="text-xs">Pago: {g.pagoLabel}</p>
+                  <p className="text-xs font-medium">{g.pagoLabel}</p>
                   <p className="text-xs text-pos-muted">{g.pagoDetalle}</p>
-                  <p className="font-semibold text-red-700">{money.format(g.monto)}</p>
+                  <p className="font-semibold text-pos-text">{money.format(g.monto)}</p>
                   <p className="text-sm">{g.descripcion}</p>
                   {esAdmin && (
                     <div className="mt-2">
@@ -383,7 +400,7 @@ export function GastosPage() {
                     {esAdmin && <th className="p-2 text-left">Origen</th>}
                     {esAdmin && <th className="p-2 text-left">Tipo de gasto</th>}
                     <th className="p-2 text-left">Pago</th>
-                    <th className="p-2 text-left">Monto</th>
+                    <th className="p-2 text-right">Monto</th>
                     <th className="p-2 text-left">Concepto / Descripcion</th>
                     {esAdmin && <th className="p-2 text-left">Acciones</th>}
                   </tr>
@@ -391,14 +408,14 @@ export function GastosPage() {
                 <tbody>
                   {historialData.map((g) => (
                     <tr key={`${g.origen}-${g.id}`} className="border-b border-pos-border/70">
-                      <td className="p-2">{new Date(g.fecha).toLocaleString()}</td>
+                      <td className="p-2 whitespace-nowrap">{formatDate(g.fecha)}</td>
                       {esAdmin && <td className="p-2">{g.origen}</td>}
                       {esAdmin && <td className="p-2">{g.tipoNombre}</td>}
                       <td className="p-2">
-                        <div className="font-medium">{g.pagoLabel}</div>
+                        <div className="mb-0.5 font-medium">{g.pagoLabel}</div>
                         <div className="text-xs text-pos-muted">{g.pagoDetalle}</div>
                       </td>
-                      <td className="p-2 font-semibold text-red-700">{money.format(g.monto)}</td>
+                      <td className="p-2 text-right font-semibold text-pos-text">{money.format(g.monto)}</td>
                       <td className="p-2">{g.descripcion}</td>
                       {esAdmin && (
                         <td className="whitespace-nowrap p-2">
