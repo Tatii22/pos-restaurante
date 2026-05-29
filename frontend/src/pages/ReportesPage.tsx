@@ -178,7 +178,7 @@ export function ReportesPage() {
     if (!r) return [];
     const list: { icon: string; text: string; color: string }[] = [];
     const abonos = r.totalAbonos ?? 0;
-    const cartera = r.carteraPendiente ?? 0;
+    const cartera = r.carteraPendienteTotal ?? 0;
     if (abonos > 0) list.push({ icon: "✅", text: `Recuperaste ${money.format(abonos)} en pagos de deudas`, color: "text-emerald-700" });
     if (cartera > 0) list.push({ icon: "⚠️", text: `Hay ${money.format(cartera)} pendientes por cobrar`, color: "text-amber-700" });
     if (!cartera && !abonos && (r.totalVentas ?? 0) > 0) list.push({ icon: "📈", text: "Buen movimiento de ventas este período", color: "text-blue-700" });
