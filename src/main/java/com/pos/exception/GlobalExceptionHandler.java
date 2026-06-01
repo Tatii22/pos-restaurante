@@ -1,6 +1,7 @@
 package com.pos.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -150,6 +151,28 @@ public class GlobalExceptionHandler {
                 "La solicitud tiene un formato invalido",
                 request.getRequestURI(),
                 null
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
+            ConstraintViolationException ex,
+            HttpServletRequest request
+    ) {
+        Map<String, String> errores = new LinkedHashMap<>();
+        ex.getConstraintViolations().forEach(violation ->
+                errores.put(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage()
+                )
+        );
+
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Error de validación",
+                request.getRequestURI(),
+                errores
         );
     }
 

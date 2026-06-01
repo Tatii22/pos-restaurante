@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Plus, Search, X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
@@ -28,6 +28,14 @@ export function ClientesPage() {
   const [abonoEfectivo, setAbonoEfectivo] = useState("0");
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
   const [abonoObservacion, setAbonoObservacion] = useState("");
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoTelefono, setNuevoTelefono] = useState("");
@@ -87,11 +95,10 @@ export function ClientesPage() {
       setAbonoObservacion("");
       qc.invalidateQueries({ queryKey: ["clientes-page"] });
       qc.invalidateQueries({ queryKey: ["cliente-detalle"] });
-      // Mostrar cambio si el servidor lo informa
       if (data.cambioEfectivo && data.cambioEfectivo > 0) {
-        window.alert(
-          `✅ Abono registrado correctamente.\n💵 Devolver al cliente: ${data.cambioEfectivo.toLocaleString("es-CO")}`
-        );
+        setSuccessMsg(`Abono registrado. Devolver al cliente: ${money.format(data.cambioEfectivo)}`);
+        if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        successTimerRef.current = setTimeout(() => setSuccessMsg(null), 4000);
       }
     }
   });
@@ -124,6 +131,11 @@ export function ClientesPage() {
 
   return (
     <div className="grid gap-4">
+      {successMsg && (
+        <div className="fixed right-4 top-20 z-50 rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 shadow-pos">
+          {successMsg}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes frecuentes</h1>
         <button className="btn-primary" onClick={() => setShowNuevoCliente(true)}>

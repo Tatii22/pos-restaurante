@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
@@ -276,6 +276,21 @@ export function VentasPage() {
   const [direccionEditadaManual, setDireccionEditadaManual] = useState(false);
   const [clienteResuelto, setClienteResuelto] = useState(false); // true cuando se autocompletó un cliente por teléfono o selección de nombre
 
+  const mountedRef = useRef(true);
+  const successToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stockWarnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const validationWarnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
+      if (stockWarnTimerRef.current) clearTimeout(stockWarnTimerRef.current);
+      if (validationWarnTimerRef.current) clearTimeout(validationWarnTimerRef.current);
+    };
+  }, []);
+
   const productsMetaEnabled = role === "CAJA";
   const catalogQ = useQuery({ queryKey: ["catalogo-hoy"], queryFn: () => posApi.catalogoHoy() });
   const productsQ = useQuery({
@@ -313,8 +328,11 @@ export function VentasPage() {
       setTransferAmount("0");
       setCashAmount("0");
       setCheckoutMode("SALON");
+      if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
       setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 2200);
+      successToastTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setShowSuccessToast(false);
+      }, 2200);
       qc.invalidateQueries({ queryKey: ["catalogo-hoy"] });
       qc.invalidateQueries({ queryKey: ["inventario-ventas"] });
       qc.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
@@ -395,8 +413,11 @@ export function VentasPage() {
       const maxStock = typeof product.stockActual === "number" ? product.stockActual : Number.MAX_SAFE_INTEGER;
       const currentQty = existing?.cantidad ?? 0;
       if (maxStock <= 0 || currentQty >= maxStock) {
+        if (stockWarnTimerRef.current) clearTimeout(stockWarnTimerRef.current);
         setStockWarn(`No hay mas stock para ${product.nombre}`);
-        setTimeout(() => setStockWarn(null), 2000);
+        stockWarnTimerRef.current = setTimeout(() => {
+          if (mountedRef.current) setStockWarn(null);
+        }, 2000);
         return prev;
       }
       if (!existing) {
@@ -451,14 +472,16 @@ export function VentasPage() {
           }
 
           setClienteResuelto(true); // Cliente resuelto por teléfono → bloquear input de teléfono
-          setTimeout(() => setIsAutoFilling(false), 70);
+          setTimeout(() => { if (mountedRef.current) setIsAutoFilling(false); }, 70);
         }
       } catch {
         /* silencioso para no romper flujo de caja */
       }
     }, 350);
 
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+    };
   }, [telefono, isAutoFilling]); // Nota: intencionalmente NO depende de 'direccion' para evitar re-autocompletados mientras el usuario edita manualmente
 
   // Handlers que marcan edición manual (evitan loops de auto-fill)
@@ -495,7 +518,7 @@ export function VentasPage() {
 
     setClienteResuelto(true); // Cliente resuelto por selección de nombre → bloquear teléfono
     setShowNameSuggestions(false);
-    setTimeout(() => setIsAutoFilling(false), 70);
+    setTimeout(() => { if (mountedRef.current) setIsAutoFilling(false); }, 70);
   }
 
   const telefonoLimpio = telefono.trim();
@@ -508,8 +531,11 @@ export function VentasPage() {
 
   function showValidationWarns(messages: string[]) {
     if (!messages.length) return;
+    if (validationWarnTimerRef.current) clearTimeout(validationWarnTimerRef.current);
     setValidationWarns(messages);
-    setTimeout(() => setValidationWarns([]), 3200);
+    validationWarnTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) setValidationWarns([]);
+    }, 3200);
   }
 
   function getCheckoutValidationMessages(forDomi: boolean): string[] {
@@ -628,9 +654,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
         await createSale.mutateAsync(buildSalePayload(transfer, cash));
       } catch (err: any) {
         console.error("Error al registrar venta fiada:", err);
-        const apiErr = err?.response?.data;
-        const errorMsg = apiErr?.message || apiErr?.error || "Error al registrar la venta fiada. Intenta de nuevo.";
-        setValidationWarns([errorMsg]);
+        setValidationWarns([getErrorMessage(err)]);
       }
       return;
     }
@@ -777,7 +801,7 @@ function buildSalePayload(transferValue: number, cashValue: number) {
                 value={clienteNombre}
                 onChange={(e) => handleNombreChange(e.target.value)}
                 onFocus={() => setShowNameSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 180)}
+                onBlur={() => setTimeout(() => { if (mountedRef.current) setShowNameSuggestions(false); }, 180)}
                 placeholder="Ej: Juan Perez"
                 maxLength={60}
               />
@@ -1085,20 +1109,31 @@ function buildSalePayload(transferValue: number, cashValue: number) {
       )}
 
       {showSuccessToast && (
-        <div className="fixed right-4 top-20 z-50 rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 shadow-pos">
-          Venta exitosa
+        <div className="fixed right-4 top-20 z-50 flex items-center gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 shadow-pos">
+          <span>Venta exitosa</span>
+          <button className="ml-auto btn-ghost p-0.5" onClick={() => setShowSuccessToast(false)}>
+            <BsXLg size={12} />
+          </button>
         </div>
       )}
 
       {stockWarn && (
-        <div className="fixed right-4 top-36 z-50 rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700 shadow-pos">
-          {stockWarn}
+        <div className="fixed right-4 top-36 z-50 flex items-center gap-3 rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-700 shadow-pos">
+          <span>{stockWarn}</span>
+          <button className="ml-auto btn-ghost p-0.5" onClick={() => setStockWarn(null)}>
+            <BsXLg size={12} />
+          </button>
         </div>
       )}
 
       {validationWarns.length > 0 && (
         <div className="fixed right-4 top-52 z-50 max-w-md rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-700 shadow-pos">
-          <p className="font-semibold">No se puede continuar por estas validaciones:</p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold">No se puede continuar por estas validaciones:</p>
+            <button className="btn-ghost p-0.5 shrink-0" onClick={() => setValidationWarns([])}>
+              <BsXLg size={12} />
+            </button>
+          </div>
           <ul className="mt-1 list-disc pl-5">
             {validationWarns.map((message) => (
               <li key={message}>{message}</li>

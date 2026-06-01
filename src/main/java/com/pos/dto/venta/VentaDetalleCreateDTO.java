@@ -10,6 +10,6 @@ public record VentaDetalleCreateDTO(
         @NotNull(message = "La cantidad es obligatoria")
         @Positive(message = "La cantidad debe ser mayor a 0")
         Integer cantidad,
-        @Size(max = 255, message = "La observacion no puede superar 255 caracteres")
+        @Size(max = 255, message = "La observación no puede superar 255 caracteres")
         String observacion
 ) {}

@@ -7,9 +7,9 @@ public record AdminConfigDTO(
         String negocioNombre,
         @Size(max = 30, message = "El NIT no puede superar 30 caracteres")
         String negocioNit,
-        @Size(max = 20, message = "El telefono no puede superar 20 caracteres")
+        @Size(max = 20, message = "El teléfono no puede superar 20 caracteres")
         String negocioTelefono,
-        @Size(max = 120, message = "La direccion no puede superar 120 caracteres")
+        @Size(max = 120, message = "La dirección no puede superar 120 caracteres")
         String negocioDireccion,
         @Size(max = 100, message = "El encabezado del ticket no puede superar 100 caracteres")
         String ticketEncabezado,
@@ -17,7 +17,7 @@ public record AdminConfigDTO(
         String ticketPie,
         boolean imprimirFacturaAuto,
         boolean imprimirCocinaAuto,
-        @Size(max = 10, message = "El tamanio de fuente no puede superar 10 caracteres")
+        @Size(max = 10, message = "El tamaño de fuente no puede superar 10 caracteres")
         String tamanoFuenteTicket
 ) {
 }

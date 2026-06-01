@@ -23,9 +23,9 @@ public record VentaCreateDTO(
         // Datos cliente (solo obligatorios en DOMICILIO)
         @Size(max = 60, message = "El nombre del cliente no puede superar 60 caracteres")
         String clienteNombre,
-        @Size(max = 15, message = "El telefono no puede superar 15 caracteres")
+        @Size(max = 15, message = "El teléfono no puede superar 15 caracteres")
         String telefono,
-        @Size(max = 120, message = "La direccion no puede superar 120 caracteres")
+        @Size(max = 120, message = "La dirección no puede superar 120 caracteres")
         String direccion,
         Boolean fiado,
         Long clienteId,
