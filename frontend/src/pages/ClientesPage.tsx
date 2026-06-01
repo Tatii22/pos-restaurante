@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HandCoins, Plus, Search, X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
@@ -23,7 +23,7 @@ export function ClientesPage() {
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
   const [showDetalle, setShowDetalle] = useState<ClienteDetalle | null>(null);
   const [showAbono, setShowAbono] = useState<Cliente | null>(null);
-  const [soloConDeuda, setSoloConDeuda] = useState(true);
+  const [soloConDeuda, setSoloConDeuda] = useState(false);
 
   const [abonoEfectivo, setAbonoEfectivo] = useState("0");
   const [abonoTransferencia, setAbonoTransferencia] = useState("0");
@@ -96,11 +96,24 @@ export function ClientesPage() {
     }
   });
 
-  const filteredClientes = (clientesQ.data || []).filter(
-    (d) =>
-      d.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      d.telefono.includes(search)
-  );
+  const filteredClientes = (clientesQ.data || [])
+    .filter(
+      (d) =>
+        d.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        d.telefono.includes(search)
+    )
+    .sort((a, b) => {
+      if (a.deudaTotal > 0 && b.deudaTotal === 0) return -1;
+      if (a.deudaTotal === 0 && b.deudaTotal > 0) return 1;
+      return 0;
+    });
+
+  useEffect(() => {
+    if (showDetalle) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [showDetalle]);
 
   function formatCurrencyChange(setter: (value: string) => void) {
     return (value: string) => {
@@ -123,21 +136,22 @@ export function ClientesPage() {
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-pos-muted" />
           <input
-            className="input pl-9"
+            className="input pl-9 h-10"
             placeholder="Buscar por nombre o teléfono..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <button
-          className={soloConDeuda ? "btn-soft" : "btn-ghost"}
+          className={`btn-ghost h-10 px-5 gap-2 ${soloConDeuda ? "bg-pos-accentSoft text-pos-forest" : ""}`}
           onClick={() => setSoloConDeuda(!soloConDeuda)}
         >
+          {soloConDeuda && <span>✓</span>}
           Solo con deuda
         </button>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden mt-6">
         {clientesQ.isLoading && (
           <p className="px-3 py-8 text-center text-pos-muted">Cargando...</p>
         )}
@@ -186,39 +200,39 @@ export function ClientesPage() {
             <table className="hidden w-full md:table">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Nombre</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-pos-muted">Teléfono</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Deuda total</th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-pos-muted">Ventas pendientes</th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
+                  <th className="pl-6 pr-4 py-3 text-left text-xs font-semibold uppercase text-pos-muted">Nombre</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-pos-muted">Teléfono</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-pos-muted">Deuda total</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-pos-muted">Ventas pendientes</th>
+                  <th className="pl-4 pr-6 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredClientes.map((cliente) => (
                   <tr key={cliente.id} className="border-t border-pos-border">
-                    <td className="px-3 py-2">{cliente.nombre}</td>
-                    <td className="px-3 py-2 font-mono text-sm">{cliente.telefono}</td>
-                    <td className={`px-3 py-2 text-right font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
+                    <td className="py-4 pl-6 pr-4">{cliente.nombre}</td>
+                    <td className="py-4 px-4 font-mono text-sm text-right">{cliente.telefono}</td>
+                    <td className={`py-4 px-4 text-right font-semibold ${cliente.deudaTotal > 0 ? "text-red-600" : "text-green-600"}`}>
                       {money.format(cliente.deudaTotal)}
                     </td>
-                    <td className="px-3 py-2 text-right">{cliente.ventasPendientes}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        className="btn-ghost text-xs"
-                        onClick={() => {
-                          setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle);
-                        }}
-                      >
-                        Ver detalle
-                      </button>
-                      {cliente.deudaTotal > 0 && (
+                    <td className="py-4 px-4 text-right">{cliente.ventasPendientes}</td>
+                    <td className="py-4 pl-4 pr-6 text-center">
+                      <div className="flex items-center justify-center gap-x-3">
                         <button
-                          className="btn-ghost text-xs text-green-600"
+                          className="btn-ghost min-w-[120px] px-4 py-1.5 text-xs"
+                          onClick={() => {
+                            setShowDetalle({ id: cliente.id, nombre: cliente.nombre, telefono: cliente.telefono, deudaTotal: cliente.deudaTotal, ventasPendientes: [], abonos: [] } as ClienteDetalle);
+                          }}
+                        >
+                          Ver detalle
+                        </button>
+                        <button
+                          className={`btn-ghost min-w-[120px] px-4 py-1.5 text-xs text-green-600 ${cliente.deudaTotal > 0 ? '' : 'invisible pointer-events-none'}`}
                           onClick={() => setShowAbono(cliente)}
                         >
                           Registrar abono
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -282,7 +296,7 @@ export function ClientesPage() {
 
       {showDetalle && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="card w-full max-w-2xl max-h-[90vh] overflow-auto p-5">
+          <div className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Detalle de {showDetalle.nombre}</h3>
               <button className="btn-ghost p-1" onClick={() => setShowDetalle(null)}>
@@ -310,8 +324,8 @@ export function ClientesPage() {
                               <p className="text-xs text-pos-muted">{formatDate(v.fecha)}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold">{money.format(v.total)}</p>
-                              <p className="text-xs text-orange-600">Pendiente: {money.format(v.saldoPendiente || 0)}</p>
+                              <p className="text-sm text-pos-muted">{money.format(v.total)}</p>
+                              <p className="text-xs font-semibold text-orange-600">Pendiente: {money.format(v.saldoPendiente || 0)}</p>
                             </div>
                           </div>
                         </div>
@@ -344,7 +358,7 @@ export function ClientesPage() {
                 )}
               </div>
             )}
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-end pb-1">
               <button className="btn-ghost" onClick={() => setShowDetalle(null)}>
                 Cerrar
               </button>
@@ -374,19 +388,21 @@ export function ClientesPage() {
               <label className="text-sm">
                 Efectivo
                 <input
-                  className="input mt-1"
+                  className="input mt-1 border-gray-200"
                   value={formatCurrencyInput(abonoEfectivo)}
                   onChange={(e) => formatCurrencyChange(setAbonoEfectivo)(e.target.value)}
                   inputMode="numeric"
+                  placeholder="$ 0"
                 />
               </label>
               <label className="text-sm">
                 Transferencia
                 <input
-                  className={`input mt-1 ${transferenciaExcede ? "border-red-400" : ""}`}
+                  className={`input mt-1 border-gray-200 ${transferenciaExcede ? "border-red-400" : ""}`}
                   value={formatCurrencyInput(abonoTransferencia)}
                   onChange={(e) => formatCurrencyChange(setAbonoTransferencia)(e.target.value)}
                   inputMode="numeric"
+                  placeholder="$ 0"
                 />
                 {transferenciaExcede && (
                   <p className="mt-1 text-xs text-red-600">
@@ -397,17 +413,17 @@ export function ClientesPage() {
               <label className="text-sm">
                 Observación (opcional)
                 <input
-                  className="input mt-1"
+                  className="input mt-1 border-gray-200"
                   value={abonoObservacion}
                   onChange={(e) => setAbonoObservacion(e.target.value)}
                   placeholder="Nota sobre el abono"
                 />
               </label>
               {/* Resumen en tiempo real */}
-              <div className="rounded-lg border border-pos-border bg-gray-50 p-3 text-sm space-y-1">
+              <div className="rounded-lg border border-pos-border bg-slate-50 p-3 text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-pos-muted">Abono que se aplica</span>
-                  <span className="font-semibold">
+                  <span className="font-bold text-slate-700">
                     {money.format(efectivoAplicadoEst + abonoTransferenciaNum)}
                   </span>
                 </div>
@@ -425,7 +441,7 @@ export function ClientesPage() {
                 <p className="text-sm text-red-600">{getErrorMessage(abonoM.error)}</p>
               )}
               <div className="mt-4 flex gap-2">
-              <button className="btn-ghost flex-1" onClick={() => setShowAbono(null)}>
+              <button className="btn-ghost flex-1 text-slate-600" onClick={() => setShowAbono(null)}>
                 Cancelar
               </button>
               <button

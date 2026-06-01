@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BsPencilSquare, BsToggleOff, BsToggleOn, BsTrash3 } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage } from "../shared/utils";
+import { CustomSelect } from "../shared/CustomSelect";
 
 type EditState = {
   id: number;
@@ -131,10 +132,15 @@ export function UsuariosPage() {
 
         <label className="text-sm">
           Rol
-          <select className="input mt-1" value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
-            <option value="CAJA">CAJA</option>
-            <option value="DOMI">DOMI</option>
-          </select>
+          <CustomSelect
+            value={form.rol}
+            onChange={(v) => setForm({ ...form, rol: v })}
+            options={[
+              { value: "CAJA", label: "CAJA" },
+              { value: "DOMI", label: "DOMI" }
+            ]}
+            className="mt-1"
+          />
         </label>
 
         <div className="flex items-end">
@@ -204,33 +210,26 @@ export function UsuariosPage() {
         </div>
       </div>
 
-      <div className="card hidden overflow-x-auto pl-5 pr-2 py-2 md:block">
-        <table className="w-full min-w-[760px] table-fixed text-sm">
-          <colgroup>
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "38%" }} />
-            <col style={{ width: "14%" }} />
-            <col style={{ width: "14%" }} />
-            <col style={{ width: "24%" }} />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-pos-border">
-              <th className="p-2 text-left">ID</th>
-              <th className="p-2 text-left">Usuario</th>
-              <th className="p-2 text-left">Rol</th>
-              <th className="p-2 text-left">Estado</th>
-              <th className="p-2 text-center">Acciones</th>
+      <div className="card hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="pl-6 pr-4 py-3 text-left text-xs font-semibold uppercase text-pos-muted">ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-pos-muted">Usuario</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Rol</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Estado</th>
+              <th className="pl-4 pr-6 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {usuariosFiltrados.map((u) => (
-              <tr key={u.id} className="border-b border-pos-border/70">
-                <td className="p-2">{u.id}</td>
-                <td className="truncate p-1.5" title={u.username}>{u.username}</td>
-                <td className="p-2">{u.rol}</td>
-                <td className="p-2">{u.activo ? "Activo" : "Inactivo"}</td>
-                <td className="p-2 whitespace-nowrap">
-                  <div className="flex items-center justify-center gap-1">
+              <tr key={u.id} className="border-t border-pos-border">
+                <td className="py-4 pl-6 pr-4">{u.id}</td>
+                <td className="py-4 px-4 truncate" title={u.username}>{u.username}</td>
+                <td className="py-4 px-4 text-center">{u.rol}</td>
+                <td className="py-4 px-4 text-center">{u.activo ? "Activo" : "Inactivo"}</td>
+                <td className="py-4 pl-4 pr-6 text-center whitespace-nowrap">
+                  <div className="flex items-center justify-center gap-4">
                     <button
                       className="btn-ghost inline-flex h-7 w-7 items-center justify-center p-0"
                       title="Editar usuario"
@@ -297,10 +296,15 @@ export function UsuariosPage() {
             </label>
             <label className="text-sm">
               Rol
-              <select className="input mt-1" value={edit.rol} onChange={(e) => setEdit({ ...edit, rol: e.target.value })}>
-                <option value="CAJA">CAJA</option>
-                <option value="DOMI">DOMI</option>
-              </select>
+              <CustomSelect
+                value={edit.rol}
+                onChange={(v) => setEdit({ ...edit, rol: v })}
+                options={[
+                  { value: "CAJA", label: "CAJA" },
+                  { value: "DOMI", label: "DOMI" }
+                ]}
+                className="mt-1"
+              />
             </label>
             <label className="text-sm">
               Nueva contrasena (opcional)

@@ -1,8 +1,18 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BsPencilSquare, BsToggleOff, BsToggleOn, BsTrash3 } from "react-icons/bs";
+import { BsPencilSquare, BsTrash3 } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
+import { CustomSelect } from "../shared/CustomSelect";
+
+function formatTipo(tipo?: string | null) {
+  if (!tipo) return "-";
+  const map: Record<string, string> = {
+    SIEMPRE_DISPONIBLE: "Siempre disponible",
+    MENU_DIARIO: "Menú diario"
+  };
+  return map[tipo] || tipo;
+}
 
 export function ProductosPage() {
   const qc = useQueryClient();
@@ -132,9 +142,9 @@ export function ProductosPage() {
     <div className="grid gap-4">
       <h2 className="text-2xl font-semibold">Productos</h2>
 
-      <form className="card grid gap-3 p-4 md:grid-cols-5" onSubmit={submit}>
+      <form className="bg-white rounded-2xl shadow-sm p-4 grid gap-3 md:grid-cols-[1fr_140px_160px_160px_260px]" onSubmit={submit}>
         <input
-          className="input"
+          className="input h-11"
           placeholder="Nombre"
           value={form.nombre}
           onChange={(e) => setForm({ ...form, nombre: e.target.value.slice(0, 80) })}
@@ -142,24 +152,30 @@ export function ProductosPage() {
           required
         />
         <input
-          className="input"
+          className="input h-11"
           placeholder="Precio"
           inputMode="numeric"
           value={formatCurrencyInput(form.precio)}
           onChange={(e) => handlePriceChange(e.target.value, (precio) => setForm({ ...form, precio }))}
           required
         />
-        <select className="input" value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })} required>
-          <option value="">Categoria</option>
-          {(categoriesQ.data || []).map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
-          ))}
-        </select>
-        <select className="input" value={form.tipoVenta} onChange={(e) => setForm({ ...form, tipoVenta: e.target.value })}>
-          <option value="MENU_DIARIO">MENU_DIARIO</option>
-          <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
-        </select>
-        <button className="btn-primary" disabled={createM.isPending}>
+        <CustomSelect
+          value={form.categoriaId}
+          onChange={(v) => setForm({ ...form, categoriaId: v })}
+          options={[{ value: "", label: "Categoría" }, ...(categoriesQ.data || []).map((c) => ({ value: String(c.id), label: c.nombre }))]}
+          required
+          className="h-11"
+        />
+        <CustomSelect
+          value={form.tipoVenta}
+          onChange={(v) => setForm({ ...form, tipoVenta: v })}
+          options={[
+            { value: "MENU_DIARIO", label: "Menú diario" },
+            { value: "SIEMPRE_DISPONIBLE", label: "Siempre disponible" }
+          ]}
+          className="h-11"
+        />
+        <button className="btn-primary h-11 border border-pos-accent" disabled={createM.isPending}>
           {createM.isPending ? "Creando..." : "Crear"}
         </button>
       </form>
@@ -167,17 +183,22 @@ export function ProductosPage() {
       <div className="card p-4">
         <div className="grid gap-2 md:grid-cols-[1fr_260px]">
           <input
-            className="input"
-            placeholder="Buscar por nombre, categoria o precio..."
+            className="input h-11"
+            placeholder="Buscar por nombre, categoría o precio..."
             value={buscar}
             onChange={(e) => setBuscar(e.target.value.slice(0, 80))}
             maxLength={80}
           />
-          <select className="input" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value as "ALL" | "MENU_DIARIO" | "SIEMPRE_DISPONIBLE")}>
-            <option value="ALL">Todos los tipos</option>
-            <option value="MENU_DIARIO">MENU_DIARIO</option>
-            <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
-          </select>
+          <CustomSelect
+            value={filtroTipo}
+            onChange={(v) => setFiltroTipo(v as "ALL" | "MENU_DIARIO" | "SIEMPRE_DISPONIBLE")}
+            options={[
+              { value: "ALL", label: "Todos los tipos" },
+              { value: "MENU_DIARIO", label: "Menú diario" },
+              { value: "SIEMPRE_DISPONIBLE", label: "Siempre disponible" }
+            ]}
+            className="h-11"
+          />
         </div>
       </div>
 
@@ -186,12 +207,10 @@ export function ProductosPage() {
           {lista.map((p) => (
             <div key={p.id} className="rounded-xl border border-pos-border p-3">
               <p className="font-semibold">{p.nombre}</p>
-              <p className="text-xs text-pos-muted">ID: {p.id}</p>
               <p className="text-sm">{money.format(p.precio)}</p>
-              <p className="text-sm text-pos-muted">{p.categoriaNombre || "Sin categoria"}</p>
-              <p className="text-xs">{p.tipoVenta || "-"}</p>
-              <p className="text-xs">{p.activo ? "Activo" : "Inactivo"}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <p className="text-sm text-pos-muted">{p.categoriaNombre || "Sin categoría"}</p>
+              <p className="text-xs">{formatTipo(p.tipoVenta)}</p>
+              <div className="mt-2 flex items-center gap-4">
                 <button
                   className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
                   title="Editar producto"
@@ -201,7 +220,15 @@ export function ProductosPage() {
                   <BsPencilSquare size={14} />
                 </button>
                 <button
-                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                  className="inline-flex h-8 w-8 items-center justify-center p-0 text-red-400 hover:text-red-600"
+                  title="Eliminar producto"
+                  aria-label="Eliminar producto"
+                  onClick={() => deleteM.mutate(p.id)}
+                >
+                  <BsTrash3 size={14} />
+                </button>
+                <button
+                  className={`relative h-5 w-9 rounded-full transition-colors flex-shrink-0 ${p.activo ? "bg-green-500" : "bg-gray-300"}`}
                   title={p.activo ? "Desactivar producto" : "Activar producto"}
                   aria-label={p.activo ? "Desactivar producto" : "Activar producto"}
                   onClick={() =>
@@ -215,15 +242,9 @@ export function ProductosPage() {
                     })
                   }
                 >
-                  {p.activo ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
-                </button>
-                <button
-                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0 text-red-600 hover:bg-red-50"
-                  title="Eliminar producto"
-                  aria-label="Eliminar producto"
-                  onClick={() => deleteM.mutate(p.id)}
-                >
-                  <BsTrash3 size={14} />
+                  <span
+                    className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${p.activo ? "translate-x-4" : "translate-x-0"}`}
+                  />
                 </button>
               </div>
             </div>
@@ -233,28 +254,24 @@ export function ProductosPage() {
 
       <div className="card hidden overflow-x-auto md:block">
         <table className="w-full min-w-[920px] text-sm">
-          <thead>
-            <tr className="border-b border-pos-border">
-              <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">Nombre</th>
-              <th className="p-3 text-left">Precio</th>
-              <th className="p-3 text-left">Categoria</th>
-              <th className="p-3 text-left">Tipo</th>
-              <th className="p-3 text-left">Activo</th>
-              <th className="p-3 text-left">Acciones</th>
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="pl-6 pr-4 py-3 text-left text-xs font-semibold uppercase text-pos-muted">Nombre</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Precio</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Categoría</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Tipo</th>
+              <th className="pl-4 pr-6 py-3 text-center text-xs font-semibold uppercase text-pos-muted">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {lista.map((p) => (
-              <tr key={p.id} className="border-b border-pos-border/70">
-                <td className="p-3">{p.id}</td>
-                <td className="p-3">{p.nombre}</td>
-                <td className="p-3">{money.format(p.precio)}</td>
-                <td className="p-3">{p.categoriaNombre || "Sin categoria"}</td>
-                <td className="p-3">{p.tipoVenta || "-"}</td>
-                <td className="p-3">{p.activo ? "Si" : "No"}</td>
-                <td className="p-3 whitespace-nowrap">
-                  <div className="flex gap-2">
+              <tr key={p.id} className="border-t border-pos-border">
+                <td className="py-4 pl-6 pr-4">{p.nombre}</td>
+                <td className="py-4 px-4 text-center font-semibold">{money.format(p.precio)}</td>
+                <td className="py-4 px-4 text-center">{p.categoriaNombre || "Sin categoría"}</td>
+                <td className="py-4 px-4 text-center">{formatTipo(p.tipoVenta)}</td>
+                <td className="py-4 pl-4 pr-6 text-center whitespace-nowrap">
+                  <div className="flex items-center justify-center gap-4">
                     <button
                       className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
                       title="Editar producto"
@@ -264,7 +281,15 @@ export function ProductosPage() {
                       <BsPencilSquare size={14} />
                     </button>
                     <button
-                      className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                      className="inline-flex h-8 w-8 items-center justify-center p-0 text-red-400 hover:text-red-600"
+                      title="Eliminar producto"
+                      aria-label="Eliminar producto"
+                      onClick={() => deleteM.mutate(p.id)}
+                    >
+                      <BsTrash3 size={14} />
+                    </button>
+                    <button
+                      className={`relative h-5 w-9 rounded-full transition-colors flex-shrink-0 ${p.activo ? "bg-green-500" : "bg-gray-300"}`}
                       title={p.activo ? "Desactivar producto" : "Activar producto"}
                       aria-label={p.activo ? "Desactivar producto" : "Activar producto"}
                       onClick={() =>
@@ -278,15 +303,9 @@ export function ProductosPage() {
                         })
                       }
                     >
-                      {p.activo ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
-                    </button>
-                    <button
-                      className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0 text-red-600 hover:bg-red-50"
-                      title="Eliminar producto"
-                      aria-label="Eliminar producto"
-                      onClick={() => deleteM.mutate(p.id)}
-                    >
-                      <BsTrash3 size={14} />
+                      <span
+                        className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${p.activo ? "translate-x-4" : "translate-x-0"}`}
+                      />
                     </button>
                   </div>
                 </td>
@@ -324,25 +343,22 @@ export function ProductosPage() {
               onChange={(e) => handlePriceChange(e.target.value, (precio) => setEditForm({ ...editForm, precio }))}
               required
             />
-            <select
-              className="input"
+            <CustomSelect
               value={editForm.categoriaId}
-              onChange={(e) => setEditForm({ ...editForm, categoriaId: e.target.value })}
+              onChange={(v) => setEditForm({ ...editForm, categoriaId: v })}
+              options={[{ value: "", label: "Categoría" }, ...(categoriesQ.data || []).map((c) => ({ value: String(c.id), label: c.nombre }))]}
               required
-            >
-              <option value="">Categoria</option>
-              {(categoriesQ.data || []).map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-            <select
-              className="input"
+              className="h-11"
+            />
+            <CustomSelect
               value={editForm.tipoVenta}
-              onChange={(e) => setEditForm({ ...editForm, tipoVenta: e.target.value })}
-            >
-              <option value="MENU_DIARIO">MENU_DIARIO</option>
-              <option value="SIEMPRE_DISPONIBLE">SIEMPRE_DISPONIBLE</option>
-            </select>
+              onChange={(v) => setEditForm({ ...editForm, tipoVenta: v })}
+              options={[
+                { value: "MENU_DIARIO", label: "Menú diario" },
+                { value: "SIEMPRE_DISPONIBLE", label: "Siempre disponible" }
+              ]}
+              className="h-11"
+            />
             <label className="inline-flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

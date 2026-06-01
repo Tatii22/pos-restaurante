@@ -5,6 +5,7 @@ import { useTurnoStore } from "../shared/store/turnoStore";
 import { useAuthStore } from "../shared/store/authStore";
 import { getErrorMessage, money } from "../shared/utils";
 import { DateRangePicker } from "../shared/DateRangePicker";
+import { CustomSelect } from "../shared/CustomSelect";
 
 function toYmd(d: Date) {
   const y = d.getFullYear();
@@ -268,19 +269,16 @@ export function GastosPage() {
 
           <label className="text-sm">
             Tipo de gasto
-            <select
-              className="input mt-1"
-              value={tipoGastoId}
-              onChange={(e) => setTipoGastoId(e.target.value ? Number(e.target.value) : "")}
+            <CustomSelect
+              value={String(tipoGastoId)}
+              onChange={(v) => setTipoGastoId(v ? Number(v) : "")}
+              options={[
+                { value: "", label: "Selecciona..." },
+                ...(tiposQ.data || []).map((t) => ({ value: String(t.id), label: t.nombre }))
+              ]}
               disabled={disabled || tiposQ.isLoading}
-            >
-              <option value="">Selecciona...</option>
-              {(tiposQ.data || []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
+              className="mt-1"
+            />
           </label>
 
           <div className="grid gap-3 md:grid-cols-2">

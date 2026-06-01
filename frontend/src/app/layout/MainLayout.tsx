@@ -43,7 +43,7 @@ const items: MenuItem[] = [
   { to: "/categorias", label: "Categorias", roles: ["ADMIN"], icon: <Boxes size={16} /> },
   { to: "/productos", label: "Productos", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/usuarios", label: "Usuarios", roles: ["ADMIN"], icon: <Users size={16} /> },
-  { to: "/configuracion", label: "Configuracion", roles: ["ADMIN"], icon: <Settings size={16} /> }
+  { to: "/configuracion", label: "Configuración", roles: ["ADMIN"], icon: <Settings size={16} /> }
 ];
 
 export function MainLayout() {

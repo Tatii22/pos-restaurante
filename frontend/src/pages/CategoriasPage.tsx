@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BsPencilSquare, BsToggleOff, BsToggleOn, BsTrash3 } from "react-icons/bs";
+import { BsPencilSquare, BsTrash3 } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage } from "../shared/utils";
 
@@ -54,27 +54,27 @@ export function CategoriasPage() {
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-2xl font-semibold">Categorias</h2>
+      <h2 className="text-2xl font-semibold">Categorías</h2>
 
       <form className="card grid gap-3 p-4 md:grid-cols-[1fr_180px]" onSubmit={submitCrear}>
         <input
-          className="input"
-          placeholder="Nombre de categoria"
+          className="input h-11"
+          placeholder="Nombre de categoría"
           value={nombre}
           onChange={(e) => setNombre(e.target.value.slice(0, 60))}
           maxLength={60}
           required
         />
-        <button className="btn-primary" disabled={crearM.isPending || !nombre.trim()}>
-          {crearM.isPending ? "Creando..." : "Crear categoria"}
+        <button className="btn-primary h-11 border border-pos-accent" disabled={crearM.isPending || !nombre.trim()}>
+          {crearM.isPending ? "Creando..." : "Crear categoría"}
         </button>
       </form>
 
       <div className="card p-4">
         <div className="mb-3">
           <input
-            className="input max-w-md"
-            placeholder="Buscar categoria..."
+            className="input w-full"
+            placeholder="Buscar categoría..."
             value={buscar}
             onChange={(e) => setBuscar(e.target.value.slice(0, 60))}
             maxLength={60}
@@ -83,16 +83,16 @@ export function CategoriasPage() {
 
         <div className="grid gap-2">
           {categoriasFiltradas.map((c) => (
-            <div key={c.id} className="grid gap-2 rounded-xl border border-pos-border p-3 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
+            <div key={c.id} className="flex items-center gap-3 rounded-xl border border-pos-border p-3">
               {editandoId === c.id ? (
                 <input
-                  className="input"
+                  className="input flex-1"
                   value={nombreEditar}
                   onChange={(e) => setNombreEditar(e.target.value.slice(0, 60))}
                   maxLength={60}
                 />
               ) : (
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">{c.nombre}</p>
                   <p className="text-xs text-pos-muted">{c.activa ? "Activa" : "Inactiva"}</p>
                 </div>
@@ -107,44 +107,46 @@ export function CategoriasPage() {
                   Guardar
                 </button>
               ) : (
-                <button
-                  className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
-                  title="Editar categoria"
-                  aria-label="Editar categoria"
-                  onClick={() => {
-                    setEditandoId(c.id);
-                    setNombreEditar(c.nombre);
-                  }}
-                >
-                  <BsPencilSquare size={14} />
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
+                    title="Editar categoría"
+                    aria-label="Editar categoría"
+                    onClick={() => {
+                      setEditandoId(c.id);
+                      setNombreEditar(c.nombre);
+                    }}
+                  >
+                    <BsPencilSquare size={14} />
+                  </button>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center p-0 text-red-400 hover:text-red-600"
+                    title="Eliminar categoría"
+                    aria-label="Eliminar categoría"
+                    onClick={() => eliminarM.mutate(c.id)}
+                    disabled={eliminarM.isPending}
+                  >
+                    <BsTrash3 size={14} />
+                  </button>
+                  <button
+                    className={`relative h-5 w-9 rounded-full transition-colors flex-shrink-0 ${c.activa ? "bg-green-500" : "bg-gray-300"}`}
+                    title={c.activa ? "Desactivar categoría" : "Activar categoría"}
+                    aria-label={c.activa ? "Desactivar categoría" : "Activar categoría"}
+                    onClick={() => actualizarM.mutate({ id: c.id, nombre: c.nombre, activa: !c.activa })}
+                    disabled={actualizarM.isPending}
+                  >
+                    <span
+                      className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${c.activa ? "translate-x-4" : "translate-x-0"}`}
+                    />
+                  </button>
+                </div>
               )}
-
-              <button
-                className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0"
-                title={c.activa ? "Desactivar categoria" : "Activar categoria"}
-                aria-label={c.activa ? "Desactivar categoria" : "Activar categoria"}
-                onClick={() => actualizarM.mutate({ id: c.id, nombre: c.nombre, activa: !c.activa })}
-                disabled={actualizarM.isPending}
-              >
-                {c.activa ? <BsToggleOn size={14} /> : <BsToggleOff size={14} />}
-              </button>
-
-              <button
-                className="btn-ghost inline-flex h-8 w-8 items-center justify-center p-0 text-red-600 hover:bg-red-50"
-                title="Eliminar categoria"
-                aria-label="Eliminar categoria"
-                onClick={() => eliminarM.mutate(c.id)}
-                disabled={eliminarM.isPending}
-              >
-                <BsTrash3 size={14} />
-              </button>
             </div>
           ))}
         </div>
 
         {!categoriasQ.isLoading && categoriasFiltradas.length === 0 && (
-          <p className="mt-2 text-sm text-pos-muted">No hay categorias para mostrar.</p>
+          <p className="mt-2 text-sm text-pos-muted">No hay categorías para mostrar.</p>
         )}
       </div>
 

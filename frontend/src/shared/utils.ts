@@ -9,7 +9,7 @@ function formatNumberWithDots(num: number): string {
 
 // money.format() compat - mantiene el nombre por compatibilidad
 export const money = {
-  format: (num: number) => formatNumberWithDots(num)
+  format: (num: number) => `$ ${formatNumberWithDots(num)}`
 };
 
 export function parseCurrencyInput(value: string): number {
