@@ -26,12 +26,16 @@ type TurnoState = {
 export const useTurnoStore = create<TurnoState>((set, get) => ({
   turno: loadTurno(),
   setTurno: (turno) => {
-    if (turno) {
+    // Invariante: solo persis turnos ABIERTO o SIMULADO
+    // Turnos CERRADO se descartan automáticamente
+    if (turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO")) {
       localStorage.setItem(TURN_KEY, JSON.stringify(turno));
+      set({ turno });
     } else {
+      // Si recibe CERRADO o null, limpia el store
       localStorage.removeItem(TURN_KEY);
+      set({ turno: null });
     }
-    set({ turno });
   },
   clearTurno: () => {
     localStorage.removeItem(TURN_KEY);
