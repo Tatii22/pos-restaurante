@@ -775,6 +775,20 @@ public class VentaService {
         return venta;
     }
 
+    public Venta reimprimirFactura(Long ventaId, Usuario usuario) {
+        Venta venta = obtenerPorId(ventaId);
+        imprimirFacturaSeguro(venta);
+        auditService.record("VENTA_FACTURA_REIMPRESA", "Venta", venta.getId(), usuario, venta.getTurno(), null);
+        return venta;
+    }
+
+    public Venta reimprimirTicketCocina(Long ventaId, Usuario usuario) {
+        Venta venta = obtenerPorId(ventaId);
+        imprimirTicketCocinaSeguro(venta);
+        auditService.record("VENTA_COCINA_REIMPRESA", "Venta", venta.getId(), usuario, venta.getTurno(), null);
+        return venta;
+    }
+
     private void devolverInventario(Venta venta) {
         MenuDiario menuActivo = menuDiarioRepository
                 .findByFechaAndActivoTrue(venta.getFecha().toLocalDate())

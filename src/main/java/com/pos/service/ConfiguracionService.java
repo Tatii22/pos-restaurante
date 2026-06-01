@@ -20,7 +20,6 @@ public class ConfiguracionService {
     private static final String DEF_TICKET_PIE = "Vuelve pronto";
     private static final boolean DEF_IMPRIMIR_FACTURA_AUTO = true;
     private static final boolean DEF_IMPRIMIR_COCINA_AUTO = true;
-    private static final String DEF_TAMANO_FUENTE = "NORMAL";
 
     private final JdbcTemplate jdbcTemplate;
     private final AuditService auditService;
@@ -39,7 +38,6 @@ public class ConfiguracionService {
                   ticket_pie VARCHAR(100) NOT NULL,
                   imprimir_factura_auto BOOLEAN NOT NULL,
                   imprimir_cocina_auto BOOLEAN NOT NULL,
-                  tamano_fuente_ticket VARCHAR(10) NOT NULL,
                   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
                 """);
@@ -52,7 +50,7 @@ public class ConfiguracionService {
                 """
                         SELECT negocio_nombre, negocio_nit, negocio_telefono, negocio_direccion,
                                ticket_encabezado, ticket_pie, imprimir_factura_auto,
-                               imprimir_cocina_auto, tamano_fuente_ticket
+                               imprimir_cocina_auto
                           FROM admin_configuracion
                          WHERE id = ?
                         """,
@@ -68,8 +66,7 @@ public class ConfiguracionService {
                             rs.getString("ticket_encabezado"),
                             rs.getString("ticket_pie"),
                             rs.getBoolean("imprimir_factura_auto"),
-                            rs.getBoolean("imprimir_cocina_auto"),
-                            rs.getString("tamano_fuente_ticket")
+                            rs.getBoolean("imprimir_cocina_auto")
                     );
                 },
                 SINGLETON_ID
@@ -84,8 +81,8 @@ public class ConfiguracionService {
                         INSERT INTO admin_configuracion (
                           id, negocio_nombre, negocio_nit, negocio_telefono, negocio_direccion,
                           ticket_encabezado, ticket_pie, imprimir_factura_auto,
-                          imprimir_cocina_auto, tamano_fuente_ticket
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          imprimir_cocina_auto
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
                           negocio_nombre = VALUES(negocio_nombre),
                           negocio_nit = VALUES(negocio_nit),
@@ -94,8 +91,7 @@ public class ConfiguracionService {
                           ticket_encabezado = VALUES(ticket_encabezado),
                           ticket_pie = VALUES(ticket_pie),
                           imprimir_factura_auto = VALUES(imprimir_factura_auto),
-                          imprimir_cocina_auto = VALUES(imprimir_cocina_auto),
-                          tamano_fuente_ticket = VALUES(tamano_fuente_ticket)
+                          imprimir_cocina_auto = VALUES(imprimir_cocina_auto)
                         """,
                 SINGLETON_ID,
                 cfg.negocioNombre(),
@@ -105,8 +101,7 @@ public class ConfiguracionService {
                 cfg.ticketEncabezado(),
                 cfg.ticketPie(),
                 cfg.imprimirFacturaAuto(),
-                cfg.imprimirCocinaAuto(),
-                cfg.tamanoFuenteTicket()
+                cfg.imprimirCocinaAuto()
         );
         auditService.record(
                 "CONFIGURACION_ACTUALIZADA",
@@ -117,8 +112,7 @@ public class ConfiguracionService {
                 null,
                 auditService.change("negocioNombre", anterior.negocioNombre(), cfg.negocioNombre()),
                 auditService.change("imprimirFacturaAuto", anterior.imprimirFacturaAuto(), cfg.imprimirFacturaAuto()),
-                auditService.change("imprimirCocinaAuto", anterior.imprimirCocinaAuto(), cfg.imprimirCocinaAuto()),
-                auditService.change("tamanoFuenteTicket", anterior.tamanoFuenteTicket(), cfg.tamanoFuenteTicket())
+                auditService.change("imprimirCocinaAuto", anterior.imprimirCocinaAuto(), cfg.imprimirCocinaAuto())
         );
         return cfg;
     }
@@ -138,8 +132,8 @@ public class ConfiguracionService {
                         INSERT INTO admin_configuracion (
                           id, negocio_nombre, negocio_nit, negocio_telefono, negocio_direccion,
                           ticket_encabezado, ticket_pie, imprimir_factura_auto,
-                          imprimir_cocina_auto, tamano_fuente_ticket
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          imprimir_cocina_auto
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 SINGLETON_ID,
                 d.negocioNombre(),
@@ -149,8 +143,7 @@ public class ConfiguracionService {
                 d.ticketEncabezado(),
                 d.ticketPie(),
                 d.imprimirFacturaAuto(),
-                d.imprimirCocinaAuto(),
-                d.tamanoFuenteTicket()
+                d.imprimirCocinaAuto()
         );
     }
 
@@ -163,18 +156,13 @@ public class ConfiguracionService {
                 DEF_TICKET_ENCABEZADO,
                 DEF_TICKET_PIE,
                 DEF_IMPRIMIR_FACTURA_AUTO,
-                DEF_IMPRIMIR_COCINA_AUTO,
-                DEF_TAMANO_FUENTE
+                DEF_IMPRIMIR_COCINA_AUTO
         );
     }
 
     private AdminConfigDTO sanitize(AdminConfigDTO in) {
         if (in == null) {
             return defaults();
-        }
-        String fuente = trimToEmpty(in.tamanoFuenteTicket()).toUpperCase();
-        if (!"SMALL".equals(fuente) && !"NORMAL".equals(fuente) && !"LARGE".equals(fuente)) {
-            fuente = DEF_TAMANO_FUENTE;
         }
 
         String nombre = trimToEmpty(in.negocioNombre());
@@ -190,8 +178,7 @@ public class ConfiguracionService {
                 cut(trimToEmpty(in.ticketEncabezado()), 100),
                 cut(trimToEmpty(in.ticketPie()), 100),
                 in.imprimirFacturaAuto(),
-                in.imprimirCocinaAuto(),
-                fuente
+                in.imprimirCocinaAuto()
         );
     }
 

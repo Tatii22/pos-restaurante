@@ -36,6 +36,7 @@ public class TurnoCajaService {
     private final CalculosFinancierosService calculosFinancierosService;
     private final AuditService auditService;
     private final MenuDiarioService menuDiarioService;
+    private final ImpresoraTtermicaService impresoraTtermicaService;
 
     // ─────────────────────────────────────────────────────────────────
     // APERTURA
@@ -211,6 +212,24 @@ public class TurnoCajaService {
                 .orElse(null);
     }
 
+    public TurnoCaja obtenerTurnoPorId(Long turnoId) {
+        return turnoCajaRepository.findById(turnoId)
+                .orElseThrow(() -> new BadRequestException("Turno no encontrado"));
+    }
+
+    public void imprimirCierreTurno(Long turnoId, Usuario usuario) {
+        TurnoCaja turno = obtenerTurnoPorId(turnoId);
+        decorarMetricasCierre(turno);
+        try {
+            impresoraTtermicaService.imprimirCierreTurno(turno);
+        } catch (Exception ex) {
+            throw new BadRequestException("Error al imprimir cierre de turno: " + ex.getMessage());
+        }
+        auditService.record(
+                "TURNO_CIERRE_IMPRESO", "TurnoCaja", turno.getId(),
+                usuario, turno, null);
+    }
+
     public List<TurnoCaja> listarPorRango(LocalDate fechaInicio, LocalDate fechaFin,
             String username) {
         Usuario usuario = usuarioRepository.findByUsername(username)
@@ -335,6 +354,10 @@ public class TurnoCajaService {
         turno.setTransferenciasNetas(transferenciasNetas);
         turno.setTotalOperativoTurno(totalOperativoTurno);
         turno.setUmbralDescuadre(UMBRAL_DESCUADRE);
+        turno.setRecaudoEfectivo(recaudoEfe);
+        turno.setRecaudoTransferencia(recaudoTransf);
+        turno.setGastosEfectivo(gastosEfe);
+        turno.setGastosTransferencia(gastosTransf);
 
         return turno;
     }

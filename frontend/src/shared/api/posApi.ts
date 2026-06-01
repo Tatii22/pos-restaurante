@@ -75,6 +75,10 @@ export const posApi = {
     const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/imprimir-factura`);
     return data;
   },
+  reimprimirFactura: async (id: number) => {
+    const { data } = await http.post<Venta>(`/api/v1/ventas/${id}/reimprimir-factura`);
+    return data;
+  },
   actualizarValorDomicilio: async (id: number, valorDomicilio: number) => {
     const { data } = await http.put<Venta>(`/api/v1/ventas/${id}/valor-domicilio`, { valorDomicilio });
     return data;
@@ -154,6 +158,9 @@ export const posApi = {
   simularCierre: async (efectivoContado: number, transferenciasVerificadas: number) => {
     const { data } = await http.post<Turno>("/api/v1/turnos/simular-cierre", { efectivoContado, transferenciasVerificadas });
     return data;
+  },
+  imprimirCierreTurno: async (turnoId: number) => {
+    await http.post(`/api/v1/turnos/${turnoId}/imprimir-cierre`);
   },
   cerrarTurno: async (efectivoContado: number, transferenciasVerificadas: number, observacionCierre?: string) => {
     const { data } = await http.post<Turno>("/api/v1/turnos/cerrar", { efectivoContado, transferenciasVerificadas, observacionCierre });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { BsPrinter } from "react-icons/bs";
 import { X } from "lucide-react";
 import { posApi } from "../shared/api/posApi";
 import {
@@ -30,6 +31,7 @@ export function TurnosPage() {
   const [valoresArqueo, setValoresArqueo] = useState<{ ef: number; trans: number } | null>(null);
   const [observacionCierre, setObservacionCierre] = useState("");
   const obsInputRef = useRef<HTMLTextAreaElement>(null);
+  const [cierreExitosoId, setCierreExitosoId] = useState<number | null>(null);
 
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-layout"],
@@ -71,6 +73,10 @@ export function TurnosPage() {
       qc.invalidateQueries({ queryKey: ["reporte-turno-activo", data.id] });
     }
   });
+  const imprimirCierreM = useMutation({
+    mutationFn: (turnoId: number) => posApi.imprimirCierreTurno(turnoId)
+  });
+
   const confirmarCierreM = useMutation({
     mutationFn: () => {
       const v = valoresArqueo!;
@@ -78,9 +84,12 @@ export function TurnosPage() {
     },
     onSuccess: (data) => {
       if (data.estado === "CERRADO") {
-        clearTurno();
-        clearAuth();
-        navigate("/login", { replace: true });
+        setCierreExitosoId(data.id);
+        setShowSimModal(false);
+        setSimResult(null);
+        setValoresArqueo(null);
+        setObservacionCierre("");
+        qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
         return;
       }
 
@@ -388,6 +397,56 @@ export function TurnosPage() {
             <li key={msg}>- {msg}</li>
           ))}
         </ul>
+      )}
+
+      {cierreExitosoId !== null && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-sm p-5 text-center">
+            <div className="mb-2 text-4xl">✅</div>
+            <h3 className="text-lg font-semibold">Cierre realizado correctamente</h3>
+            <p className="mt-1 text-sm text-pos-muted">Turno #{cierreExitosoId} cerrado.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="btn-soft"
+                disabled={imprimirCierreM.isPending}
+                onClick={() => {
+                  imprimirCierreM.mutate(cierreExitosoId, {
+                    onSuccess: () => {
+                      clearTurno();
+                      clearAuth();
+                      navigate("/login", { replace: true });
+                    },
+                    onError: () => {
+                      clearTurno();
+                      clearAuth();
+                      navigate("/login", { replace: true });
+                    }
+                  });
+                }}
+              >
+                <BsPrinter size={14} className="mr-1 inline" />
+                {imprimirCierreM.isPending ? "Imprimiendo..." : "Imprimir cierre"}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  clearTurno();
+                  clearAuth();
+                  navigate("/login", { replace: true });
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+            {imprimirCierreM.isError && (
+              <ul className="mt-3 text-sm text-red-600">
+                {getErrorMessages(imprimirCierreM.error).map((msg) => (
+                  <li key={msg}>- {msg}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
 
       {showSimModal && simResult && (() => {

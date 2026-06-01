@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BsEye, BsFilter, BsXLg } from "react-icons/bs";
+import { BsEye, BsFilter, BsPrinter, BsXLg } from "react-icons/bs";
 import { posApi } from "../shared/api/posApi";
 import type { Venta, VentaDetalle } from "../shared/types";
 import { useTurnoStore } from "../shared/store/turnoStore";
@@ -111,6 +111,13 @@ export function HistorialVentasPage() {
       posApi.getTurnoActivo().then((t) => setTurno(t)).catch(() => {});
       setConfirmAnularId(null);
       setMotivoAnulacion("");
+    }
+  });
+
+  const reimprimirM = useMutation({
+    mutationFn: (id: number) => posApi.reimprimirFactura(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
     }
   });
 
@@ -247,6 +254,13 @@ export function HistorialVentasPage() {
                     Anular
                   </button>
                 )}
+                <button
+                  className="rounded-lg border border-pos-border px-2 py-1 text-xs font-medium text-pos-text hover:bg-gray-50"
+                  disabled={reimprimirM.isPending}
+                  onClick={() => reimprimirM.mutate(venta.id)}
+                >
+                  Reimprimir
+                </button>
               </div>
             </div>
           ))}
@@ -300,6 +314,15 @@ export function HistorialVentasPage() {
                         Anular
                       </button>
                     )}
+                    <button
+                      className="inline-flex items-center gap-1 rounded-lg border border-pos-border px-2 py-1 text-xs font-medium text-pos-text hover:bg-gray-50"
+                      disabled={reimprimirM.isPending}
+                      onClick={() => reimprimirM.mutate(venta.id)}
+                      title="Reimprimir factura"
+                    >
+                      <BsPrinter size={14} />
+                      Reimprimir
+                    </button>
                   </div>
                 </td>
               </tr>

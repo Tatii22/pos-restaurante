@@ -209,6 +209,20 @@ public class VentaController {
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
+    @PostMapping("/{id}/reimprimir-factura")
+    @Operation(summary = "Reimprimir factura de cualquier venta registrada")
+    public ResponseEntity<VentaResponseDTO> reimprimirFactura(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Venta venta = ventaService.reimprimirFactura(id, usuario);
+        return ResponseEntity.ok(ventaService.construirRespuesta(venta));
+    }
+
     @PreAuthorize("hasAnyRole('CAJA','DOMI')")
     @PutMapping("/{id}/fiado")
     @Operation(summary = "Marcar domicilio en proceso como fiado")

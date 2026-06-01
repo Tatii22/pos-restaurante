@@ -130,4 +130,20 @@ public class TurnoCaja {
     /** Umbral de descuadre configurado en el servidor. Solo en memoria. */
     @Transient
     private BigDecimal umbralDescuadre;
+
+    /** Recaudo en efectivo del turno (ventas contado ef + abonos ef). Solo en memoria. */
+    @Transient
+    private BigDecimal recaudoEfectivo;
+
+    /** Recaudo en transferencia del turno (ventas contado transf + abonos transf). Solo en memoria. */
+    @Transient
+    private BigDecimal recaudoTransferencia;
+
+    /** Gastos de caja en efectivo. Solo en memoria. */
+    @Transient
+    private BigDecimal gastosEfectivo;
+
+    /** Gastos de caja en transferencia. Solo en memoria. */
+    @Transient
+    private BigDecimal gastosTransferencia;
 }

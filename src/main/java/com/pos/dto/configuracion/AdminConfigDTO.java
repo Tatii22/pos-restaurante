@@ -16,8 +16,6 @@ public record AdminConfigDTO(
         @Size(max = 100, message = "El pie del ticket no puede superar 100 caracteres")
         String ticketPie,
         boolean imprimirFacturaAuto,
-        boolean imprimirCocinaAuto,
-        @Size(max = 10, message = "El tamaño de fuente no puede superar 10 caracteres")
-        String tamanoFuenteTicket
+        boolean imprimirCocinaAuto
 ) {
 }

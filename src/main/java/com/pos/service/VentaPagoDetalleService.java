@@ -60,7 +60,10 @@ public class VentaPagoDetalleService {
         return ventaPagoDetalleRepository.findById(ventaId)
                 .map(detalle -> new VentaPagoDetalleDTO(
                         detalle.getPagoEfectivo(),
-                        detalle.getPagoTransferencia()
+                        detalle.getPagoTransferencia(),
+                        detalle.getRecibidoEfectivo(),
+                        detalle.getRecibidoTransferencia(),
+                        detalle.getCambioEfectivo()
                 ))
                 .orElse(null);
     }

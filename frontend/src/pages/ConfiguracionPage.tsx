@@ -12,8 +12,7 @@ const defaults: AdminConfig = {
   ticketEncabezado: "Gracias por su compra",
   ticketPie: "Vuelve pronto",
   imprimirFacturaAuto: true,
-  imprimirCocinaAuto: true,
-  tamanoFuenteTicket: "NORMAL"
+  imprimirCocinaAuto: true
 };
 
 export function ConfiguracionPage() {
@@ -123,23 +122,6 @@ export function ConfiguracionPage() {
               onChange={(e) => setConfig((prev) => ({ ...prev, ticketPie: e.target.value.slice(0, 100) }))}
               maxLength={100}
             />
-          </label>
-          <label className="text-sm">
-            Tamano fuente ticket
-            <select
-              className="input mt-1"
-              value={config.tamanoFuenteTicket}
-              onChange={(e) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  tamanoFuenteTicket: e.target.value as AdminConfig["tamanoFuenteTicket"]
-                }))
-              }
-            >
-              <option value="SMALL">SMALL</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="LARGE">LARGE</option>
-            </select>
           </label>
           <div className="grid gap-2 pt-6 text-sm">
             <label className="inline-flex items-center gap-2">

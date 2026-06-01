@@ -313,5 +313,4 @@ export type AdminConfig = {
   ticketPie: string;
   imprimirFacturaAuto: boolean;
   imprimirCocinaAuto: boolean;
-  tamanoFuenteTicket: "SMALL" | "NORMAL" | "LARGE";
 };

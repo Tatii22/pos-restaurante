@@ -71,6 +71,17 @@ public class TurnoCajaController {
         return ResponseEntity.ok(TurnoCajaMapper.toDTO(turno));
     }
 
+    @PostMapping("/{id}/imprimir-cierre")
+    @PreAuthorize("hasAnyRole('CAJA','ADMIN')")
+    public ResponseEntity<Void> imprimirCierre(
+            @PathVariable Long id,
+            Authentication auth
+    ) {
+        Usuario usuario = usuarioService.obtenerPorUsername(auth.getName());
+        turnoCajaService.imprimirCierreTurno(id, usuario);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/rango")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TurnoCajaResponseDTO>> listarPorRango(

@@ -4,6 +4,7 @@ import com.pos.dto.configuracion.AdminConfigDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.dto.venta.VentaResponseDTO;
 import com.pos.entity.TipoVenta;
+import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
 import com.pos.entity.VentaDetalle;
 import lombok.RequiredArgsConstructor;
@@ -60,16 +61,23 @@ public class ImpresoraTtermicaService {
     public void imprimirFactura(Venta venta, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
         AdminConfigDTO cfg = configuracionService.obtener();
 
+        VentaPagoDetalleDTO pagoDetalle = null;
+        if (venta != null && venta.getId() != null) {
+            pagoDetalle = ventaPagoDetalleService.obtener(venta.getId());
+        }
+
         BigDecimal efectivoFinal      = pagoEfectivo;
         BigDecimal transferenciaFinal = pagoTransferencia;
+        BigDecimal recibidoEfectivo   = null;
+        BigDecimal cambioEfectivo     = null;
 
-        if (efectivoFinal == null && transferenciaFinal == null
-                && venta != null && venta.getId() != null) {
-            VentaPagoDetalleDTO detallePago = ventaPagoDetalleService.obtener(venta.getId());
-            if (detallePago != null) {
-                efectivoFinal      = detallePago.pagoEfectivo();
-                transferenciaFinal = detallePago.pagoTransferencia();
-            }
+        if (efectivoFinal == null && transferenciaFinal == null && pagoDetalle != null) {
+            efectivoFinal      = pagoDetalle.pagoEfectivo();
+            transferenciaFinal = pagoDetalle.pagoTransferencia();
+        }
+        if (pagoDetalle != null) {
+            recibidoEfectivo = pagoDetalle.recibidoEfectivo();
+            cambioEfectivo   = pagoDetalle.cambioEfectivo();
         }
 
         StringBuilder sb = new StringBuilder();
@@ -109,8 +117,14 @@ public class ImpresoraTtermicaService {
                 String itemLabel = detalle.getCantidad() + " x " + safe(nombreProducto);
                 String itemTotal = "$" + formatMoneda(detalle.getSubtotal());
 
-                // FIX 4: Columnas alineadas correctamente
-                appendKvAligned(sb, itemLabel, itemTotal);
+                int availForLabel = PAPER_WIDTH - itemTotal.length() - 2;
+                if (itemLabel.length() <= availForLabel) {
+                    appendKvAligned(sb, itemLabel, itemTotal);
+                } else {
+                    appendWrapped(sb, itemLabel, 0);
+                    int pad = Math.max(0, PAPER_WIDTH - itemTotal.length());
+                    sb.append(" ".repeat(pad)).append(itemTotal).append("\n");
+                }
 
                 if (detalle.getObservacion() != null && !detalle.getObservacion().isBlank()) {
                     appendKvLabel(sb, "  Obs", detalle.getObservacion());
@@ -133,7 +147,7 @@ public class ImpresoraTtermicaService {
 
         sb.append(DOUBLE_LINE).append("\n");
         appendKvAligned(sb, "TOTAL", "$" + formatMoneda(venta.getTotal()));
-        appendPagoFactura(sb, venta, efectivoFinal, transferenciaFinal);
+        appendPagoFactura(sb, venta, efectivoFinal, transferenciaFinal, recibidoEfectivo, cambioEfectivo);
         sb.append(DOUBLE_LINE).append("\n");
 
         appendCentered(sb, isBlank(cfg.ticketPie()) ? "Gracias por su compra" : cfg.ticketPie());
@@ -174,24 +188,6 @@ public class ImpresoraTtermicaService {
         }
 
         appendCentered(sb, "ENVIAR A PREPARACION");
-        sb.append(DOUBLE_LINE).append("\n");
-        appendTrailingFeed(sb);
-        enviarAImpresora(sb.toString());
-    }
-
-    /** Fallback para flujos que solo tienen DTO resumido. */
-    public void imprimirTicketVenta(VentaResponseDTO venta) {
-        StringBuilder sb = new StringBuilder();
-        appendCentered(sb, "TICKET DE VENTA");
-        sb.append(DOUBLE_LINE).append("\n");
-        appendKv(sb, "ID",     String.valueOf(venta.id()));
-        appendKv(sb, "Fecha",  valueOrDash(String.valueOf(venta.fecha())));
-        appendKv(sb, "Tipo",   valueOrDash(venta.tipoVenta()  == null ? null : venta.tipoVenta().name()));
-        appendKv(sb, "Estado", valueOrDash(venta.estado()     == null ? null : venta.estado().name()));
-        appendKvLabel(sb, "Cliente", valueOrDash(venta.clienteNombre()));
-        sb.append(DOUBLE_LINE).append("\n");
-        appendKvAligned(sb, "TOTAL", "$" + formatMoneda(venta.total()));
-        appendKv(sb, "PAGO",   valueOrDash(venta.formaPago() == null ? null : venta.formaPago().name()));
         sb.append(DOUBLE_LINE).append("\n");
         appendTrailingFeed(sb);
         enviarAImpresora(sb.toString());
@@ -260,32 +256,48 @@ public class ImpresoraTtermicaService {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void appendPagoFactura(StringBuilder sb, Venta venta,
-                                    BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+                                    BigDecimal pagoEfectivo, BigDecimal pagoTransferencia,
+                                    BigDecimal recibidoEfectivo, BigDecimal cambioEfectivo) {
         if (venta.getFormaPago() == com.pos.entity.FormaPago.FIADO) {
             appendKvAligned(sb, "PAGO",    "FIADO (pendiente)");
             appendKvAligned(sb, "  Saldo", "$" + formatMoneda(venta.getSaldoPendiente()));
             return;
         }
 
-        BigDecimal efectivo      = safeNonNegative(pagoEfectivo);
-        BigDecimal transferencia = safeNonNegative(pagoTransferencia);
+        BigDecimal efectivo         = safeNonNegative(pagoEfectivo);
+        BigDecimal transferencia    = safeNonNegative(pagoTransferencia);
+        BigDecimal efectivoRecibido = safeNonNegative(recibidoEfectivo);
+        BigDecimal cambio           = safeNonNegative(cambioEfectivo);
         boolean tieneEfectivo      = efectivo.compareTo(BigDecimal.ZERO)      > 0;
         boolean tieneTransferencia = transferencia.compareTo(BigDecimal.ZERO) > 0;
+        boolean tieneCambio        = cambio.compareTo(BigDecimal.ZERO)        > 0;
 
         if (tieneEfectivo && tieneTransferencia) {
             appendKvAligned(sb, "PAGO",        "MIXTO");
             appendKvAligned(sb, "  Efectivo",  "$" + formatMoneda(efectivo));
+            if (tieneCambio || efectivo.compareTo(efectivoRecibido) < 0) {
+                appendKvAligned(sb, "  Recibido", "$" + formatMoneda(efectivoRecibido));
+            }
+            if (tieneCambio) {
+                appendKvAligned(sb, "  Cambio",   "$" + formatMoneda(cambio));
+            }
             appendKvAligned(sb, "  Transfer",  "$" + formatMoneda(transferencia));
             return;
         }
         if (tieneEfectivo) {
-            appendKvAligned(sb, "PAGO",    "EFECTIVO");
-            appendKvAligned(sb, "  Valor", "$" + formatMoneda(efectivo));
+            appendKvAligned(sb, "PAGO",        "EFECTIVO");
+            appendKvAligned(sb, "  Aplicado",  "$" + formatMoneda(efectivo));
+            if (tieneCambio || efectivo.compareTo(efectivoRecibido) < 0) {
+                appendKvAligned(sb, "  Recibido",  "$" + formatMoneda(efectivoRecibido));
+            }
+            if (tieneCambio) {
+                appendKvAligned(sb, "  Cambio",    "$" + formatMoneda(cambio));
+            }
             return;
         }
         if (tieneTransferencia) {
-            appendKvAligned(sb, "PAGO",    "TRANSFERENCIA");
-            appendKvAligned(sb, "  Valor", "$" + formatMoneda(transferencia));
+            appendKvAligned(sb, "PAGO",       "TRANSFERENCIA");
+            appendKvAligned(sb, "  Aplicado", "$" + formatMoneda(transferencia));
             return;
         }
 
@@ -346,6 +358,85 @@ public class ImpresoraTtermicaService {
 
     private void appendTrailingFeed(StringBuilder sb) {
         sb.append("\n".repeat(TRAILING_FEED_LINES));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ENVÍO A IMPRESORA
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CIERRE DE TURNO
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public void imprimirCierreTurno(TurnoCaja turno) {
+        StringBuilder sb = new StringBuilder();
+        appendCentered(sb, "CIERRE DE TURNO");
+        sb.append(DOUBLE_LINE).append("\n");
+
+        appendKv(sb, "Apertura",  formatFecha(turno.getFechaApertura()));
+        appendKv(sb, "Cierre",    formatFecha(turno.getFechaCierre()));
+        appendKv(sb, "Cajero",    turno.getUsuario() != null ? turno.getUsuario().getUsername() : "-");
+        sb.append(LINE).append("\n");
+
+        appendKvAligned(sb, "Monto inicial", "$" + formatMoneda(turno.getMontoInicial()));
+        sb.append(LINE).append("\n");
+
+        BigDecimal recaudoEfe   = safeNonNegative(turno.getRecaudoEfectivo());
+        BigDecimal recaudoTransf = safeNonNegative(turno.getRecaudoTransferencia());
+        BigDecimal gastosEfe    = safeNonNegative(turno.getGastosEfectivo());
+        BigDecimal gastosTransf = safeNonNegative(turno.getGastosTransferencia());
+
+        appendKvAligned(sb, "Ventas efectivo",     "$" + formatMoneda(recaudoEfe));
+        appendKvAligned(sb, "Ventas transferencia", "$" + formatMoneda(recaudoTransf));
+        sb.append(LINE).append("\n");
+
+        appendKvAligned(sb, "Gastos efectivo",     "$" + formatMoneda(gastosEfe));
+        appendKvAligned(sb, "Gastos transferencia", "$" + formatMoneda(gastosTransf));
+        sb.append(LINE).append("\n");
+
+        BigDecimal entradas = recaudoEfe.add(recaudoTransf);
+        BigDecimal salidas  = gastosEfe.add(gastosTransf);
+        if (turno.getTotalGastosAdmin() != null && turno.getTotalGastosAdmin().compareTo(BigDecimal.ZERO) > 0) {
+            salidas = salidas.add(turno.getTotalGastosAdmin());
+            appendKvAligned(sb, "Gastos admin", "$" + formatMoneda(turno.getTotalGastosAdmin()));
+        }
+
+        appendKvAligned(sb, "Entradas totales", "$" + formatMoneda(entradas));
+        appendKvAligned(sb, "Salidas totales",  "$" + formatMoneda(salidas));
+        sb.append(DOUBLE_LINE).append("\n");
+
+        appendKvAligned(sb, "Esperado en caja",  "$" + formatMoneda(turno.getEsperado()));
+        appendKvAligned(sb, "Reportado cajero",  "$" + formatMoneda(turno.getEfectivoContado()));
+        appendKvAligned(sb, "Diferencia",    "$" + formatMoneda(turno.getDiferenciaEfectivo()));
+        if (turno.getTransferenciasNetas() != null) {
+            appendKvAligned(sb, "Transf esperadas", "$" + formatMoneda(turno.getTransferenciasNetas()));
+        }
+        if (turno.getTransferenciasVerificadas() != null) {
+            appendKvAligned(sb, "Transf reportadas","$" + formatMoneda(turno.getTransferenciasVerificadas()));
+            appendKvAligned(sb, "Dif transferencias","$" + formatMoneda(turno.getDiferenciaTransferencias()));
+        }
+        sb.append(DOUBLE_LINE).append("\n");
+
+        String estadoCierre;
+        if (turno.getDiferenciaTotal() != null) {
+            int cmp = turno.getDiferenciaTotal().compareTo(BigDecimal.ZERO);
+            if (cmp == 0) {
+                estadoCierre = "CUADRA";
+            } else if (cmp > 0) {
+                estadoCierre = "SOBRANTE";
+            } else {
+                estadoCierre = "FALTANTE";
+            }
+            appendKvAligned(sb, "Estado", estadoCierre);
+        }
+
+        if (turno.getObservacionCierre() != null && !turno.getObservacionCierre().isBlank()) {
+            sb.append(LINE).append("\n");
+            appendKvLabel(sb, "Observacion", turno.getObservacionCierre());
+        }
+
+        appendTrailingFeed(sb);
+        enviarAImpresora(sb.toString());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
