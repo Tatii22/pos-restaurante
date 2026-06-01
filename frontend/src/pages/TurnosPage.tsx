@@ -106,8 +106,11 @@ export function TurnosPage() {
   const turnoActual = (turnoResumen ?? turno)!;
   const esperado = reporte?.cajaFisicaEsperada ?? turnoActual?.esperado ?? (turnoActual?.montoInicial || 0);
 
+  // Considerar turno cerrado como equivalente a "no existe turno"
+  const turnoEstaActivo = turno && turno.estado === "ABIERTO";
+
   useEffect(() => {
-    if (turno && turno.estado !== "CERRADO") {
+    if (turnoEstaActivo && turno.estado !== "CERRADO") {
       const fisico = String(Math.round(esperado));
       efectivoContado.setValue(fisico);
 
@@ -133,7 +136,7 @@ export function TurnosPage() {
     );
   }
 
-  if (!turno) {
+  if (!turnoEstaActivo) {
     return (
       <div className="grid min-h-[70vh] place-items-center">
         <div className="card w-full max-w-xl p-6 text-center">

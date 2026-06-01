@@ -13,7 +13,8 @@ export function MenuDiaPage() {
   const productosQ = useQuery({ queryKey: ["productos-menu-dia"], queryFn: () => posApi.getProductos() });
   const inventarioQ = useQuery({ queryKey: ["inventario-dia"], queryFn: () => posApi.getInventarioDiario(), retry: false });
 
-  const menuActivo = inventarioQ.isSuccess;
+  // Menu existe solo si: query exitosa AND hay al menos un producto configurado
+  const menuActivo = inventarioQ.isSuccess && (inventarioQ.data?.length ?? 0) > 0;
 
   const crearMenuM = useMutation({
     mutationFn: () => posApi.crearMenuDiario(),
