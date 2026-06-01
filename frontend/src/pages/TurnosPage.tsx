@@ -27,8 +27,6 @@ export function TurnosPage() {
   const transferenciasVerificadas = useCurrencyInput("", { maxDigits: 9, allowZero: true });
   const [showSimModal, setShowSimModal] = useState(false);
   const [simResult, setSimResult] = useState<Turno | null>(null);
-  const [showCloseModal, setShowCloseModal] = useState(false);
-  const [closeResult, setCloseResult] = useState<Turno | null>(null);
   const [valoresArqueo, setValoresArqueo] = useState<{ ef: number; trans: number } | null>(null);
   const [observacionCierre, setObservacionCierre] = useState("");
   const obsInputRef = useRef<HTMLTextAreaElement>(null);
@@ -101,7 +99,7 @@ export function TurnosPage() {
   const turnoBase = turnoActivoQ.data ?? turno;
   const reporte = reporteQ.data;
   const turnoResumen =
-    closeResult?.id === turnoBase?.id ? closeResult : simResult?.id === turnoBase?.id ? simResult : turnoBase;
+    simResult?.id === turnoBase?.id ? simResult : turnoBase;
 
   const turnoActual = (turnoResumen ?? turno)!;
   const esperado = reporte?.cajaFisicaEsperada ?? turnoActual?.esperado ?? (turnoActual?.montoInicial || 0);
@@ -474,59 +472,7 @@ export function TurnosPage() {
         );
       })()}
 
-      {showCloseModal && closeResult && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="card w-full max-w-lg p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Cierre de Turno Exitoso</h3>
-              <button
-                className="btn-ghost p-1"
-                onClick={() => {
-                  setShowCloseModal(false);
-                  clearTurno();
-                  clearAuth();
-                  navigate("/login", { replace: true });
-                }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <div className="grid gap-2 rounded-xl border border-pos-border bg-gray-50 p-3 text-sm">
-               <p>Turno: <span className="font-semibold">#{closeResult.numeroTurno ?? closeResult.id}</span></p>
-              <p>Estado final: <span className="font-semibold">{closeResult.estado}</span></p>
-              <p>Fecha cierre: <span className="font-semibold">{closeResult.fechaCierre ? new Date(closeResult.fechaCierre).toLocaleString() : "-"}</span></p>
 
-              <div className="mt-2">
-                <p className="font-semibold">Caja Física</p>
-                <p>Sistema: {summaryNumber(closeResult.esperado)} | Contado: {summaryNumber(closeResult.efectivoContado)} | Dif: {summaryNumber(closeResult.diferenciaEfectivo)}</p>
-              </div>
-              <div>
-                <p className="font-semibold">Caja Virtual</p>
-                <p>Sistema: {summaryNumber(closeResult.transferenciasNetas)} | Verificado: {summaryNumber(closeResult.transferenciasVerificadas)} | Dif: {summaryNumber(closeResult.diferenciaTransferencias)}</p>
-              </div>
-              <div className="border-t pt-2">
-                <p>Total (sistema): <span className="font-semibold">{summaryNumber(closeResult.totalOperativoTurno)}</span></p>
-                <p>Total verificado: <span className="font-semibold">{summaryNumber(closeResult.totalVerificado)}</span></p>
-                <p className="font-bold">Diferencia total del cierre: {summaryNumber(closeResult.diferenciaTotal)}</p>
-              </div>
-            </div>
-            <div className="mt-3">{renderResumenFinanciero(reporte)}</div>
-            <div className="mt-3 flex justify-end">
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  setShowCloseModal(false);
-                  clearTurno();
-                  clearAuth();
-                  navigate("/login", { replace: true });
-                }}
-              >
-                Cerrar y salir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
