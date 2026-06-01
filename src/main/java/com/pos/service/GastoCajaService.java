@@ -33,14 +33,13 @@ public class GastoCajaService {
     @Transactional
     public GastoCaja registrar(
             GastoCajaCreateDTO dto,
-            Usuario usuario
-    ) {
+            Usuario usuario) {
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede registrar gastos de caja");
         }
 
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstado(EstadoTurno.ABIERTO)
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         TipoGasto tipo = tipoGastoRepository.findById(dto.tipoGastoId())
@@ -76,8 +75,7 @@ public class GastoCajaService {
                 guardado.getDescripcion(),
                 auditService.change("monto", null, guardado.getMonto()),
                 auditService.change("montoEfectivo", null, guardado.getMontoEfectivo()),
-                auditService.change("montoTransferencia", null, guardado.getMontoTransferencia())
-        );
+                auditService.change("montoTransferencia", null, guardado.getMontoTransferencia()));
         return guardado;
     }
 
@@ -87,7 +85,7 @@ public class GastoCajaService {
         }
 
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstado(EstadoTurno.ABIERTO)
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         return gastoCajaRepository.findByTurnoOrderByFechaDesc(turno)
@@ -146,8 +144,7 @@ public class GastoCajaService {
                 gasto.getDescripcion(),
                 auditService.change("monto", gasto.getMonto(), null),
                 auditService.change("montoEfectivo", gasto.getMontoEfectivo(), null),
-                auditService.change("montoTransferencia", gasto.getMontoTransferencia(), null)
-        );
+                auditService.change("montoTransferencia", gasto.getMontoTransferencia(), null));
         movimientoFinancieroService.registrarEliminacionGastoCaja(gasto, usuario);
         gastoCajaRepository.delete(gasto);
     }
@@ -159,11 +156,11 @@ public class GastoCajaService {
                 gasto.getDescripcion(),
                 gasto.getMonto(),
                 nonNegative(gasto.getMontoEfectivo()),
-                nonNegative(gasto.getMontoTransferencia())
-        );
+                nonNegative(gasto.getMontoTransferencia()));
     }
 
-    private BigDecimal resolverMontoEfectivo(BigDecimal montoLegacy, BigDecimal montoEfectivo, BigDecimal montoTransferencia) {
+    private BigDecimal resolverMontoEfectivo(BigDecimal montoLegacy, BigDecimal montoEfectivo,
+            BigDecimal montoTransferencia) {
         BigDecimal efectivo = nonNegative(montoEfectivo);
         BigDecimal transferencia = nonNegative(montoTransferencia);
         if (efectivo.compareTo(BigDecimal.ZERO) == 0

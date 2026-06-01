@@ -223,7 +223,7 @@ export type Turno = {
   diferenciaTransferencias?: number | null;
   totalVerificado?: number | null;
   diferenciaTotal?: number | null;
-  estado: "ABIERTO" | "SIMULADO" | "CERRADO";
+  estado: "ABIERTO" | "CERRADO";
   usuario: string;
   umbralDescuadre?: number;
   observacionCierre?: string | null;

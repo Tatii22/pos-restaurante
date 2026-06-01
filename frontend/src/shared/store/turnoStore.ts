@@ -8,7 +8,7 @@ function loadTurno(): Turno | null {
   if (!raw) return null;
   try {
     const t = JSON.parse(raw) as Turno;
-    if (t.estado === "ABIERTO" || t.estado === "SIMULADO") return t;
+    if (t.estado === "ABIERTO") return t;
     return null;
   } catch {
     return null;
@@ -26,9 +26,9 @@ type TurnoState = {
 export const useTurnoStore = create<TurnoState>((set, get) => ({
   turno: loadTurno(),
   setTurno: (turno) => {
-    // Invariante: solo persis turnos ABIERTO o SIMULADO
+    // Invariante: solo persis turnos ABIERTO
     // Turnos CERRADO se descartan automáticamente
-    if (turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO")) {
+    if (turno && turno.estado === "ABIERTO") {
       localStorage.setItem(TURN_KEY, JSON.stringify(turno));
       set({ turno });
     } else {
@@ -44,7 +44,7 @@ export const useTurnoStore = create<TurnoState>((set, get) => ({
   isAbierto: () => get().turno?.estado === "ABIERTO",
   isActivo: () => {
     const estado = get().turno?.estado;
-    return estado === "ABIERTO" || estado === "SIMULADO";
+    return estado === "ABIERTO";
   }
 }));
 

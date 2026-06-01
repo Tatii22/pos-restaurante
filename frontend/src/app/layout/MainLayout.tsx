@@ -221,23 +221,21 @@ export function MainLayout() {
   useEffect(() => {
     if (resolvedRole !== "CAJA") return;
     if (!turno) return;
-    if (turno.estado !== "ABIERTO" && turno.estado !== "SIMULADO") return;
+    if (turno.estado !== "ABIERTO") return;
     if (!inventarioQ.isSuccess) return;
     if ((inventarioQ.data ?? []).length > 0) return;
     setMenuSetupLocked(true);
   }, [resolvedRole, turno, inventarioQ.isSuccess, inventarioQ.data, setMenuSetupLocked]);
 
   useEffect(() => {
-    if (resolvedRole === "CAJA" && turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO")) return;
+    if (resolvedRole === "CAJA" && turno && turno.estado === "ABIERTO") return;
     setMenuSetupLocked(false);
   }, [resolvedRole, turno]);
 
   const turnoClass =
     turno?.estado === "ABIERTO"
       ? "bg-green-100 text-green-700"
-      : turno?.estado === "SIMULADO"
-        ? "bg-yellow-100 text-yellow-700"
-        : "bg-red-100 text-red-700";
+      : "bg-red-100 text-red-700";
 
   const lowStockAlerts = (inventarioQ.data || []).filter((i) => {
     if (i.stockActual > i.stockMinimo) {
@@ -284,7 +282,7 @@ export function MainLayout() {
     setShowAlerts(false);
   }, [lowStockAlerts.length, showAlerts]);
 
-  const hasCajaTurnoActivo = resolvedRole === "CAJA" && !!turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO");
+  const hasCajaTurnoActivo = resolvedRole === "CAJA" && !!turno && turno.estado === "ABIERTO";
   const menuChecked = hasCajaTurnoActivo && inventarioQ.isSuccess;
   const menuHasItems = (inventarioQ.data ?? []).length > 0;
   const backendConfirmedNoTurno = turnoActivoQ.isSuccess && !turnoActivoQ.data;
@@ -427,7 +425,7 @@ export function MainLayout() {
                   )}
                 </button>
                 <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno || verifyingTurno || verifyingMenu}>
-                  {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
+                  {turno?.estado === "ABIERTO" ? "Cerrar turno" : "Abrir turno"}
                 </button>
               </>
             )}

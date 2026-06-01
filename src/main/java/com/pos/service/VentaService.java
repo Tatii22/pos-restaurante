@@ -60,8 +60,7 @@ public class VentaService {
         FormaPago formaPago = resolverFormaPago(
                 venta.getFormaPago(),
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
-                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
-        );
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO);
 
         return new VentaDetalleResponseDTO(
                 venta.getId(),
@@ -87,16 +86,14 @@ public class VentaService {
                 venta.getDetalles() == null
                         ? List.of()
                         : venta.getDetalles().stream()
-                        .map(d -> new VentaItemResponseDTO(
-                                d.getProducto() != null ? d.getProducto().getId() : null,
-                                d.getProducto() != null ? d.getProducto().getNombre() : "Producto",
-                                d.getCantidad(),
-                                d.getPrecioUnitario(),
-                                d.getSubtotal(),
-                                d.getObservacion()
-                        ))
-                        .toList()
-        );
+                                .map(d -> new VentaItemResponseDTO(
+                                        d.getProducto() != null ? d.getProducto().getId() : null,
+                                        d.getProducto() != null ? d.getProducto().getNombre() : "Producto",
+                                        d.getCantidad(),
+                                        d.getPrecioUnitario(),
+                                        d.getSubtotal(),
+                                        d.getObservacion()))
+                                .toList());
     }
 
     public com.pos.dto.venta.VentaResponseDTO construirRespuesta(Venta venta) {
@@ -106,8 +103,7 @@ public class VentaService {
         FormaPago formaPago = resolverFormaPago(
                 venta.getFormaPago(),
                 pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
-                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO
-        );
+                pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO);
 
         return new com.pos.dto.venta.VentaResponseDTO(
                 venta.getId(),
@@ -127,8 +123,7 @@ public class VentaService {
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                 venta.getCondicionPago(),
                 venta.getSaldoPendiente(),
-                 venta.getCliente() != null ? venta.getCliente().getId() : null
-        );
+                venta.getCliente() != null ? venta.getCliente().getId() : null);
     }
 
     public Page<Venta> listarOperativas(
@@ -140,8 +135,7 @@ public class VentaService {
             String clienteNombre,
             String telefono,
             int page,
-            int size
-    ) {
+            int size) {
         Specification<Venta> spec = Specification.unrestricted();
 
         if (estado != null) {
@@ -156,24 +150,20 @@ public class VentaService {
         if (fechaInicio != null) {
             spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(
                     root.get("fecha"),
-                    fechaInicio.atStartOfDay()
-            ));
+                    fechaInicio.atStartOfDay()));
         }
         if (fechaFin != null) {
             spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(
                     root.get("fecha"),
-                    fechaFin.atTime(23, 59, 59)
-            ));
+                    fechaFin.atTime(23, 59, 59)));
         }
         if (clienteNombre != null && !clienteNombre.isBlank()) {
             String pattern = "%" + clienteNombre.toLowerCase() + "%";
-            spec = spec.and((root, query, cb) ->
-                    cb.like(cb.lower(root.get("clienteNombre")), pattern));
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("clienteNombre")), pattern));
         }
         if (telefono != null && !telefono.isBlank()) {
             String pattern = "%" + telefono.toLowerCase() + "%";
-            spec = spec.and((root, query, cb) ->
-                    cb.like(cb.lower(root.get("telefono")), pattern));
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("telefono")), pattern));
         }
 
         Page<Venta> pageResult = ventaRepository.findAll(
@@ -183,10 +173,7 @@ public class VentaService {
                         Math.max(size, 1),
                         org.springframework.data.domain.Sort.by(
                                 org.springframework.data.domain.Sort.Direction.DESC,
-                                "fecha"
-                        )
-                )
-        );
+                                "fecha")));
 
         return pageResult;
     }
@@ -194,7 +181,7 @@ public class VentaService {
     @Transactional
     public Venta registrarVenta(VentaCreateDTO dto, Usuario usuario) {
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         if (dto.tipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
@@ -228,12 +215,12 @@ public class VentaService {
 
         Cliente cliente;
         if (dto.tipoVenta() == TipoVenta.DOMICILIO) {
-            // Para cualquier domicilio (contado, transferencia o fiado) sincronizamos el cliente maestro automáticamente
+            // Para cualquier domicilio (contado, transferencia o fiado) sincronizamos el
+            // cliente maestro automáticamente
             cliente = fiadoService.resolverOActualizarCliente(
                     dto.clienteNombre(),
                     dto.telefono(),
-                    dto.direccion()
-            );
+                    dto.direccion());
         } else if (esFiado) {
             cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(), dto.telefono());
         } else {
@@ -255,13 +242,11 @@ public class VentaService {
         venta.setClienteNombre(
                 cliente != null
                         ? cliente.getNombre()
-                        : dto.clienteNombre()
-        );
+                        : dto.clienteNombre());
         venta.setTelefono(
                 cliente != null
                         ? cliente.getTelefono()
-                        : dto.telefono()
-        );
+                        : dto.telefono());
         venta.setDireccion(dto.direccion());
         venta.setValorDomicilio(dto.valorDomicilio());
         venta.setParaLlevar(dto.tipoVenta() == TipoVenta.LOCAL && Boolean.TRUE.equals(dto.paraLlevar()));
@@ -304,8 +289,7 @@ public class VentaService {
                 InventarioDiario inv = obtenerInventarioParaActualizar(
                         producto,
                         menuActivo,
-                        "Producto no esta en el menu"
-                );
+                        "Producto no esta en el menu");
 
                 if (inv.getStockActual() < d.cantidad()) {
                     throw new BadRequestException("Stock insuficiente");
@@ -339,21 +323,26 @@ public class VentaService {
         venta.setTotal(total);
         venta.setDetalles(detalles);
 
-        boolean hayAbonoParcial = esFiado && (pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0);
+        boolean hayAbonoParcial = esFiado
+                && (pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0);
         boolean cobraContado = dto.tipoVenta() == TipoVenta.LOCAL && !esFiado;
         PagoAplicado pagoAplicado;
         if (cobraContado) {
-            pagoAplicado = calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia, "El pago es insuficiente para registrar la venta");
+            pagoAplicado = calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia,
+                    "El pago es insuficiente para registrar la venta");
         } else if (hayAbonoParcial) {
             pagoAplicado = calcularPagoFiadoAbono(total, pagoEfectivo, pagoTransferencia);
         } else {
             pagoAplicado = PagoAplicado.cero();
         }
 
-        venta.setSaldoPendiente(hayAbonoParcial ? total.subtract(pagoAplicado.totalAplicado()) : (esFiado ? total : BigDecimal.ZERO));
+        venta.setSaldoPendiente(
+                hayAbonoParcial ? total.subtract(pagoAplicado.totalAplicado()) : (esFiado ? total : BigDecimal.ZERO));
 
-        log.info("[VENTA] tipo={} fiado={} total={} efectivo={} transf={} cobraContado={} hayAbonoParcial={} saldoPendiente={}",
-                dto.tipoVenta(), esFiado, total, pagoEfectivo, pagoTransferencia, cobraContado, hayAbonoParcial, venta.getSaldoPendiente());
+        log.info(
+                "[VENTA] tipo={} fiado={} total={} efectivo={} transf={} cobraContado={} hayAbonoParcial={} saldoPendiente={}",
+                dto.tipoVenta(), esFiado, total, pagoEfectivo, pagoTransferencia, cobraContado, hayAbonoParcial,
+                venta.getSaldoPendiente());
 
         if (dto.tipoVenta() == TipoVenta.LOCAL && (!esFiado || hayAbonoParcial)) {
             turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
@@ -367,11 +356,11 @@ public class VentaService {
                 pagoAplicado.transferenciaAplicada(),
                 pagoAplicado.efectivoRecibido(),
                 pagoAplicado.transferenciaRecibida(),
-                pagoAplicado.cambioEfectivo()
-        );
+                pagoAplicado.cambioEfectivo());
         if (esFiado) {
             if (hayAbonoParcial) {
-                movimientoFinancieroService.registrarVentaFiadaConAbono(ventaGuardada, usuario, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
+                movimientoFinancieroService.registrarVentaFiadaConAbono(ventaGuardada, usuario,
+                        pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
             } else {
                 movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
             }
@@ -380,19 +369,20 @@ public class VentaService {
                     ventaGuardada,
                     usuario,
                     pagoAplicado.efectivoAplicado(),
-                    pagoAplicado.transferenciaAplicada()
-            );
+                    pagoAplicado.transferenciaAplicada());
         }
         if (hayAbonoParcial && ventaGuardada.getCliente() != null) {
             BigDecimal efectivoAplicado = pagoAplicado.efectivoAplicado();
             BigDecimal transferenciaAplicada = pagoAplicado.transferenciaAplicada();
             BigDecimal montoAbono = efectivoAplicado.add(transferenciaAplicada);
             log.info("[ABONO_INICIAL] ventaId={} clienteId={} monto={} efectivo={} transferencia={}",
-                    ventaGuardada.getId(), ventaGuardada.getCliente().getId(), montoAbono, efectivoAplicado, transferenciaAplicada);
+                    ventaGuardada.getId(), ventaGuardada.getCliente().getId(), montoAbono, efectivoAplicado,
+                    transferenciaAplicada);
 
             FormaPago formaPagoAbono = transferenciaAplicada.compareTo(BigDecimal.ZERO) > 0
                     && efectivoAplicado.compareTo(BigDecimal.ZERO) == 0
-                    ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+                            ? FormaPago.TRANSFERENCIA
+                            : FormaPago.EFECTIVO;
 
             abonoFiadoRepository.save(
                     AbonoFiado.builder()
@@ -404,8 +394,7 @@ public class VentaService {
                             .cliente(ventaGuardada.getCliente())
                             .usuario(usuario)
                             .turno(turno)
-                            .build()
-            );
+                            .build());
         }
 
         auditService.record(
@@ -417,8 +406,7 @@ public class VentaService {
                 null,
                 auditService.change("total", null, ventaGuardada.getTotal()),
                 auditService.change("estado", null, ventaGuardada.getEstado()),
-                auditService.change("condicionPago", null, ventaGuardada.getCondicionPago())
-        );
+                auditService.change("condicionPago", null, ventaGuardada.getCondicionPago()));
 
         if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
             imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
@@ -498,7 +486,8 @@ public class VentaService {
         boolean esFiado = venta.getCondicionPago() == CondicionPago.FIADO;
         PagoAplicado pagoAplicado = esFiado
                 ? PagoAplicado.cero()
-                : calcularPagoAplicado(venta.getTotal(), pagoEfectivo, pagoTransferencia, "El pago es insuficiente para despachar la venta");
+                : calcularPagoAplicado(venta.getTotal(), pagoEfectivo, pagoTransferencia,
+                        "El pago es insuficiente para despachar la venta");
 
         log.info("[DESPACHO] ventaId={} esFiado={} total={} efectivo={} transf={} saldoPendiente={}",
                 venta.getId(), esFiado, venta.getTotal(), pagoEfectivo, pagoTransferencia,
@@ -520,8 +509,7 @@ public class VentaService {
                 pagoAplicado.transferenciaAplicada(),
                 pagoAplicado.efectivoRecibido(),
                 pagoAplicado.transferenciaRecibida(),
-                pagoAplicado.cambioEfectivo()
-        );
+                pagoAplicado.cambioEfectivo());
         if (esFiado) {
             movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
         } else {
@@ -529,8 +517,7 @@ public class VentaService {
                     ventaGuardada,
                     usuario,
                     pagoAplicado.efectivoAplicado(),
-                    pagoAplicado.transferenciaAplicada()
-            );
+                    pagoAplicado.transferenciaAplicada());
         }
         auditService.record(
                 "VENTA_DESPACHADA",
@@ -541,8 +528,7 @@ public class VentaService {
                 null,
                 auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
                 auditService.change("pagoEfectivo", null, pagoAplicado.efectivoAplicado()),
-                auditService.change("pagoTransferencia", null, pagoAplicado.transferenciaAplicada())
-        );
+                auditService.change("pagoTransferencia", null, pagoAplicado.transferenciaAplicada()));
 
         if (isFacturaAutoEnabled() && !esFiado) {
             imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
@@ -574,12 +560,14 @@ public class VentaService {
                 cliente.setNombre(dto.clienteNombre());
             }
         } else {
-            cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(), dto.clienteTelefono());
+            cliente = fiadoService.resolverClienteVenta(true, dto.clienteId(), dto.clienteNombre(),
+                    dto.clienteTelefono());
         }
 
         BigDecimal pagoEfectivo = nonNegative(dto.pagoEfectivo());
         BigDecimal pagoTransferencia = nonNegative(dto.pagoTransferencia());
-        boolean hayAbono = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0;
+        boolean hayAbono = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0
+                || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0;
         TurnoCaja turno = venta.getTurno();
 
         venta.setCliente(cliente);
@@ -614,8 +602,7 @@ public class VentaService {
                 pagoAplicado.transferenciaAplicada(),
                 pagoAplicado.efectivoRecibido(),
                 pagoAplicado.transferenciaRecibida(),
-                pagoAplicado.cambioEfectivo()
-        );
+                pagoAplicado.cambioEfectivo());
 
         if (hayAbono) {
             movimientoFinancieroService.registrarVentaFiadaConAbono(ventaGuardada, usuario,
@@ -624,7 +611,8 @@ public class VentaService {
                 BigDecimal montoAbono = pagoAplicado.totalAplicado();
                 FormaPago formaPagoAbono = pagoAplicado.transferenciaAplicada().compareTo(BigDecimal.ZERO) > 0
                         && pagoAplicado.efectivoAplicado().compareTo(BigDecimal.ZERO) == 0
-                        ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+                                ? FormaPago.TRANSFERENCIA
+                                : FormaPago.EFECTIVO;
                 abonoFiadoRepository.save(
                         AbonoFiado.builder()
                                 .fecha(LocalDateTime.now())
@@ -635,8 +623,7 @@ public class VentaService {
                                 .cliente(ventaGuardada.getCliente())
                                 .usuario(usuario)
                                 .turno(turno)
-                                .build()
-                );
+                                .build());
             }
         } else {
             movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
@@ -652,8 +639,7 @@ public class VentaService {
                 auditService.change("condicionPago", CondicionPago.CONTADO, CondicionPago.FIADO),
                 auditService.change("formaPago", null, FormaPago.FIADO),
                 auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.DESPACHADA),
-                auditService.change("clienteId", null, cliente != null ? cliente.getId() : null)
-        );
+                auditService.change("clienteId", null, cliente != null ? cliente.getId() : null));
         return ventaGuardada;
     }
 
@@ -686,8 +672,7 @@ public class VentaService {
                 usuario,
                 guardada.getTurno(),
                 null,
-                auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.CANCELADA)
-        );
+                auditService.change("estado", EstadoVenta.EN_PROCESO, EstadoVenta.CANCELADA));
         return guardada;
     }
 
@@ -727,7 +712,8 @@ public class VentaService {
 
         Venta guardada = ventaRepository.save(venta);
         if (efectivoAplicado.compareTo(BigDecimal.ZERO) > 0 || transferenciaAplicada.compareTo(BigDecimal.ZERO) > 0) {
-            movimientoFinancieroService.registrarAnulacionVenta(guardada, usuario, efectivoAplicado, transferenciaAplicada);
+            movimientoFinancieroService.registrarAnulacionVenta(guardada, usuario, efectivoAplicado,
+                    transferenciaAplicada);
         }
         auditService.record(
                 "VENTA_ANULADA",
@@ -737,8 +723,7 @@ public class VentaService {
                 turno,
                 guardada.getMotivoAnulacion(),
                 auditService.change("estado", EstadoVenta.DESPACHADA, EstadoVenta.ANULADA),
-                auditService.change("saldoPendiente", venta.getTotal(), BigDecimal.ZERO)
-        );
+                auditService.change("saldoPendiente", venta.getTotal(), BigDecimal.ZERO));
         return guardada;
     }
 
@@ -766,8 +751,7 @@ public class VentaService {
                 guardada.getTurno(),
                 null,
                 auditService.change("valorDomicilio", anterior, valorDomicilio),
-                auditService.change("total", null, guardada.getTotal())
-        );
+                auditService.change("total", null, guardada.getTotal()));
         return guardada;
     }
 
@@ -807,8 +791,7 @@ public class VentaService {
                 InventarioDiario inv = obtenerInventarioParaActualizar(
                         producto,
                         menuActivo,
-                        "Inventario no encontrado"
-                );
+                        "Inventario no encontrado");
 
                 inv.setStockActual(inv.getStockActual() + detalle.getCantidad());
                 inv.setAgotado(false);
@@ -860,12 +843,11 @@ public class VentaService {
         BigDecimal subtotalProductos = venta.getDetalles() == null
                 ? BigDecimal.ZERO
                 : venta.getDetalles().stream()
-                .map(VentaDetalle::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        .map(VentaDetalle::getSubtotal)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal base = subtotalProductos.add(
-                venta.getValorDomicilio() == null ? BigDecimal.ZERO : venta.getValorDomicilio()
-        );
+                venta.getValorDomicilio() == null ? BigDecimal.ZERO : venta.getValorDomicilio());
 
         BigDecimal descuentoValor = BigDecimal.ZERO;
         if (venta.getDescuentoPorcentaje() != null
@@ -907,25 +889,32 @@ public class VentaService {
      * Resuelve la forma de pago real a partir de los montos recibidos.
      * Si se usa junto a una venta fiada, llamar directamente con FormaPago.FIADO.
      */
-    private FormaPago resolverFormaPago(FormaPago formaPagoDeclarada, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+    private FormaPago resolverFormaPago(FormaPago formaPagoDeclarada, BigDecimal pagoEfectivo,
+            BigDecimal pagoTransferencia) {
         // Si el caller ya sabe que es FIADO, respetarlo sin inspeccionar montos
-        if (formaPagoDeclarada == FormaPago.FIADO) return FormaPago.FIADO;
+        if (formaPagoDeclarada == FormaPago.FIADO)
+            return FormaPago.FIADO;
 
-        BigDecimal efectivo      = pagoEfectivo      == null ? BigDecimal.ZERO : pagoEfectivo;
+        BigDecimal efectivo = pagoEfectivo == null ? BigDecimal.ZERO : pagoEfectivo;
         BigDecimal transferencia = pagoTransferencia == null ? BigDecimal.ZERO : pagoTransferencia;
 
-        boolean tieneEfectivo      = efectivo.compareTo(BigDecimal.ZERO)      > 0;
+        boolean tieneEfectivo = efectivo.compareTo(BigDecimal.ZERO) > 0;
         boolean tieneTransferencia = transferencia.compareTo(BigDecimal.ZERO) > 0;
 
-        if (tieneTransferencia && !tieneEfectivo)  return FormaPago.TRANSFERENCIA;
-        if (tieneEfectivo && !tieneTransferencia)  return FormaPago.EFECTIVO;
-        if (tieneEfectivo && tieneTransferencia)   return transferencia.compareTo(efectivo) >= 0
-                ? FormaPago.TRANSFERENCIA : FormaPago.EFECTIVO;
+        if (tieneTransferencia && !tieneEfectivo)
+            return FormaPago.TRANSFERENCIA;
+        if (tieneEfectivo && !tieneTransferencia)
+            return FormaPago.EFECTIVO;
+        if (tieneEfectivo && tieneTransferencia)
+            return transferencia.compareTo(efectivo) >= 0
+                    ? FormaPago.TRANSFERENCIA
+                    : FormaPago.EFECTIVO;
 
         return formaPagoDeclarada != null ? formaPagoDeclarada : FormaPago.EFECTIVO;
     }
 
-    private void validarPagoSuficiente(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia, String mensaje) {
+    private void validarPagoSuficiente(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia,
+            String mensaje) {
         BigDecimal totalPagado = nonNegative(pagoEfectivo).add(nonNegative(pagoTransferencia));
         if (totalPagado.compareTo(total) < 0) {
             throw new BadRequestException(mensaje);
@@ -939,7 +928,8 @@ public class VentaService {
         return value;
     }
 
-    private InventarioDiario obtenerInventarioParaActualizar(Producto producto, MenuDiario menuDiario, String errorMessage) {
+    private InventarioDiario obtenerInventarioParaActualizar(Producto producto, MenuDiario menuDiario,
+            String errorMessage) {
         return inventarioDiarioRepository.findByProductoAndMenuDiarioForUpdate(producto, menuDiario)
                 .orElseThrow(() -> new BadRequestException(errorMessage));
     }
@@ -956,7 +946,8 @@ public class VentaService {
      * Cálculo específico para abono parcial en venta fiada.
      * No exige que el pago cubra el total — el restante queda como saldo pendiente.
      */
-    private PagoAplicado calcularPagoFiadoAbono(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia) {
+    private PagoAplicado calcularPagoFiadoAbono(BigDecimal total, BigDecimal pagoEfectivo,
+            BigDecimal pagoTransferencia) {
         BigDecimal totalVenta = total == null ? BigDecimal.ZERO : total;
         BigDecimal efectivoRecibido = nonNegative(pagoEfectivo);
         BigDecimal transferenciaRecibida = nonNegative(pagoTransferencia);
@@ -969,10 +960,12 @@ public class VentaService {
         BigDecimal efectivoAplicado = efectivoRecibido.min(faltante);
         BigDecimal cambio = efectivoRecibido.subtract(efectivoAplicado);
 
-        return new PagoAplicado(efectivoAplicado, transferenciaRecibida, efectivoRecibido, transferenciaRecibida, cambio);
+        return new PagoAplicado(efectivoAplicado, transferenciaRecibida, efectivoRecibido, transferenciaRecibida,
+                cambio);
     }
 
-    private PagoAplicado calcularPagoAplicado(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia, String mensajeInsuficiente) {
+    private PagoAplicado calcularPagoAplicado(BigDecimal total, BigDecimal pagoEfectivo, BigDecimal pagoTransferencia,
+            String mensajeInsuficiente) {
         BigDecimal totalVenta = total == null ? BigDecimal.ZERO : total;
         BigDecimal efectivoRecibido = nonNegative(pagoEfectivo);
         BigDecimal transferenciaRecibida = nonNegative(pagoTransferencia);
@@ -997,8 +990,7 @@ public class VentaService {
                 transferenciaRecibida,
                 efectivoRecibido,
                 transferenciaRecibida,
-                cambio
-        );
+                cambio);
     }
 
     private record PagoAplicado(
@@ -1006,10 +998,10 @@ public class VentaService {
             BigDecimal transferenciaAplicada,
             BigDecimal efectivoRecibido,
             BigDecimal transferenciaRecibida,
-            BigDecimal cambioEfectivo
-    ) {
+            BigDecimal cambioEfectivo) {
         static PagoAplicado cero() {
-            return new PagoAplicado(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+            return new PagoAplicado(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO);
         }
 
         BigDecimal totalAplicado() {

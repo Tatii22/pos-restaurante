@@ -149,7 +149,7 @@ export function HistorialVentasPage() {
   if (!turno || !isActivo()) {
     return (
       <div className="card p-4">
-        <p className="text-sm text-pos-muted">No hay turno activo. El historial del turno solo aparece cuando caja tiene un turno abierto o simulado.</p>
+        <p className="text-sm text-pos-muted">No hay turno activo. El historial del turno solo aparece cuando caja tiene un turno abierto.</p>
       </div>
     );
   }

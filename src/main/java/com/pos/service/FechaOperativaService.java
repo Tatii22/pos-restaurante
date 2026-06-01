@@ -16,7 +16,7 @@ public class FechaOperativaService {
 
     public LocalDate obtenerFechaOperativa() {
         return turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstado(EstadoTurno.ABIERTO)
                 .map(turno -> turno.getFechaApertura().toLocalDate())
                 .orElse(LocalDate.now());
     }

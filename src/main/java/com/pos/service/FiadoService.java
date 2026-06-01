@@ -57,9 +57,9 @@ public class FiadoService {
         Map<Long, BigDecimal> deudaMap = new HashMap<>();
         Map<Long, Long> conteoMap = new HashMap<>();
         for (Object[] row : ventaRepository.sumarDeudaAgrupadaPorCliente()) {
-            Long clienteId   = (Long)       row[0];
+            Long clienteId = (Long) row[0];
             BigDecimal deuda = (BigDecimal) row[1];
-            Long conteo      = (Long)       row[2];
+            Long conteo = (Long) row[2];
             deudaMap.put(clienteId, deuda);
             conteoMap.put(clienteId, conteo);
         }
@@ -76,9 +76,11 @@ public class FiadoService {
      * Usado por componentes de listado completo.
      */
     public List<ClienteResponseDTO> buscarClientes(String q) {
-        if (q == null || q.isBlank()) return List.of();
+        if (q == null || q.isBlank())
+            return List.of();
         String query = q.trim().replaceAll("[^\\w\\s]", "");
-        if (query.isBlank()) return List.of();
+        if (query.isBlank())
+            return List.of();
 
         Map<Long, BigDecimal> deudaMap = new HashMap<>();
         Map<Long, Long> conteoMap = new HashMap<>();
@@ -97,9 +99,11 @@ public class FiadoService {
      * Devuelve DTO mínimo con deuda actual.
      */
     public List<ClienteSearchDTO> buscarClientesLigero(String q) {
-        if (q == null || q.isBlank()) return List.of();
+        if (q == null || q.isBlank())
+            return List.of();
         String query = q.trim().replaceAll("[^\\w\\s]", "");
-        if (query.isBlank()) return List.of();
+        if (query.isBlank())
+            return List.of();
 
         Map<Long, BigDecimal> deudaMap = new HashMap<>();
         for (Object[] row : ventaRepository.sumarDeudaAgrupadaPorCliente()) {
@@ -113,8 +117,7 @@ public class FiadoService {
                             c.getId(), c.getNombre(), c.getTelefono(),
                             c.getDireccionPredeterminada(),
                             deuda,
-                            deuda.compareTo(BigDecimal.ZERO) > 0
-                    );
+                            deuda.compareTo(BigDecimal.ZERO) > 0);
                 })
                 .toList();
     }
@@ -130,32 +133,30 @@ public class FiadoService {
                 .map(a -> toAbonoDto(a, BigDecimal.ZERO))
                 .toList();
 
-        List<com.pos.dto.venta.VentaResponseDTO> ventasPendientes =
-                ventaRepository.findByClienteAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(
+        List<com.pos.dto.venta.VentaResponseDTO> ventasPendientes = ventaRepository
+                .findByClienteAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(
                         cliente, EstadoVenta.DESPACHADA, BigDecimal.ZERO)
-                        .stream()
-                        .map(v -> {
-                            var pago = ventaPagoDetalleService.obtener(v.getId());
-                            return new com.pos.dto.venta.VentaResponseDTO(
-                                    v.getId(), v.getFecha(), v.getTipoVenta(), v.getEstado(),
-                                    v.getClienteNombre(), v.getTelefono(), v.getDireccion(),
-                                    v.getValorDomicilio(), v.getParaLlevar(),
-                                    v.getDescuentoPorcentaje(), v.getDescuentoValor(),
-                                    v.getTotal(), v.getFormaPago(),
-                                    pago != null ? pago.pagoEfectivo()      : BigDecimal.ZERO,
-                                    pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
-                                    v.getCondicionPago(), v.getSaldoPendiente(),
-                                    v.getCliente() != null ? v.getCliente().getId() : null
-                            );
-                        })
-                        .toList();
+                .stream()
+                .map(v -> {
+                    var pago = ventaPagoDetalleService.obtener(v.getId());
+                    return new com.pos.dto.venta.VentaResponseDTO(
+                            v.getId(), v.getFecha(), v.getTipoVenta(), v.getEstado(),
+                            v.getClienteNombre(), v.getTelefono(), v.getDireccion(),
+                            v.getValorDomicilio(), v.getParaLlevar(),
+                            v.getDescuentoPorcentaje(), v.getDescuentoValor(),
+                            v.getTotal(), v.getFormaPago(),
+                            pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
+                            pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
+                            v.getCondicionPago(), v.getSaldoPendiente(),
+                            v.getCliente() != null ? v.getCliente().getId() : null);
+                })
+                .toList();
 
         return new ClienteDetalleDTO(
                 cliente.getId(), cliente.getNombre(), cliente.getTelefono(),
                 cliente.getDireccionPredeterminada(), cliente.getNotas(),
                 deudaTotal.compareTo(BigDecimal.ZERO) > 0,
-                deudaTotal, ventasPendientes, abonos
-        );
+                deudaTotal, ventasPendientes, abonos);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -187,14 +188,15 @@ public class FiadoService {
                                     .nombre(normalizarNombre(dto.nombre()))
                                     .telefono(telefono)
                                     .direccionPredeterminada(
-                                            dto.direccionPredeterminada() != null && !dto.direccionPredeterminada().isBlank()
-                                                    ? dto.direccionPredeterminada().trim() : null)
+                                            dto.direccionPredeterminada() != null
+                                                    && !dto.direccionPredeterminada().isBlank()
+                                                            ? dto.direccionPredeterminada().trim()
+                                                            : null)
                                     .notas(dto.notas() != null && !dto.notas().isBlank() ? dto.notas().trim() : null)
                                     .activo(true)
                                     .fechaCreacion(ahora)
                                     .fechaActualizacion(ahora)
-                                    .build()
-                    );
+                                    .build());
                     return toResumenDTO(nuevo, BigDecimal.ZERO, 0L);
                 });
     }
@@ -202,7 +204,7 @@ public class FiadoService {
     @Transactional
     public AbonoFiadoResponseDTO registrarAbono(AbonoFiadoCreateDTO dto, Usuario usuario) {
         Cliente cliente = obtenerCliente(dto.clienteId());
-        BigDecimal montoEfectivo      = nonNegative(dto.montoEfectivo());
+        BigDecimal montoEfectivo = nonNegative(dto.montoEfectivo());
         BigDecimal montoTransferencia = nonNegative(dto.montoTransferencia());
 
         if (montoEfectivo.add(montoTransferencia).compareTo(BigDecimal.ZERO) <= 0) {
@@ -220,7 +222,7 @@ public class FiadoService {
         PagoAbono pago = calcularPagoAbono(deudaActual, montoEfectivo, montoTransferencia);
 
         Optional<TurnoCaja> optTurno = turnoCajaRepository
-                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO));
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO));
         if (optTurno.isEmpty() && !"ADMIN".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("No hay turno activo para registrar el abono");
         }
@@ -232,8 +234,9 @@ public class FiadoService {
                 cliente, EstadoVenta.DESPACHADA, BigDecimal.ZERO);
 
         for (Venta venta : ventasPendientes) {
-            if (restante.compareTo(BigDecimal.ZERO) <= 0) break;
-            BigDecimal aplicado   = venta.getSaldoPendiente().min(restante);
+            if (restante.compareTo(BigDecimal.ZERO) <= 0)
+                break;
+            BigDecimal aplicado = venta.getSaldoPendiente().min(restante);
             BigDecimal nuevoSaldo = venta.getSaldoPendiente().subtract(aplicado);
             if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
                 throw new IllegalStateException("Inconsistencia: saldo negativo en venta " + venta.getId());
@@ -263,8 +266,7 @@ public class FiadoService {
                         .cliente(cliente)
                         .usuario(usuario)
                         .turno(turno)
-                        .build()
-        );
+                        .build());
 
         if (turno != null) {
             turno.setTotalVentas(turno.getTotalVentas().add(aplicadoTotal));
@@ -274,12 +276,11 @@ public class FiadoService {
         auditService.record(
                 "ABONO_FIADO_REGISTRADO", "AbonoFiado", abono.getId(),
                 usuario, turno, abono.getObservacion(),
-                auditService.change("clienteId",             null, cliente.getId()),
-                auditService.change("monto",                 null, aplicadoTotal),
-                auditService.change("efectivoAplicado",      null, pago.efectivoAplicado()),
+                auditService.change("clienteId", null, cliente.getId()),
+                auditService.change("monto", null, aplicadoTotal),
+                auditService.change("efectivoAplicado", null, pago.efectivoAplicado()),
                 auditService.change("transferenciaAplicada", null, pago.transferenciaAplicada()),
-                auditService.change("cambioEfectivo",        null, pago.cambioEfectivo())
-        );
+                auditService.change("cambioEfectivo", null, pago.cambioEfectivo()));
 
         return toAbonoDto(abono, pago.cambioEfectivo());
     }
@@ -292,14 +293,15 @@ public class FiadoService {
      * Resuelve o crea el cliente para una venta LOCAL fiada.
      *
      * Prioridad:
-     *   1. Si viene clienteId → usar ese cliente directamente.
-     *   2. Si viene teléfono  → buscar por teléfono; si existe, actualizar nombre;
-     *      si no existe, crear nuevo.
+     * 1. Si viene clienteId → usar ese cliente directamente.
+     * 2. Si viene teléfono → buscar por teléfono; si existe, actualizar nombre;
+     * si no existe, crear nuevo.
      */
     @Transactional
     public Cliente resolverClienteVenta(Boolean fiado, Long clienteId,
-                                        String clienteNombre, String clienteTelefono) {
-        if (!Boolean.TRUE.equals(fiado)) return null;
+            String clienteNombre, String clienteTelefono) {
+        if (!Boolean.TRUE.equals(fiado))
+            return null;
 
         if (clienteId != null) {
             Cliente c = obtenerCliente(clienteId);
@@ -308,7 +310,7 @@ public class FiadoService {
         }
 
         String telefono = normalizarTelefono(clienteTelefono);
-        String nombre   = normalizarNombre(clienteNombre);
+        String nombre = normalizarNombre(clienteNombre);
 
         return clienteRepository.findByTelefono(telefono)
                 .map(existente -> {
@@ -328,29 +330,32 @@ public class FiadoService {
                                     .activo(true)
                                     .fechaCreacion(ahora)
                                     .fechaActualizacion(ahora)
-                                    .build()
-                    );
+                                    .build());
                 });
     }
 
     /**
-     * Resuelve o crea el cliente para cualquier domicilio (contado, transferencia o fiado).
+     * Resuelve o crea el cliente para cualquier domicilio (contado, transferencia o
+     * fiado).
      * Actualiza la dirección predeterminada con la última usada.
      * Retorna null si no viene ni teléfono ni nombre (domicilio anónimo).
      */
     @Transactional
     public Cliente resolverOActualizarCliente(String nombre, String telefono, String direccion) {
         // Sin teléfono: domicilio anónimo permitido para contado
-        if (telefono == null || telefono.isBlank()) return null;
+        if (telefono == null || telefono.isBlank())
+            return null;
 
-        String telNorm  = normalizarTelefono(telefono);
-        String nomNorm  = (nombre != null && !nombre.isBlank()) ? normalizarNombre(nombre) : null;
-        String dirNorm  = (direccion != null && !direccion.isBlank()) ? direccion.trim() : null;
+        String telNorm = normalizarTelefono(telefono);
+        String nomNorm = (nombre != null && !nombre.isBlank()) ? normalizarNombre(nombre) : null;
+        String dirNorm = (direccion != null && !direccion.isBlank()) ? direccion.trim() : null;
 
         return clienteRepository.findByTelefono(telNorm)
                 .map(existente -> {
-                    if (nomNorm != null) existente.setNombre(nomNorm);
-                    if (dirNorm != null) existente.setDireccionPredeterminada(dirNorm);
+                    if (nomNorm != null)
+                        existente.setNombre(nomNorm);
+                    if (dirNorm != null)
+                        existente.setDireccionPredeterminada(dirNorm);
                     existente.setActivo(true);
                     existente.setFechaActualizacion(LocalDateTime.now());
                     return clienteRepository.save(existente);
@@ -365,8 +370,7 @@ public class FiadoService {
                                     .activo(true)
                                     .fechaCreacion(ahora)
                                     .fechaActualizacion(ahora)
-                                    .build()
-                    );
+                                    .build());
                 });
     }
 
@@ -385,8 +389,8 @@ public class FiadoService {
     // ─────────────────────────────────────────────────────────────────
 
     private ClienteResponseDTO toResumenDTO(Cliente c,
-                                             Map<Long, BigDecimal> deudaMap,
-                                             Map<Long, Long> conteoMap) {
+            Map<Long, BigDecimal> deudaMap,
+            Map<Long, Long> conteoMap) {
         return toResumenDTO(c,
                 deudaMap.getOrDefault(c.getId(), BigDecimal.ZERO),
                 conteoMap.getOrDefault(c.getId(), 0L));
@@ -397,8 +401,7 @@ public class FiadoService {
         return new ClienteResponseDTO(
                 c.getId(), c.getNombre(), c.getTelefono(),
                 c.getDireccionPredeterminada(), c.getNotas(),
-                c.getActivo(), tieneDeuda, deuda, conteo
-        );
+                c.getActivo(), tieneDeuda, deuda, conteo);
     }
 
     private AbonoFiadoResponseDTO toAbonoDto(AbonoFiado abono, BigDecimal cambio) {
@@ -407,9 +410,8 @@ public class FiadoService {
                 abono.getMonto(), abono.getMontoEfectivo(), abono.getMontoTransferencia(),
                 abono.getFormaPago(), abono.getObservacion(),
                 abono.getUsuario() != null ? abono.getUsuario().getUsername() : "-",
-                abono.getTurno()   != null ? abono.getTurno().getId()         : null,
-                cambio != null ? cambio : BigDecimal.ZERO
-        );
+                abono.getTurno() != null ? abono.getTurno().getId() : null,
+                cambio != null ? cambio : BigDecimal.ZERO);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -417,19 +419,19 @@ public class FiadoService {
     // ─────────────────────────────────────────────────────────────────
 
     private PagoAbono calcularPagoAbono(BigDecimal deudaActual,
-                                        BigDecimal montoEfectivo,
-                                        BigDecimal montoTransferencia) {
-        BigDecimal deuda              = deudaActual == null ? BigDecimal.ZERO : deudaActual;
-        BigDecimal efectivoRecibido   = nonNegative(montoEfectivo);
+            BigDecimal montoEfectivo,
+            BigDecimal montoTransferencia) {
+        BigDecimal deuda = deudaActual == null ? BigDecimal.ZERO : deudaActual;
+        BigDecimal efectivoRecibido = nonNegative(montoEfectivo);
         BigDecimal transferenciaRecibida = nonNegative(montoTransferencia);
 
         if (transferenciaRecibida.compareTo(deuda) > 0) {
             throw new BadRequestException("La transferencia no puede superar la deuda pendiente");
         }
 
-        BigDecimal faltante         = deuda.subtract(transferenciaRecibida);
+        BigDecimal faltante = deuda.subtract(transferenciaRecibida);
         BigDecimal efectivoAplicado = efectivoRecibido.min(faltante);
-        BigDecimal totalAplicado    = efectivoAplicado.add(transferenciaRecibida);
+        BigDecimal totalAplicado = efectivoAplicado.add(transferenciaRecibida);
 
         if (totalAplicado.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("No fue posible aplicar el abono");
@@ -446,8 +448,7 @@ public class FiadoService {
     private record PagoAbono(
             BigDecimal efectivoAplicado,
             BigDecimal transferenciaAplicada,
-            BigDecimal cambioEfectivo
-    ) {
+            BigDecimal cambioEfectivo) {
         BigDecimal totalAplicado() {
             return efectivoAplicado.add(transferenciaAplicada);
         }
@@ -466,7 +467,8 @@ public class FiadoService {
     // ─────────────────────────────────────────────────────────────────
 
     private BigDecimal nonNegative(BigDecimal value) {
-        if (value == null || value.compareTo(BigDecimal.ZERO) < 0) return BigDecimal.ZERO;
+        if (value == null || value.compareTo(BigDecimal.ZERO) < 0)
+            return BigDecimal.ZERO;
         return value;
     }
 
@@ -487,7 +489,8 @@ public class FiadoService {
     }
 
     private String normalizarObservacion(String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank())
+            return null;
         String clean = value.trim().replace("\r", " ").replace("\n", " ");
         return clean.length() > 255 ? clean.substring(0, 255) : clean;
     }
