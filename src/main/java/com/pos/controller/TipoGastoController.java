@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.pos.dto.gastoAdmin.TipoGastoCreateDTO;
+import jakarta.validation.Valid;
 import java.util.List;
 
 
@@ -21,7 +22,7 @@ public class TipoGastoController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TipoGasto> crear(@RequestBody TipoGastoCreateDTO dto) {
+    public ResponseEntity<TipoGasto> crear(@Valid @RequestBody TipoGastoCreateDTO dto) {
         return ResponseEntity.ok(
                 tipoGastoService.crear(dto.nombre())
         );

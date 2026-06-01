@@ -6,12 +6,14 @@ import com.pos.entity.TipoVentaProducto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
 public class ProductoUpdateDTO {
 
     @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 80, message = "El nombre no puede superar 80 caracteres")
     private String nombre;
 
     @NotNull(message = "El precio es obligatorio")

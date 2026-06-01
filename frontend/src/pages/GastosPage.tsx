@@ -6,6 +6,7 @@ import { useAuthStore } from "../shared/store/authStore";
 import { getErrorMessage, money } from "../shared/utils";
 import { DateRangePicker } from "../shared/DateRangePicker";
 import { CustomSelect } from "../shared/CustomSelect";
+import { X } from "lucide-react";
 
 function toYmd(d: Date) {
   const y = d.getFullYear();
@@ -84,6 +85,7 @@ export function GastosPage() {
   const [fechaAdmin, setFechaAdmin] = useState(() => todayYmd());
   const [fechaInicio, setFechaInicio] = useState(() => monthStartYmd());
   const [fechaFin, setFechaFin] = useState(() => todayYmd());
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; origen: "CAJA" | "ADMIN" } | null>(null);
   const esAdmin = role === "ADMIN";
 
   const efectivoValue = parseMoneyInput(montoEfectivo);
@@ -379,7 +381,7 @@ export function GastosPage() {
                     <div className="mt-2">
                       <button
                         className="btn-ghost bg-red-100 text-red-700 hover:bg-red-200"
-                        onClick={() => deleteM.mutate({ id: g.id, origen: g.origen })}
+                        onClick={() => setConfirmDelete({ id: g.id, origen: g.origen })}
                         disabled={deleteM.isPending}
                       >
                         Eliminar
@@ -419,7 +421,7 @@ export function GastosPage() {
                         <td className="whitespace-nowrap p-2">
                           <button
                             className="btn-ghost bg-red-100 text-red-700 hover:bg-red-200"
-                            onClick={() => deleteM.mutate({ id: g.id, origen: g.origen })}
+                            onClick={() => setConfirmDelete({ id: g.id, origen: g.origen })}
                             disabled={deleteM.isPending}
                           >
                             Eliminar
@@ -434,6 +436,42 @@ export function GastosPage() {
           </>
         )}
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="card w-full max-w-sm p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Confirmar eliminación</h3>
+              <button className="btn-ghost p-1" onClick={() => setConfirmDelete(null)}>
+                <X size={14} />
+              </button>
+            </div>
+            <p className="text-sm text-pos-muted">
+              ¿Estás seguro de eliminar este gasto{confirmDelete.origen === "ADMIN" ? " administrativo" : " de caja"}?
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                className="btn-soft"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleteM.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-primary bg-red-700 hover:bg-red-800"
+                onClick={() => {
+                  deleteM.mutate(confirmDelete);
+                  setConfirmDelete(null);
+                }}
+                disabled={deleteM.isPending}
+              >
+                {deleteM.isPending ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(tiposQ.isError || registrarError || historialError || deleteM.isError) && (
         <p className="text-sm text-red-600">{getErrorMessage(tiposQ.error || registrarError || historialError || deleteM.error)}</p>

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -20,8 +21,11 @@ public record VentaCreateDTO(
         FormaPago formaPago,
 
         // Datos cliente (solo obligatorios en DOMICILIO)
+        @Size(max = 60, message = "El nombre del cliente no puede superar 60 caracteres")
         String clienteNombre,
+        @Size(max = 15, message = "El telefono no puede superar 15 caracteres")
         String telefono,
+        @Size(max = 120, message = "La direccion no puede superar 120 caracteres")
         String direccion,
         Boolean fiado,
         Long clienteId,

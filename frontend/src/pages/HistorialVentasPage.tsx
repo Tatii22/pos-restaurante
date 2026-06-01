@@ -338,7 +338,12 @@ export function HistorialVentasPage() {
       {confirmAnularId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="card w-full max-w-md p-5">
-            <h3 className="text-lg font-semibold">Anular venta {confirmAnularId !== null ? numeracionTurno.get(confirmAnularId) || "-" : "-"}</h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Anular venta {confirmAnularId !== null ? numeracionTurno.get(confirmAnularId) || "-" : "-"}</h3>
+              <button className="btn-ghost p-1" onClick={() => { setConfirmAnularId(null); setMotivoAnulacion(""); }}>
+                <BsXLg size={14} />
+              </button>
+            </div>
             <p className="mt-2 text-sm text-pos-muted">La venta quedará anulada, se ajustará el turno y se devolverá inventario.</p>
             <label className="mt-4 block text-sm">
               Motivo de anulacion
