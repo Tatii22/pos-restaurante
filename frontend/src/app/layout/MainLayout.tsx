@@ -121,7 +121,9 @@ export function MainLayout() {
     mutationFn: () => posApi.abrirTurno(Number(montoInicial)),
     onSuccess: (data) => {
       setTurno(data);
+      queryClient.setQueryData(["turno-activo-layout", resolvedRole], data);
       setMenuSetupLocked(true);
+      queryClient.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       queryClient.invalidateQueries({ queryKey: ["inventario-arranque-caja"] });
       queryClient.invalidateQueries({ queryKey: ["catalogo-alertas-caja"] });
     }
@@ -208,13 +210,13 @@ export function MainLayout() {
 
   useEffect(() => {
     if (resolvedRole !== "CAJA") return;
-    if (turnoActivoQ.data === undefined) return;
+    if (!turnoActivoQ.isSuccess) return;
     if (turnoActivoQ.data) {
       setTurno(turnoActivoQ.data);
       return;
     }
     clearTurno();
-  }, [resolvedRole, turnoActivoQ.data, setTurno, clearTurno]);
+  }, [resolvedRole, turnoActivoQ.isSuccess, turnoActivoQ.data, setTurno, clearTurno]);
 
   useEffect(() => {
     if (resolvedRole !== "CAJA") return;
@@ -224,6 +226,11 @@ export function MainLayout() {
     if ((inventarioQ.data ?? []).length > 0) return;
     setMenuSetupLocked(true);
   }, [resolvedRole, turno, inventarioQ.isSuccess, inventarioQ.data, setMenuSetupLocked]);
+
+  useEffect(() => {
+    if (resolvedRole === "CAJA" && turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO")) return;
+    setMenuSetupLocked(false);
+  }, [resolvedRole, turno]);
 
   const turnoClass =
     turno?.estado === "ABIERTO"
@@ -277,10 +284,16 @@ export function MainLayout() {
     setShowAlerts(false);
   }, [lowStockAlerts.length, showAlerts]);
 
-  const needsTurno = resolvedRole === "CAJA" && !turno && turnoActivoQ.isSuccess && turnoActivoQ.data === null;
-  const needsMenu = resolvedRole === "CAJA" && !!turno && menuSetupLocked;
-  const verifyingTurno = resolvedRole === "CAJA" && turnoActivoQ.isPending && !turno;
-  const blockCajaNavigation = needsTurno || needsMenu || verifyingTurno;
+  const hasCajaTurnoActivo = resolvedRole === "CAJA" && !!turno && (turno.estado === "ABIERTO" || turno.estado === "SIMULADO");
+  const menuChecked = hasCajaTurnoActivo && inventarioQ.isSuccess;
+  const menuHasItems = (inventarioQ.data ?? []).length > 0;
+  const backendConfirmedNoTurno = turnoActivoQ.isSuccess && !turnoActivoQ.data;
+  const needsTurno = resolvedRole === "CAJA" && !turno && backendConfirmedNoTurno;
+  const showTurnoModal = needsTurno;
+  const needsMenu = hasCajaTurnoActivo && (menuSetupLocked || (menuChecked && !menuHasItems));
+  const verifyingTurno = resolvedRole === "CAJA" && !turnoActivoQ.isSuccess;
+  const verifyingMenu = hasCajaTurnoActivo && !menuSetupLocked && !menuChecked;
+  const blockCajaNavigation = showTurnoModal || needsMenu || verifyingTurno || verifyingMenu;
 
   const productosDisponiblesMenu = useMemo(() => {
     const inventarioProductoIds = new Set((inventarioQ.data || []).map((i) => i.productoId));
@@ -413,7 +426,7 @@ export function MainLayout() {
                     </span>
                   )}
                 </button>
-                <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno}>
+                <button className="btn-soft w-full whitespace-nowrap px-2 py-2 text-xs sm:w-auto sm:px-3 sm:text-sm" onClick={() => navigate("/turnos")} disabled={needsTurno || verifyingTurno || verifyingMenu}>
                   {turno?.estado === "ABIERTO" || turno?.estado === "SIMULADO" ? "Cerrar turno" : "Abrir turno"}
                 </button>
               </>
@@ -698,7 +711,12 @@ export function MainLayout() {
             <p className="text-sm text-pos-muted">Verificando turno activo...</p>
           </div>
         )}
-        {needsTurno && (
+        {verifyingMenu && !verifyingTurno && (
+          <div className="grid min-h-[70vh] place-items-center">
+            <p className="text-sm text-pos-muted">Verificando menu del dia...</p>
+          </div>
+        )}
+        {showTurnoModal && (
           <div className="grid min-h-[70vh] place-items-center">
             <div className="card w-full max-w-xl p-6 text-center">
               <p className="text-xs uppercase tracking-wide text-pos-muted">Inicio de jornada</p>
@@ -728,7 +746,7 @@ export function MainLayout() {
           </div>
         )}
 
-        {needsMenu && !needsTurno && (
+        {needsMenu && !showTurnoModal && (
           <div className="grid min-h-[70vh] place-items-center">
             <div className="card w-full max-w-3xl p-6">
               <p className="text-xs uppercase tracking-wide text-pos-muted">Inicio de jornada</p>
