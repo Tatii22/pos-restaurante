@@ -79,6 +79,13 @@ export function TurnosPage() {
       return posApi.cerrarTurno(v.ef, v.trans, observacionCierre || undefined);
     },
     onSuccess: (data) => {
+      if (data.estado === "CERRADO") {
+        clearTurno();
+        clearAuth();
+        navigate("/login", { replace: true });
+        return;
+      }
+
       setTurno(data);
       setShowSimModal(false);
       setSimResult(null);
@@ -86,10 +93,6 @@ export function TurnosPage() {
       setObservacionCierre("");
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["reporte-turno-activo", data.id] });
-      if (data.estado === "CERRADO") {
-        setCloseResult(data);
-        setShowCloseModal(true);
-      }
     }
   });
 
