@@ -49,7 +49,7 @@ public class TurnoCajaService {
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo un usuario CAJA puede abrir turno");
         }
-        if (turnoCajaRepository.existsByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))) {
+        if (turnoCajaRepository.existsByEstado(EstadoTurno.ABIERTO)) {
             throw new BadRequestException("Ya existe un turno activo");
         }
         if (montoInicial == null || montoInicial.compareTo(BigDecimal.ZERO) < 0) {
@@ -76,8 +76,7 @@ public class TurnoCajaService {
         auditService.record(
                 "TURNO_ABIERTO", "TurnoCaja", guardado.getId(), usuario, guardado, null,
                 auditService.change("montoInicial", null, guardado.getMontoInicial()),
-                auditService.change("estado", null, guardado.getEstado())
-        );
+                auditService.change("estado", null, guardado.getEstado()));
         return guardado;
     }
 
@@ -89,26 +88,29 @@ public class TurnoCajaService {
      * Calcula y devuelve las métricas de arqueo SIN cerrar el turno ni persistir
      * los valores de conciliación. El cajero puede ejecutar esto N veces.
      * Solo el cerrarTurno() persiste los valores definitivos.
+     *
+     * Sin @Transactional para que la entidad cargada quede DETACHED
+     * al modificar sus campos @Column y evitar que Hibernate persista
+     * los datos de la simulación en la BD. auditService.record() maneja
+     * su propia transacción para el evento de auditoría.
      */
-    @Transactional
     public TurnoCaja simularCierre(BigDecimal efectivoContado,
-                                   BigDecimal transferenciasVerificadas,
-                                   Usuario usuario) {
+            BigDecimal transferenciasVerificadas,
+            Usuario usuario) {
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede simular cierre");
         }
 
-        // Usar findByEstadoIn (lectura limpia, sin FOR UPDATE — solo consulta)
+        // Usar findByEstado (lectura limpia, sin FOR UPDATE — solo consulta)
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstado(EstadoTurno.ABIERTO)
                 .orElseThrow(() -> new BadRequestException("No hay turno abierto"));
 
         decorarMetricasCierre(turno);
 
         // Calcular métricas de arqueo en memoria
         ArqueoResult arqueo = calcularArqueo(
-                turno, efectivoContado, transferenciasVerificadas
-        );
+                turno, efectivoContado, transferenciasVerificadas);
 
         // Volcar al objeto en memoria ÚNICAMENTE (sin save)
         aplicarArqueoATurno(turno, efectivoContado, transferenciasVerificadas, arqueo);
@@ -116,14 +118,13 @@ public class TurnoCajaService {
         // Auditar la simulación (sin tocar el estado ni los campos persistidos)
         auditService.record(
                 "TURNO_CIERRE_SIMULADO", "TurnoCaja", turno.getId(), usuario, turno, null,
-                auditService.change("efectivoContado",           null, efectivoContado),
+                auditService.change("efectivoContado", null, efectivoContado),
                 auditService.change("transferenciasVerificadas", null, transferenciasVerificadas),
-                auditService.change("diferenciaEfectivo",        null, arqueo.diferenciaEfectivo()),
-                auditService.change("diferenciaTransferencias",  null, arqueo.diferenciaTransferencias()),
-                auditService.change("diferenciaTotal",           null, arqueo.diferenciaTotal())
-        );
+                auditService.change("diferenciaEfectivo", null, arqueo.diferenciaEfectivo()),
+                auditService.change("diferenciaTransferencias", null, arqueo.diferenciaTransferencias()),
+                auditService.change("diferenciaTotal", null, arqueo.diferenciaTotal()));
 
-        return turno;  // objeto decorado, NO persistido con datos de arqueo
+        return turno; // objeto decorado, NO persistido con datos de arqueo
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -132,15 +133,15 @@ public class TurnoCajaService {
 
     @Transactional
     public TurnoCaja cerrarTurno(BigDecimal efectivoContado,
-                                 BigDecimal transferenciasVerificadas,
-                                 String observacionCierre,
-                                 Usuario usuario) {
+            BigDecimal transferenciasVerificadas,
+            String observacionCierre,
+            Usuario usuario) {
         if (!usuario.getRol().getNombre().equals("CAJA")) {
             throw new BadRequestException("Solo CAJA puede cerrar turno");
         }
 
         TurnoCaja turno = turnoCajaRepository
-                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno para cerrar"));
 
         // Bloqueo: no cerrar si hay domicilios pendientes
@@ -169,9 +170,8 @@ public class TurnoCajaService {
             if (obsLimpia.isBlank()) {
                 throw new BadRequestException(String.format(
                         "La caja presenta una diferencia de %s. " +
-                        "Debes ingresar una observación para justificar el descuadre antes de cerrar.",
-                        formatMoney(arqueo.diferenciaTotal())
-                ));
+                                "Debes ingresar una observación para justificar el descuadre antes de cerrar.",
+                        formatMoney(arqueo.diferenciaTotal())));
             }
         }
 
@@ -189,15 +189,14 @@ public class TurnoCajaService {
 
         auditService.record(
                 "TURNO_CERRADO", "TurnoCaja", guardado.getId(), usuario, guardado, obsFinal,
-                auditService.change("estado",                    EstadoTurno.ABIERTO, EstadoTurno.CERRADO),
-                auditService.change("efectivoContado",           null, efectivoContado),
+                auditService.change("estado", EstadoTurno.ABIERTO, EstadoTurno.CERRADO),
+                auditService.change("efectivoContado", null, efectivoContado),
                 auditService.change("transferenciasVerificadas", null, transferenciasVerificadas),
-                auditService.change("diferenciaEfectivo",        null, arqueo.diferenciaEfectivo()),
-                auditService.change("diferenciaTransferencias",  null, arqueo.diferenciaTransferencias()),
-                auditService.change("diferenciaTotal",           null, arqueo.diferenciaTotal()),
-                auditService.change("faltante",                  null, guardado.getFaltante()),
-                auditService.change("observacionCierre",         null, obsFinal)
-        );
+                auditService.change("diferenciaEfectivo", null, arqueo.diferenciaEfectivo()),
+                auditService.change("diferenciaTransferencias", null, arqueo.diferenciaTransferencias()),
+                auditService.change("diferenciaTotal", null, arqueo.diferenciaTotal()),
+                auditService.change("faltante", null, guardado.getFaltante()),
+                auditService.change("observacionCierre", null, obsFinal));
         return guardado;
     }
 
@@ -207,13 +206,13 @@ public class TurnoCajaService {
 
     public TurnoCaja obtenerTurnoActivo() {
         return turnoCajaRepository
-                .findByEstadoIn(List.of(EstadoTurno.ABIERTO, EstadoTurno.SIMULADO))
+                .findByEstado(EstadoTurno.ABIERTO)
                 .map(this::decorarMetricasCierre)
                 .orElse(null);
     }
 
     public List<TurnoCaja> listarPorRango(LocalDate fechaInicio, LocalDate fechaFin,
-                                          String username) {
+            String username) {
         Usuario usuario = usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new BadRequestException("Usuario no existe"));
 
@@ -245,20 +244,20 @@ public class TurnoCajaService {
      * contados. No modifica el turno ni accede a la BD.
      */
     private ArqueoResult calcularArqueo(TurnoCaja turno,
-                                        BigDecimal efectivoContado,
-                                        BigDecimal transferenciasVerificadas) {
-        BigDecimal esperado             = safe(turno.getEsperado());
-        BigDecimal transferenciasNetas  = safe(turno.getTransferenciasNetas());
-        BigDecimal totalOperativo       = safe(turno.getTotalOperativoTurno());
+            BigDecimal efectivoContado,
+            BigDecimal transferenciasVerificadas) {
+        BigDecimal esperado = safe(turno.getEsperado());
+        BigDecimal transferenciasNetas = safe(turno.getTransferenciasNetas());
+        BigDecimal totalOperativo = safe(turno.getTotalOperativoTurno());
 
-        BigDecimal efContado   = safe(efectivoContado);
-        BigDecimal transVerif  = safe(transferenciasVerificadas);
+        BigDecimal efContado = safe(efectivoContado);
+        BigDecimal transVerif = safe(transferenciasVerificadas);
 
         // Diferencias con signo: negativo = falta, positivo = sobra
-        BigDecimal difEfectivo        = efContado.subtract(esperado);
-        BigDecimal difTransferencias  = transVerif.subtract(transferenciasNetas);
-        BigDecimal totalVerificado    = efContado.add(transVerif);
-        BigDecimal difTotal           = totalVerificado.subtract(totalOperativo);
+        BigDecimal difEfectivo = efContado.subtract(esperado);
+        BigDecimal difTransferencias = transVerif.subtract(transferenciasNetas);
+        BigDecimal totalVerificado = efContado.add(transVerif);
+        BigDecimal difTotal = totalVerificado.subtract(totalOperativo);
 
         // FIX 1: faltante = solo la parte negativa (monto que falta, siempre >= 0)
         BigDecimal faltante = difEfectivo.compareTo(BigDecimal.ZERO) < 0
@@ -267,15 +266,14 @@ public class TurnoCajaService {
 
         return new ArqueoResult(
                 difEfectivo, difTransferencias,
-                totalVerificado, difTotal, faltante
-        );
+                totalVerificado, difTotal, faltante);
     }
 
     /** Vuelca los resultados del arqueo al objeto TurnoCaja (en memoria). */
     private void aplicarArqueoATurno(TurnoCaja turno,
-                                     BigDecimal efectivoContado,
-                                     BigDecimal transferenciasVerificadas,
-                                     ArqueoResult arqueo) {
+            BigDecimal efectivoContado,
+            BigDecimal transferenciasVerificadas,
+            ArqueoResult arqueo) {
         turno.setEfectivoContado(efectivoContado);
         turno.setTransferenciasVerificadas(transferenciasVerificadas);
         turno.setDiferenciaEfectivo(arqueo.diferenciaEfectivo());
@@ -290,23 +288,24 @@ public class TurnoCajaService {
             BigDecimal diferenciaTransferencias,
             BigDecimal totalVerificado,
             BigDecimal diferenciaTotal,
-            BigDecimal faltante
-    ) {}
+            BigDecimal faltante) {
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // DECORACIÓN DE MÉTRICAS (ledger → @Transient)
     // ─────────────────────────────────────────────────────────────────
 
     TurnoCaja decorarMetricasCierre(TurnoCaja turno) {
-        if (turno == null || turno.getId() == null) return turno;
+        if (turno == null || turno.getId() == null)
+            return turno;
 
-        BigDecimal recaudoEfe    = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal recaudoEfe = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.EFECTIVO);
         BigDecimal recaudoTransf = calculosFinancierosService.sumarRecaudoTurno(turno, MedioFinanciero.TRANSFERENCIA);
-        BigDecimal gastosEfe     = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.EFECTIVO);
-        BigDecimal gastosTransf  = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.TRANSFERENCIA);
+        BigDecimal gastosEfe = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.EFECTIVO);
+        BigDecimal gastosTransf = calculosFinancierosService.sumarGastosPorTurno(turno, MedioFinanciero.TRANSFERENCIA);
 
-        BigDecimal recaudoBruto       = recaudoEfe.add(recaudoTransf);
-        BigDecimal gastosCaja         = gastosEfe.add(gastosTransf);
+        BigDecimal recaudoBruto = recaudoEfe.add(recaudoTransf);
+        BigDecimal gastosCaja = gastosEfe.add(gastosTransf);
 
         // Para gastos admin: usar inicio del día de apertura, no la hora exacta.
         // Los movimientos GASTO_ADMIN se guardan con atStartOfDay(), entonces
@@ -316,16 +315,16 @@ public class TurnoCajaService {
         LocalDateTime hastaDateTime = turno.getFechaCierre() != null
                 ? turno.getFechaCierre()
                 : LocalDateTime.now();
-        BigDecimal gastosAdminEfe    = calculosFinancierosService
+        BigDecimal gastosAdminEfe = calculosFinancierosService
                 .sumarGastosAdminPeriodo(desdeDateTime, hastaDateTime, MedioFinanciero.EFECTIVO);
         BigDecimal gastosAdminTransf = calculosFinancierosService
                 .sumarGastosAdminPeriodo(desdeDateTime, hastaDateTime, MedioFinanciero.TRANSFERENCIA);
         BigDecimal gastosAdmin = gastosAdminEfe.add(gastosAdminTransf);
 
-        BigDecimal gananciaFinanciera    = recaudoBruto.subtract(gastosCaja).subtract(gastosAdmin);
-        BigDecimal saldoCajaEsperado     = turno.getMontoInicial().add(recaudoEfe).subtract(gastosEfe);
-        BigDecimal transferenciasNetas   = recaudoTransf.subtract(gastosTransf);
-        BigDecimal totalOperativoTurno   = saldoCajaEsperado.add(transferenciasNetas);
+        BigDecimal gananciaFinanciera = recaudoBruto.subtract(gastosCaja).subtract(gastosAdmin);
+        BigDecimal saldoCajaEsperado = turno.getMontoInicial().add(recaudoEfe).subtract(gastosEfe);
+        BigDecimal transferenciasNetas = recaudoTransf.subtract(gastosTransf);
+        BigDecimal totalOperativoTurno = saldoCajaEsperado.add(transferenciasNetas);
 
         turno.setRecaudoBruto(recaudoBruto);
         turno.setTotalVentas(recaudoBruto);
@@ -349,13 +348,15 @@ public class TurnoCajaService {
     }
 
     private String limpiarObservacion(String obs) {
-        if (obs == null || obs.isBlank()) return null;
+        if (obs == null || obs.isBlank())
+            return null;
         String clean = obs.trim().replace("\r", " ").replace("\n", " ");
         return clean.length() > 500 ? clean.substring(0, 500) : clean;
     }
 
     private String formatMoney(BigDecimal value) {
-        if (value == null) return "$0";
+        if (value == null)
+            return "$0";
         return String.format("$%,.0f", value);
     }
 }
