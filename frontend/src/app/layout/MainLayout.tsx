@@ -34,7 +34,7 @@ type MenuItem = {
 
 const items: MenuItem[] = [
   { to: "/dashboard", label: "Dashboard", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
-  { to: "/ventas", label: "Ventas", roles: ["CAJA", "DOMI"], icon: <ShoppingCart size={16} /> },
+  { to: "/ventas", label: "Ventas", roles: ["CAJA", "DOMI", "MESERO"], icon: <ShoppingCart size={16} /> },
   { to: "/historial", label: "Historial", roles: ["CAJA"], icon: <History size={16} /> },
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
   { to: "/gastos", label: "Gastos", roles: ["CAJA", "ADMIN"], icon: <Wallet size={16} /> },

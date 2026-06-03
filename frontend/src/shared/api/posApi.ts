@@ -331,5 +331,12 @@ export const posApi = {
       params: { q }
     });
     return data;
+  },
+  getPendientesMeseros: async () => {
+    const { data } = await http.get<Venta[]>("/api/v1/ventas/pendientes-meseros");
+    return data;
+  },
+  confirmarEntregaCaja: async (ventaIds: number[]) => {
+    await http.post("/api/v1/ventas/confirmar-entrega-caja", ventaIds);
   }
 };

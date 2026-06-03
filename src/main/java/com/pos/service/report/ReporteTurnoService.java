@@ -16,6 +16,7 @@ import com.pos.repository.VentaRepository;
 import com.pos.service.CalculosFinancierosService;
 import com.pos.service.VentaService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -47,6 +48,7 @@ public class ReporteTurnoService {
         this.calculosFinancierosService = calculosFinancierosService;
     }
 
+    @Transactional(readOnly = true)
     public ReporteCierreTurnoDTO generarReporteTurno(Long turnoId) {
         if (turnoId == null) {
             throw new IllegalArgumentException("Turno ID no puede ser nulo");

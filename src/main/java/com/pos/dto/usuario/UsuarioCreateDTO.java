@@ -18,6 +18,6 @@ public class UsuarioCreateDTO {
     private String password;
 
     @NotBlank(message = "El rol es obligatorio")
-    private String rol; // CAJA o DOMI
+    private String rol; // CAJA, DOMI o MESERO
 }
 

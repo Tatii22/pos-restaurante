@@ -137,7 +137,8 @@ export function UsuariosPage() {
             onChange={(v) => setForm({ ...form, rol: v })}
             options={[
               { value: "CAJA", label: "CAJA" },
-              { value: "DOMI", label: "DOMI" }
+              { value: "DOMI", label: "DOMI" },
+              { value: "MESERO", label: "MESERO" }
             ]}
             className="mt-1"
           />
@@ -301,7 +302,8 @@ export function UsuariosPage() {
                 onChange={(v) => setEdit({ ...edit, rol: v })}
                 options={[
                   { value: "CAJA", label: "CAJA" },
-                  { value: "DOMI", label: "DOMI" }
+                  { value: "DOMI", label: "DOMI" },
+                  { value: "MESERO", label: "MESERO" }
                 ]}
                 className="mt-1"
               />

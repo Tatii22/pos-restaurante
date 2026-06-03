@@ -93,4 +93,12 @@ public class Venta {
     @Column(nullable = false)
     private Boolean paraLlevar;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CanalVenta canalVenta;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private EstadoEntregaCaja estadoEntregaCaja;
+
 }

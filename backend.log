@@ -1,0 +1,3143 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.pos:pos-backend >-------------------------
+[INFO] Building pos-backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.5.9:run (default-cli) > test-compile @ pos-backend >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ pos-backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ pos-backend ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ pos-backend ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ pos-backend ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] <<< spring-boot:3.5.9:run (default-cli) < test-compile @ pos-backend <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.5.9:run (default-cli) @ pos-backend ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:10:16.572-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:10:16.575-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:10:16.605-05:00  INFO 12328 --- [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-06-03T11:10:16.606-05:00  INFO 12328 --- [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-06-03T11:10:17.335-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:10:17.432-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 88 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:10:18.059-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:10:18.070-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:10:18.070-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:10:18.112-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:10:18.113-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1507 ms
+2026-06-03T11:10:18.222-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:10:18.263-05:00  INFO 12328 --- [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.39.Final
+2026-06-03T11:10:18.296-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:10:18.500-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:10:18.525-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-03T11:10:18.648-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@10f7ebc5
+2026-06-03T11:10:18.650-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-03T11:10:18.680-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:10:18.685-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:10:18.700-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:10:19.681-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:10:19.843-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:10:20.203-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:10:20.292-05:00  INFO 12328 --- [  restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-03T11:10:21.960-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:10:21.989-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:10:21.997-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 5.773 seconds (process running for 6.115)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:10:22.077-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:10:22.082-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:10:22.093-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:11:41.145-05:00  INFO 12328 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-03T11:11:41.146-05:00  INFO 12328 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-03T11:11:41.148-05:00  INFO 12328 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+2026-06-03T11:11:41.410-05:00  WARN 12328 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.security.authorization.AuthorizationDeniedException: Access Denied]
+2026-06-03T11:21:37.089-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-06-03T11:21:37.097-05:00  INFO 12328 --- [       Thread-5] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:37.227-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:37.235-05:00  INFO 12328 --- [       Thread-5] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:37.239-05:00  INFO 12328 --- [       Thread-5] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-03T11:21:37.245-05:00  INFO 12328 --- [       Thread-5] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:37.337-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:37.338-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:37.702-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:37.751-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 48 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:37.874-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:37.875-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:37.875-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:37.899-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:37.899-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 559 ms
+2026-06-03T11:21:37.938-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:37.941-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:37.949-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:37.950-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-06-03T11:21:37.953-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection com.mysql.cj.jdbc.ConnectionImpl@31e6b466
+2026-06-03T11:21:37.954-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-06-03T11:21:37.955-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:37.956-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:37.956-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-2)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:38.144-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:38.246-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:38.362-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:39.682-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:39.702-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:39.707-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 2.399 seconds (process running for 683.825)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:39.715-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:39.720-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:39.734-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:39.740-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:21:41.185-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2026-06-03T11:21:41.186-05:00  INFO 12328 --- [       Thread-7] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:41.329-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:41.333-05:00  INFO 12328 --- [       Thread-7] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:41.334-05:00  INFO 12328 --- [       Thread-7] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-06-03T11:21:41.336-05:00  INFO 12328 --- [       Thread-7] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:41.446-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:41.447-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:41.930-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:41.970-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 39 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:42.068-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:42.069-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:42.069-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:42.087-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:42.088-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 638 ms
+2026-06-03T11:21:42.129-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:42.131-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:42.138-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:42.139-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-06-03T11:21:42.142-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5fd43f31
+2026-06-03T11:21:42.142-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-06-03T11:21:42.143-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:42.144-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:42.144-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-3)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:42.298-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:42.402-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:42.515-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:43.503-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:43.515-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:43.519-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 2.115 seconds (process running for 687.637)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:43.529-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:43.536-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:43.547-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:43.550-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:21:45.008-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2026-06-03T11:21:45.012-05:00  INFO 12328 --- [      Thread-11] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:45.218-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:45.222-05:00  INFO 12328 --- [      Thread-11] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:45.223-05:00  INFO 12328 --- [      Thread-11] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2026-06-03T11:21:45.227-05:00  INFO 12328 --- [      Thread-11] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:45.335-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:45.335-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:45.599-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:45.642-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 40 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:45.748-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:45.749-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:45.749-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:45.768-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:45.768-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 431 ms
+2026-06-03T11:21:45.806-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:45.809-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:45.817-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:45.818-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2026-06-03T11:21:45.820-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection com.mysql.cj.jdbc.ConnectionImpl@60630ab0
+2026-06-03T11:21:45.821-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2026-06-03T11:21:45.822-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:45.823-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:45.823-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-4)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:46.026-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:46.121-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:46.228-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:46.777-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:46.788-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:46.791-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.488 seconds (process running for 690.909)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:46.799-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:46.803-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:46.811-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:46.814-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:21:48.248-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2026-06-03T11:21:48.250-05:00  INFO 12328 --- [      Thread-15] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:48.346-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:48.348-05:00  INFO 12328 --- [      Thread-15] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:48.349-05:00  INFO 12328 --- [      Thread-15] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown initiated...
+2026-06-03T11:21:48.349-05:00  INFO 12328 --- [      Thread-15] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:48.411-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:48.411-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:48.631-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:48.668-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 34 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:48.753-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:48.754-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:48.754-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:48.772-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:48.773-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 360 ms
+2026-06-03T11:21:48.806-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:48.809-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:48.816-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:48.817-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Starting...
+2026-06-03T11:21:48.819-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-5 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2a3c75b8
+2026-06-03T11:21:48.820-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Start completed.
+2026-06-03T11:21:48.820-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:48.821-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:48.822-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-5)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:48.965-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:49.058-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:49.166-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:49.842-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:49.866-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:49.874-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.482 seconds (process running for 693.992)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:49.893-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:49.910-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:49.950-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:49.957-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:21:51.317-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-06-03T11:21:51.319-05:00  INFO 12328 --- [      Thread-19] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:51.412-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:51.414-05:00  INFO 12328 --- [      Thread-19] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:51.414-05:00  INFO 12328 --- [      Thread-19] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown initiated...
+2026-06-03T11:21:51.416-05:00  INFO 12328 --- [      Thread-19] com.zaxxer.hikari.HikariDataSource       : HikariPool-5 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:51.475-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:51.475-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:51.688-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:51.726-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 36 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:51.816-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:51.817-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:51.817-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:51.836-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:51.836-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 360 ms
+2026-06-03T11:21:51.877-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:51.880-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:51.887-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:51.888-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Starting...
+2026-06-03T11:21:51.891-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-6 - Added connection com.mysql.cj.jdbc.ConnectionImpl@a9e7d3c
+2026-06-03T11:21:51.891-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Start completed.
+2026-06-03T11:21:51.892-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:51.892-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:51.893-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-6)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:52.171-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:52.413-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:52.753-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:53.578-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:53.588-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:53.592-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 2.135 seconds (process running for 697.71)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:53.599-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:53.603-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:53.612-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:53.616-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:21:55.053-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2026-06-03T11:21:55.054-05:00  INFO 12328 --- [      Thread-23] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:21:55.149-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:21:55.152-05:00  INFO 12328 --- [      Thread-23] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:55.152-05:00  INFO 12328 --- [      Thread-23] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown initiated...
+2026-06-03T11:21:55.153-05:00  INFO 12328 --- [      Thread-23] com.zaxxer.hikari.HikariDataSource       : HikariPool-6 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:21:55.211-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:21:55.211-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:21:55.408-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:21:55.444-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 34 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:21:55.529-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:21:55.530-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:21:55.531-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:21:55.549-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:21:55.549-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 337 ms
+2026-06-03T11:21:55.585-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:21:55.587-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:21:55.594-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:21:55.611-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Starting...
+2026-06-03T11:21:55.613-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-7 - Added connection com.mysql.cj.jdbc.ConnectionImpl@4eaf8e2d
+2026-06-03T11:21:55.614-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Start completed.
+2026-06-03T11:21:55.615-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:21:55.615-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:21:55.615-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-7)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:21:55.765-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:21:55.855-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:21:55.962-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:21:56.471-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:21:56.480-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:21:56.484-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.291 seconds (process running for 700.602)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:56.490-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:56.496-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:21:56.506-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:21:56.508-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:22:02.129-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2026-06-03T11:22:02.131-05:00  INFO 12328 --- [      Thread-27] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:22:02.271-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:22:02.274-05:00  INFO 12328 --- [      Thread-27] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:22:02.274-05:00  INFO 12328 --- [      Thread-27] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown initiated...
+2026-06-03T11:22:02.275-05:00  INFO 12328 --- [      Thread-27] com.zaxxer.hikari.HikariDataSource       : HikariPool-7 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:22:02.357-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:22:02.357-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:22:02.653-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:22:02.702-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 48 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:22:02.873-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:22:02.874-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:22:02.875-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:22:02.897-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:22:02.897-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 539 ms
+2026-06-03T11:22:02.957-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:22:02.960-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:22:02.971-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:22:02.973-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Starting...
+2026-06-03T11:22:02.978-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-8 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7492921
+2026-06-03T11:22:02.979-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Start completed.
+2026-06-03T11:22:02.980-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:22:02.981-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:22:02.981-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-8)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:22:03.272-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:22:03.396-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:22:03.625-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:22:04.256-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:22:04.266-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:22:04.270-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.934 seconds (process running for 708.387)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:04.276-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:04.279-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:04.287-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:22:04.291-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:22:05.730-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 1 class path change (1 addition, 0 deletions, 0 modifications)
+2026-06-03T11:22:05.731-05:00  INFO 12328 --- [      Thread-31] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:22:05.829-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:22:05.831-05:00  INFO 12328 --- [      Thread-31] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:22:05.832-05:00  INFO 12328 --- [      Thread-31] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Shutdown initiated...
+2026-06-03T11:22:05.833-05:00  INFO 12328 --- [      Thread-31] com.zaxxer.hikari.HikariDataSource       : HikariPool-8 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:22:05.899-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:22:05.899-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:22:06.104-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:22:06.140-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 34 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:22:06.228-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:22:06.229-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:22:06.229-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:22:06.249-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:22:06.250-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 349 ms
+2026-06-03T11:22:06.284-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:22:06.286-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:22:06.293-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:22:06.294-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-9 - Starting...
+2026-06-03T11:22:06.296-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-9 - Added connection com.mysql.cj.jdbc.ConnectionImpl@296ebd21
+2026-06-03T11:22:06.296-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-9 - Start completed.
+2026-06-03T11:22:06.297-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:22:06.298-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:22:06.298-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-9)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:22:06.442-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:22:06.531-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:22:06.640-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:22:07.166-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:22:07.177-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:22:07.180-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.298 seconds (process running for 711.299)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:07.188-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:07.193-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:22:07.200-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:22:07.203-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:22:24.408-05:00  INFO 12328 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-03T11:22:24.409-05:00  INFO 12328 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-03T11:22:24.412-05:00  INFO 12328 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        tc1_0.id,
+        tc1_0.diferencia_efectivo,
+        tc1_0.diferencia_total,
+        tc1_0.diferencia_transferencias,
+        tc1_0.efectivo_contado,
+        tc1_0.esperado,
+        tc1_0.estado,
+        tc1_0.faltante,
+        tc1_0.fecha_apertura,
+        tc1_0.fecha_cierre,
+        tc1_0.monto_final,
+        tc1_0.monto_inicial,
+        tc1_0.numero_turno,
+        tc1_0.observacion_cierre,
+        tc1_0.total_gastos,
+        tc1_0.total_ventas,
+        tc1_0.total_verificado,
+        tc1_0.transferencias_verificadas,
+        tc1_0.usuario_id,
+        tc1_0.version 
+    from
+        turnos_caja tc1_0 
+    where
+        tc1_0.estado=?
+Hibernate: 
+    select
+        tc1_0.id,
+        tc1_0.diferencia_efectivo,
+        tc1_0.diferencia_total,
+        tc1_0.diferencia_transferencias,
+        tc1_0.efectivo_contado,
+        tc1_0.esperado,
+        tc1_0.estado,
+        tc1_0.faltante,
+        tc1_0.fecha_apertura,
+        tc1_0.fecha_cierre,
+        tc1_0.monto_final,
+        tc1_0.monto_inicial,
+        tc1_0.numero_turno,
+        tc1_0.observacion_cierre,
+        tc1_0.total_gastos,
+        tc1_0.total_ventas,
+        tc1_0.total_verificado,
+        tc1_0.transferencias_verificadas,
+        tc1_0.usuario_id,
+        tc1_0.version 
+    from
+        turnos_caja tc1_0 
+    where
+        tc1_0.estado=?
+2026-06-03T11:22:24.466-05:00  WARN 12328 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.security.authorization.AuthorizationDeniedException: Access Denied]
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        r1_0.id,
+        r1_0.nombre,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        r1_0.id,
+        r1_0.nombre,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.fecha=? 
+        and md1_0.activo
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.fecha=? 
+        and md1_0.activo
+Hibernate: 
+    select
+        id1_0.id,
+        id1_0.agotado,
+        id1_0.fecha,
+        id1_0.menu_diario_id,
+        id1_0.producto_id,
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta,
+        id1_0.stock_actual,
+        id1_0.stock_inicial,
+        id1_0.stock_minimo,
+        id1_0.version 
+    from
+        inventarios_diarios id1_0 
+    join
+        productos p1_0 
+            on p1_0.id=id1_0.producto_id 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        id1_0.menu_diario_id=?
+Hibernate: 
+    select
+        id1_0.id,
+        id1_0.agotado,
+        id1_0.fecha,
+        id1_0.menu_diario_id,
+        id1_0.producto_id,
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta,
+        id1_0.stock_actual,
+        id1_0.stock_inicial,
+        id1_0.stock_minimo,
+        id1_0.version 
+    from
+        inventarios_diarios id1_0 
+    join
+        productos p1_0 
+            on p1_0.id=id1_0.producto_id 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        id1_0.menu_diario_id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.id=?
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta 
+    from
+        productos p1_0 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        p1_0.tipo_venta=? 
+        and p1_0.activo=1
+2026-06-03T11:27:21.850-05:00  INFO 12328 --- [   File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-06-03T11:27:21.852-05:00  INFO 12328 --- [      Thread-35] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-06-03T11:27:21.947-05:00  INFO 12328 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-06-03T11:27:21.949-05:00  INFO 12328 --- [      Thread-35] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:27:21.950-05:00  INFO 12328 --- [      Thread-35] com.zaxxer.hikari.HikariDataSource       : HikariPool-9 - Shutdown initiated...
+2026-06-03T11:27:21.951-05:00  INFO 12328 --- [      Thread-35] com.zaxxer.hikari.HikariDataSource       : HikariPool-9 - Shutdown completed.
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.9)
+
+2026-06-03T11:27:22.027-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Starting PosBackendApplication using Java 17.0.19 with PID 12328 (C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante\target\classes started by Full Service in C:\Users\Full Service\Documents\Proyectos personales\pos-restaurante)
+2026-06-03T11:27:22.027-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : The following 1 profile is active: "local"
+2026-06-03T11:27:22.262-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-03T11:27:22.301-05:00  INFO 12328 --- [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 38 ms. Found 17 JPA repository interfaces.
+2026-06-03T11:27:22.406-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-03T11:27:22.407-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-03T11:27:22.407-05:00  INFO 12328 --- [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-06-03T11:27:22.428-05:00  INFO 12328 --- [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-03T11:27:22.429-05:00  INFO 12328 --- [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 401 ms
+2026-06-03T11:27:22.467-05:00  INFO 12328 --- [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-03T11:27:22.469-05:00  INFO 12328 --- [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-03T11:27:22.478-05:00  INFO 12328 --- [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-03T11:27:22.479-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-10 - Starting...
+2026-06-03T11:27:22.482-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-10 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7408e19b
+2026-06-03T11:27:22.483-05:00  INFO 12328 --- [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-10 - Start completed.
+2026-06-03T11:27:22.484-05:00  WARN 12328 --- [  restartedMain] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-06-03T11:27:22.485-05:00  WARN 12328 --- [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-03T11:27:22.485-05:00  INFO 12328 --- [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-10)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-06-03T11:27:22.642-05:00  INFO 12328 --- [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column medio enum ('CARTERA','EFECTIVO','TRANSFERENCIA') not null
+Hibernate: 
+    alter table movimientos_financieros 
+       modify column tipo enum ('ABONO_CON_VENTA_FIADA','ABONO_FIADO','AJUSTE_INVENTARIO','ANULACION_VENTA','CANCELACION_VENTA','ELIMINACION_GASTO_ADMIN','ELIMINACION_GASTO_CAJA','GASTO_ADMIN','GASTO_CAJA','VENTA_CONTADO','VENTA_FIADA') not null
+Hibernate: 
+    alter table turnos_caja 
+       modify column estado enum ('ABIERTO','CERRADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column canal_venta enum ('CAJA','MESERO') not null
+Hibernate: 
+    alter table ventas 
+       modify column condicion_pago enum ('CONTADO','FIADO') not null
+Hibernate: 
+    alter table ventas 
+       modify column estado_entrega_caja enum ('ENTREGADO','PENDIENTE')
+2026-06-03T11:27:22.736-05:00  INFO 12328 --- [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-03T11:27:22.849-05:00  INFO 12328 --- [  restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name customUserDetailsService
+2026-06-03T11:27:23.501-05:00  INFO 12328 --- [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-06-03T11:27:23.513-05:00  INFO 12328 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-03T11:27:23.519-05:00  INFO 12328 --- [  restartedMain] com.pos.PosBackendApplication            : Started PosBackendApplication in 1.508 seconds (process running for 1027.636)
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        r1_0.id 
+    from
+        roles r1_0 
+    where
+        upper(r1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:27:23.527-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de roles verificado
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        c1_0.id 
+    from
+        categorias c1_0 
+    where
+        upper(c1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:27:23.534-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de categorias verificado
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+Hibernate: 
+    select
+        tg1_0.id 
+    from
+        tipos_gasto tg1_0 
+    where
+        upper(tg1_0.nombre)=upper(?) 
+    limit
+        ?
+2026-06-03T11:27:23.546-05:00  INFO 12328 --- [  restartedMain] com.pos.config.DefaultCatalogBootstrap   : Catalogo de tipos de gasto verificado
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        usuarios u1_0 
+    left join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        r1_0.nombre=? 
+    limit
+        ?
+2026-06-03T11:27:23.549-05:00  INFO 12328 --- [  restartedMain] .ConditionEvaluationDeltaLoggingListener : Condition evaluation unchanged
+2026-06-03T11:28:58.998-05:00  INFO 12328 --- [nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-03T11:28:58.999-05:00  INFO 12328 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-03T11:28:59.001-05:00  INFO 12328 --- [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.id=?
+Hibernate: 
+    select
+        tc1_0.id,
+        tc1_0.diferencia_efectivo,
+        tc1_0.diferencia_total,
+        tc1_0.diferencia_transferencias,
+        tc1_0.efectivo_contado,
+        tc1_0.esperado,
+        tc1_0.estado,
+        tc1_0.faltante,
+        tc1_0.fecha_apertura,
+        tc1_0.fecha_cierre,
+        tc1_0.monto_final,
+        tc1_0.monto_inicial,
+        tc1_0.numero_turno,
+        tc1_0.observacion_cierre,
+        tc1_0.total_gastos,
+        tc1_0.total_ventas,
+        tc1_0.total_verificado,
+        tc1_0.transferencias_verificadas,
+        tc1_0.usuario_id,
+        tc1_0.version 
+    from
+        turnos_caja tc1_0 
+    where
+        tc1_0.estado=?
+Hibernate: 
+    select
+        tc1_0.id,
+        tc1_0.diferencia_efectivo,
+        tc1_0.diferencia_total,
+        tc1_0.diferencia_transferencias,
+        tc1_0.efectivo_contado,
+        tc1_0.esperado,
+        tc1_0.estado,
+        tc1_0.faltante,
+        tc1_0.fecha_apertura,
+        tc1_0.fecha_cierre,
+        tc1_0.monto_final,
+        tc1_0.monto_inicial,
+        tc1_0.numero_turno,
+        tc1_0.observacion_cierre,
+        tc1_0.total_gastos,
+        tc1_0.total_ventas,
+        tc1_0.total_verificado,
+        tc1_0.transferencias_verificadas,
+        tc1_0.usuario_id,
+        tc1_0.version 
+    from
+        turnos_caja tc1_0 
+    where
+        tc1_0.estado=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        r1_0.id,
+        r1_0.nombre,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.rol_id,
+        r1_0.id,
+        r1_0.nombre,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    join
+        roles r1_0 
+            on r1_0.id=u1_0.rol_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.fecha=? 
+        and md1_0.activo
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.fecha=? 
+        and md1_0.activo
+2026-06-03T11:28:59.042-05:00  WARN 12328 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.security.authorization.AuthorizationDeniedException: Access Denied]
+Hibernate: 
+    select
+        id1_0.id,
+        id1_0.agotado,
+        id1_0.fecha,
+        id1_0.menu_diario_id,
+        id1_0.producto_id,
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta,
+        id1_0.stock_actual,
+        id1_0.stock_inicial,
+        id1_0.stock_minimo,
+        id1_0.version 
+    from
+        inventarios_diarios id1_0 
+    join
+        productos p1_0 
+            on p1_0.id=id1_0.producto_id 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        id1_0.menu_diario_id=?
+Hibernate: 
+    select
+        id1_0.id,
+        id1_0.agotado,
+        id1_0.fecha,
+        id1_0.menu_diario_id,
+        id1_0.producto_id,
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta,
+        id1_0.stock_actual,
+        id1_0.stock_inicial,
+        id1_0.stock_minimo,
+        id1_0.version 
+    from
+        inventarios_diarios id1_0 
+    join
+        productos p1_0 
+            on p1_0.id=id1_0.producto_id 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        id1_0.menu_diario_id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.id=?
+Hibernate: 
+    select
+        md1_0.id,
+        md1_0.activo,
+        md1_0.fecha,
+        md1_0.usuario_id 
+    from
+        menus_diarios md1_0 
+    where
+        md1_0.id=?
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.activo,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.descripcion,
+        c1_0.nombre,
+        p1_0.descripcion,
+        p1_0.nombre,
+        p1_0.precio,
+        p1_0.tipo_venta 
+    from
+        productos p1_0 
+    left join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    where
+        p1_0.tipo_venta=? 
+        and p1_0.activo=1
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  22:14 min
+[INFO] Finished at: 2026-06-03T11:32:28-05:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.9:run (default-cli) on project pos-backend: Process terminated with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

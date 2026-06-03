@@ -90,6 +90,7 @@ class GastoSerializationIntegrationTest {
                                 {
                                   "fecha": "2026-04-06",
                                   "descripcion": "Pago proveedor",
+                                  "monto": 25000,
                                   "montoEfectivo": 15000,
                                   "montoTransferencia": 10000,
                                   "tipoGastoId": %d
@@ -114,6 +115,7 @@ class GastoSerializationIntegrationTest {
                 .totalGastos(BigDecimal.ZERO)
                 .estado(EstadoTurno.ABIERTO)
                 .usuario(cajaUsuario)
+                .numeroTurno(1)
                 .build());
 
         mockMvc.perform(post("/api/v1/gastos-caja")
@@ -122,6 +124,7 @@ class GastoSerializationIntegrationTest {
                         .content("""
                                 {
                                   "descripcion": "Compra urgente",
+                                  "monto": 20000,
                                   "montoEfectivo": 12000,
                                   "montoTransferencia": 8000,
                                   "tipoGastoId": %d

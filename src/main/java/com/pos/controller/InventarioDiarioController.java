@@ -35,7 +35,7 @@ public class InventarioDiarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','MESERO')")
     public ResponseEntity<List<InventarioResponseDTO>> listar() {
 
         return ResponseEntity.ok(

@@ -1,5 +1,7 @@
 package com.pos.dto.venta;
 
+import com.pos.entity.CanalVenta;
+import com.pos.entity.EstadoEntregaCaja;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.FormaPago;
 import com.pos.entity.TipoVenta;
@@ -30,6 +32,9 @@ public record VentaDetalleResponseDTO(
         Long clienteId,
         LocalDateTime fechaAnulacion,
         String motivoAnulacion,
-        List<VentaItemResponseDTO> detalles
+        List<VentaItemResponseDTO> detalles,
+        CanalVenta canalVenta,
+        EstadoEntregaCaja estadoEntregaCaja,
+        String usuario
 ) {
 }

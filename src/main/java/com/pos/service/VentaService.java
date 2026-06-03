@@ -17,6 +17,7 @@ import com.pos.repository.ProductoRepository;
 import com.pos.repository.TurnoCajaRepository;
 import com.pos.repository.VentaRepository;
 import jakarta.transaction.Transactional;
+import com.pos.dto.venta.VentaResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -93,7 +94,10 @@ public class VentaService {
                                         d.getPrecioUnitario(),
                                         d.getSubtotal(),
                                         d.getObservacion()))
-                                .toList());
+                                .toList(),
+                venta.getCanalVenta(),
+                venta.getEstadoEntregaCaja(),
+                venta.getUsuario() != null ? venta.getUsuario().getUsername() : null);
     }
 
     public com.pos.dto.venta.VentaResponseDTO construirRespuesta(Venta venta) {
@@ -123,10 +127,14 @@ public class VentaService {
                 pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                 venta.getCondicionPago(),
                 venta.getSaldoPendiente(),
-                venta.getCliente() != null ? venta.getCliente().getId() : null);
+                venta.getCliente() != null ? venta.getCliente().getId() : null,
+                venta.getCanalVenta(),
+                venta.getEstadoEntregaCaja(),
+                venta.getUsuario() != null ? venta.getUsuario().getUsername() : null);
     }
 
-    public Page<Venta> listarOperativas(
+    @Transactional
+    public Page<VentaResponseDTO> listarOperativas(
             EstadoVenta estado,
             TipoVenta tipoVenta,
             Long turnoId,
@@ -166,16 +174,15 @@ public class VentaService {
             spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("telefono")), pattern));
         }
 
-        Page<Venta> pageResult = ventaRepository.findAll(
+        return ventaRepository.findAll(
                 spec,
                 PageRequest.of(
                         Math.max(page, 0),
                         Math.max(size, 1),
                         org.springframework.data.domain.Sort.by(
                                 org.springframework.data.domain.Sort.Direction.DESC,
-                                "fecha")));
-
-        return pageResult;
+                                "fecha")))
+                .map(this::construirRespuesta);
     }
 
     @Transactional
@@ -184,12 +191,19 @@ public class VentaService {
                 .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
-        if (dto.tipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
-            throw new BadRequestException("Solo CAJA puede registrar ventas locales");
+        String rol = usuario.getRol().getNombre();
+        boolean esMesero = "MESERO".equals(rol);
+
+        if (dto.tipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(rol) && !esMesero) {
+            throw new BadRequestException("Solo CAJA o MESERO puede registrar ventas locales");
         }
 
-        if (dto.tipoVenta() == TipoVenta.DOMICILIO && !"DOMI".equals(usuario.getRol().getNombre())) {
+        if (dto.tipoVenta() == TipoVenta.DOMICILIO && !"DOMI".equals(rol)) {
             throw new BadRequestException("Solo DOMI puede registrar ventas a domicilio");
+        }
+
+        if (esMesero && dto.tipoVenta() != TipoVenta.LOCAL) {
+            throw new BadRequestException("MESERO solo puede registrar ventas locales");
         }
 
         if (dto.tipoVenta() == TipoVenta.DOMICILIO && turno.getEstado() != EstadoTurno.ABIERTO) {
@@ -237,7 +251,23 @@ public class VentaService {
         venta.setCondicionPago(esFiado ? CondicionPago.FIADO : CondicionPago.CONTADO);
         venta.setUsuario(usuario);
         venta.setTurno(turno);
-        venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
+        venta.setCanalVenta(esMesero ? CanalVenta.MESERO : CanalVenta.CAJA);
+        if (esMesero) {
+            venta.setEstado(EstadoVenta.EN_PROCESO);
+            boolean pagoEfectivoUsado = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0;
+            boolean pagoTransferenciaUsado = pagoTransferencia.compareTo(BigDecimal.ZERO) > 0;
+            if (pagoEfectivoUsado && !pagoTransferenciaUsado) {
+                venta.setEstadoEntregaCaja(EstadoEntregaCaja.PENDIENTE);
+            } else {
+            if (pagoEfectivoUsado) {
+                venta.setEstadoEntregaCaja(EstadoEntregaCaja.PENDIENTE);
+            } else {
+                venta.setEstadoEntregaCaja(EstadoEntregaCaja.ENTREGADO);
+            }
+        }
+    } else {
+            venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
+        }
         venta.setCliente(cliente);
         venta.setClienteNombre(
                 cliente != null
@@ -325,7 +355,7 @@ public class VentaService {
 
         boolean hayAbonoParcial = esFiado
                 && (pagoEfectivo.compareTo(BigDecimal.ZERO) > 0 || pagoTransferencia.compareTo(BigDecimal.ZERO) > 0);
-        boolean cobraContado = dto.tipoVenta() == TipoVenta.LOCAL && !esFiado;
+        boolean cobraContado = (dto.tipoVenta() == TipoVenta.LOCAL || esMesero) && !esFiado;
         PagoAplicado pagoAplicado;
         if (cobraContado) {
             pagoAplicado = calcularPagoAplicado(total, pagoEfectivo, pagoTransferencia,
@@ -344,7 +374,7 @@ public class VentaService {
                 dto.tipoVenta(), esFiado, total, pagoEfectivo, pagoTransferencia, cobraContado, hayAbonoParcial,
                 venta.getSaldoPendiente());
 
-        if (dto.tipoVenta() == TipoVenta.LOCAL && (!esFiado || hayAbonoParcial)) {
+        if ((dto.tipoVenta() == TipoVenta.LOCAL || esMesero) && (!esFiado || hayAbonoParcial)) {
             turno.setTotalVentas(turno.getTotalVentas().add(pagoAplicado.totalAplicado()));
             turnoCajaRepository.save(turno);
         }
@@ -364,7 +394,7 @@ public class VentaService {
             } else {
                 movimientoFinancieroService.registrarVentaFiada(ventaGuardada, usuario);
             }
-        } else if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA) {
+        } else if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA || esMesero) {
             movimientoFinancieroService.registrarVentaContado(
                     ventaGuardada,
                     usuario,
@@ -406,10 +436,16 @@ public class VentaService {
                 null,
                 auditService.change("total", null, ventaGuardada.getTotal()),
                 auditService.change("estado", null, ventaGuardada.getEstado()),
-                auditService.change("condicionPago", null, ventaGuardada.getCondicionPago()));
+                auditService.change("condicionPago", null, ventaGuardada.getCondicionPago()),
+                auditService.change("canalVenta", null, ventaGuardada.getCanalVenta()),
+                auditService.change("estadoEntregaCaja", null, ventaGuardada.getEstadoEntregaCaja()));
 
         if (ventaGuardada.getEstado() == EstadoVenta.DESPACHADA && isFacturaAutoEnabled()) {
             imprimirFacturaSeguro(ventaGuardada, pagoAplicado.efectivoAplicado(), pagoAplicado.transferenciaAplicada());
+        }
+
+        if (esMesero && isCocinaAutoEnabled()) {
+            imprimirTicketCocinaSeguro(ventaGuardada);
         }
 
         return ventaGuardada;
@@ -652,7 +688,8 @@ public class VentaService {
             throw new BadRequestException("Solo se pueden cancelar ventas en proceso");
         }
 
-        if (venta.getTipoVenta() == TipoVenta.LOCAL && !"CAJA".equals(usuario.getRol().getNombre())) {
+        if (venta.getTipoVenta() == TipoVenta.LOCAL
+                && !"CAJA".equals(usuario.getRol().getNombre())) {
             throw new BadRequestException("Solo CAJA puede cancelar ventas locales");
         }
 
@@ -787,6 +824,46 @@ public class VentaService {
         imprimirTicketCocinaSeguro(venta);
         auditService.record("VENTA_COCINA_REIMPRESA", "Venta", venta.getId(), usuario, venta.getTurno(), null);
         return venta;
+    }
+
+    @Transactional
+    public List<VentaResponseDTO> listarPendientesMeseros(Usuario usuario) {
+        TurnoCaja turno = turnoCajaRepository
+                .findByEstado(EstadoTurno.ABIERTO)
+                .orElseThrow(() -> new BadRequestException("No hay turno activo"));
+
+        return ventaRepository.findByTurnoAndCanalVentaAndEstadoEntregaCaja(
+                turno, CanalVenta.MESERO, EstadoEntregaCaja.PENDIENTE)
+                .stream()
+                .map(this::construirRespuesta)
+                .toList();
+    }
+
+    @Transactional
+    public void confirmarEntregaCaja(List<Long> ventaIds, Usuario usuario) {
+        if (!"CAJA".equals(usuario.getRol().getNombre())) {
+            throw new BadRequestException("Solo CAJA puede confirmar entrega");
+        }
+        for (Long id : ventaIds) {
+            Venta venta = ventaRepository.findById(id)
+                    .orElseThrow(() -> new BadRequestException("Venta no encontrada: " + id));
+            if (venta.getCanalVenta() != CanalVenta.MESERO) {
+                throw new BadRequestException("La venta " + id + " no es de mesero");
+            }
+            if (venta.getEstadoEntregaCaja() != EstadoEntregaCaja.PENDIENTE) {
+                continue;
+            }
+            venta.setEstadoEntregaCaja(EstadoEntregaCaja.ENTREGADO);
+            ventaRepository.save(venta);
+            auditService.record(
+                    "ENTREGA_CAJA_CONFIRMADA",
+                    "Venta",
+                    venta.getId(),
+                    usuario,
+                    venta.getTurno(),
+                    null,
+                    auditService.change("estadoEntregaCaja", EstadoEntregaCaja.PENDIENTE, EstadoEntregaCaja.ENTREGADO));
+        }
     }
 
     private void devolverInventario(Venta venta) {

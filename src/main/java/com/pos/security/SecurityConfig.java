@@ -45,7 +45,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll();
                     }
-                    auth.requestMatchers("/api/v1/turnos/activo").hasAnyRole("CAJA","DOMI");
+                    auth.requestMatchers("/api/v1/turnos/activo").hasAnyRole("CAJA","DOMI","MESERO");
 auth.requestMatchers("/api/v1/turnos/rango").hasRole("ADMIN");
                     auth.requestMatchers("/api/v1/turnos/**").hasRole("CAJA");
                     auth.requestMatchers("/api/v1/fiados/**").hasAnyRole("CAJA","DOMI","ADMIN");

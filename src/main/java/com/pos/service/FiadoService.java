@@ -148,7 +148,10 @@ public class FiadoService {
                             pago != null ? pago.pagoEfectivo() : BigDecimal.ZERO,
                             pago != null ? pago.pagoTransferencia() : BigDecimal.ZERO,
                             v.getCondicionPago(), v.getSaldoPendiente(),
-                            v.getCliente() != null ? v.getCliente().getId() : null);
+                            v.getCliente() != null ? v.getCliente().getId() : null,
+                            v.getCanalVenta(),
+                            v.getEstadoEntregaCaja(),
+                            v.getUsuario() != null ? v.getUsuario().getUsername() : null);
                 })
                 .toList();
 

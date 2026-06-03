@@ -110,6 +110,7 @@ class VentaDomicilioFlowIntegrationTest {
                 .totalGastos(BigDecimal.ZERO)
                 .estado(EstadoTurno.ABIERTO)
                 .usuario(caja)
+                .numeroTurno(1)
                 .build());
     }
 

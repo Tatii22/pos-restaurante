@@ -15,6 +15,7 @@ import com.pos.repository.VentaRepository;
 import com.pos.service.CalculosFinancierosService;
 import com.pos.service.VentaService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,6 +46,7 @@ public class ReporteVentaService {
         this.calculosFinancierosService = calculosFinancierosService;
     }
 
+    @Transactional(readOnly = true)
     public ReporteVentaDTO generarReporteVentas(LocalDate fechaInicio, LocalDate fechaFin) {
         LocalDateTime inicio = fechaInicio.atStartOfDay();
         LocalDateTime fin = fechaFin.atTime(23, 59, 59);

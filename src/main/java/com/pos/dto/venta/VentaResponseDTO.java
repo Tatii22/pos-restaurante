@@ -1,5 +1,7 @@
 package com.pos.dto.venta;
 
+import com.pos.entity.CanalVenta;
+import com.pos.entity.EstadoEntregaCaja;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.FormaPago;
 import com.pos.entity.TipoVenta;
@@ -25,5 +27,8 @@ public record VentaResponseDTO(
         BigDecimal pagoTransferencia,
         CondicionPago condicionPago,
         BigDecimal saldoPendiente,
-        Long clienteId
+        Long clienteId,
+        CanalVenta canalVenta,
+        EstadoEntregaCaja estadoEntregaCaja,
+        String usuario
 ) {}

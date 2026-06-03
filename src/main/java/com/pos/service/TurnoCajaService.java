@@ -1,9 +1,10 @@
 package com.pos.service;
 
+import com.pos.entity.CanalVenta;
+import com.pos.entity.EstadoEntregaCaja;
 import com.pos.entity.EstadoTurno;
 import com.pos.entity.EstadoVenta;
 import com.pos.entity.MedioFinanciero;
-import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Usuario;
 import com.pos.exception.BadRequestException;
@@ -145,11 +146,18 @@ public class TurnoCajaService {
                 .findByEstadoInForUpdate(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno para cerrar"));
 
-        // Bloqueo: no cerrar si hay domicilios pendientes
-        if (ventaRepository.existsByTurnoAndTipoVentaAndEstado(
-                turno, TipoVenta.DOMICILIO, EstadoVenta.EN_PROCESO)) {
+        // Bloqueo: no cerrar si hay ventas en proceso (domicilios, meseros, etc.)
+        if (ventaRepository.existsByTurnoAndEstado(
+                turno, EstadoVenta.EN_PROCESO)) {
             throw new BadRequestException(
-                    "No puedes cerrar turno: hay domicilios del turno pendientes por despachar");
+                    "No puedes cerrar turno: hay ventas en proceso pendientes de completar");
+        }
+
+        // Bloqueo: no cerrar si hay meseros con efectivo pendiente de entrega
+        if (ventaRepository.existsByTurnoAndCanalVentaAndEstadoEntregaCaja(
+                turno, CanalVenta.MESERO, EstadoEntregaCaja.PENDIENTE)) {
+            throw new BadRequestException(
+                    "No puedes cerrar turno: hay meseros con efectivo pendiente de entregar a caja");
         }
 
         // Validaciones de entrada

@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.pos.entity.CanalVenta;
+import com.pos.entity.EstadoEntregaCaja;
+
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
     @Query("""
@@ -66,6 +69,23 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             TurnoCaja turno,
             TipoVenta tipoVenta,
             EstadoVenta estado
+    );
+
+    boolean existsByTurnoAndEstado(
+            TurnoCaja turno,
+            EstadoVenta estado
+    );
+
+    boolean existsByTurnoAndCanalVentaAndEstadoEntregaCaja(
+            TurnoCaja turno,
+            CanalVenta canalVenta,
+            EstadoEntregaCaja estadoEntregaCaja
+    );
+
+    List<Venta> findByTurnoAndCanalVentaAndEstadoEntregaCaja(
+            TurnoCaja turno,
+            CanalVenta canalVenta,
+            EstadoEntregaCaja estadoEntregaCaja
     );
 
     List<Venta> findByClienteAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(

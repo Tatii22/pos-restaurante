@@ -30,7 +30,8 @@ public class DefaultCatalogBootstrap implements CommandLineRunner {
     private static final List<String> DEFAULT_ROLES = List.of(
             "ADMIN",
             "CAJA",
-            "DOMI"
+            "DOMI",
+            "MESERO"
     );
 
     private static final List<CategoriaSeed> DEFAULT_CATEGORIAS = List.of(

@@ -1,4 +1,5 @@
 package com.pos.controller;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,7 +47,7 @@ public class VentaController {
 
     /* ===================== REGISTRAR ===================== */
 
-    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','MESERO')")
     @PostMapping
     @Operation(summary = "Registrar venta")
     public ResponseEntity<VentaResponseDTO> registrar(
@@ -101,14 +102,14 @@ public class VentaController {
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN','MESERO')")
     @GetMapping("/{id}")
     @Operation(summary = "Obtener venta por id")
     public ResponseEntity<VentaDetalleResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(ventaService.obtenerDetallePorId(id));
     }
 
-    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','ADMIN','MESERO')")
     @GetMapping
     @Operation(summary = "Listar ventas operativas con filtros y paginación")
     public ResponseEntity<Page<VentaResponseDTO>> listarOperativas(
@@ -132,8 +133,7 @@ public class VentaController {
             @RequestParam(defaultValue = "20") int size
     ) {
         Page<VentaResponseDTO> ventas = ventaService
-                .listarOperativas(estado, tipoVenta, turnoId, fechaInicio, fechaFin, clienteNombre, telefono, page, size)
-                .map(ventaService::construirRespuesta);
+                .listarOperativas(estado, tipoVenta, turnoId, fechaInicio, fechaFin, clienteNombre, telefono, page, size);
         return ResponseEntity.ok(ventas);
     }
 
@@ -165,7 +165,7 @@ public class VentaController {
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
     }
 
-    @PreAuthorize("hasRole('CAJA')")
+    @PreAuthorize("hasAnyRole('CAJA','MESERO')")
     @PostMapping("/imprimir-cocina-preview")
     @Operation(summary = "Imprimir ticket de cocina previo al pago (sin registrar venta)")
     public ResponseEntity<Void> imprimirCocinaPreview(
@@ -236,5 +236,34 @@ public class VentaController {
 
         Venta venta = ventaService.marcarVentaDomicilioComoFiado(id, dto, usuario);
         return ResponseEntity.ok(ventaService.construirRespuesta(venta));
+    }
+
+    /* ===================== MESERO ===================== */
+
+    @PreAuthorize("hasAnyRole('CAJA','MESERO')")
+    @GetMapping("/pendientes-meseros")
+    @Operation(summary = "Listar ventas de meseros pendientes de entrega a caja")
+    public ResponseEntity<List<VentaResponseDTO>> listarPendientesMeseros(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        List<Venta> ventas = ventaService.listarPendientesMeseros(usuario);
+        return ResponseEntity.ok(ventas);
+    }
+
+    @PreAuthorize("hasRole('CAJA')")
+    @PostMapping("/confirmar-entrega-caja")
+    @Operation(summary = "Confirmar que el mesero entrego el efectivo a caja")
+    public ResponseEntity<Void> confirmarEntregaCaja(
+            @RequestBody List<Long> ventaIds,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        ventaService.confirmarEntregaCaja(ventaIds, usuario);
+        return ResponseEntity.ok().build();
     }
 }

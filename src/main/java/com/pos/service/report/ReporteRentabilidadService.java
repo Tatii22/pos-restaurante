@@ -19,6 +19,7 @@ import com.pos.repository.VentaRepository;
 import com.pos.service.CalculosFinancierosService;
 import com.pos.service.VentaService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -57,6 +58,7 @@ public class ReporteRentabilidadService {
         this.calculosFinancierosService = calculosFinancierosService;
     }
 
+    @Transactional(readOnly = true)
     public ReporteRentabilidadDTO generarReporte(LocalDate fechaInicio, LocalDate fechaFin) {
         validarFechas(fechaInicio, fechaFin);
 

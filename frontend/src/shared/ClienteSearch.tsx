@@ -125,7 +125,7 @@ export function ClienteSearch({
         telefono: nuevoCliente.telefono,
         direccionPredeterminada: nuevoCliente.direccionPredeterminada ?? null,
         deudaActual: "deudaActual" in nuevoCliente ? nuevoCliente.deudaActual : 0,
-        tieneDeuda: "tieneDeuda" in nuevoCliente ? nuevoCliente.tieneDeuda : false,
+        tieneDeuda: "tieneDeuda" in nuevoCliente && nuevoCliente.tieneDeuda === true,
       };
       handleSeleccionarCliente(clienteSearch);
     } catch (err) {

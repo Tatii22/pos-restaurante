@@ -1,7 +1,7 @@
 // src/types.ts — fuente única de verdad para todos los tipos del frontend.
 // shared/types.ts es un alias que re-exporta desde aquí para compatibilidad.
 
-export type Role = "ADMIN" | "CAJA" | "DOMI";
+export type Role = "ADMIN" | "CAJA" | "DOMI" | "MESERO";
 
 export type ApiError = {
   timestamp?: string;
@@ -37,6 +37,9 @@ export type Venta = {
   condicionPago?: "CONTADO" | "FIADO";
   saldoPendiente?: number | null;
   clienteId?: number | null;
+  canalVenta?: "CAJA" | "MESERO" | null;
+  estadoEntregaCaja?: "PENDIENTE" | "ENTREGADO" | null;
+  usuario?: string | null;
 };
 
 export type VentaDetalleItem = {
@@ -57,6 +60,9 @@ export type VentaDetalle = Venta & {
   fechaAnulacion: string | null;
   motivoAnulacion: string | null;
   detalles: VentaDetalleItem[];
+  canalVenta?: "CAJA" | "MESERO" | null;
+  estadoEntregaCaja?: "PENDIENTE" | "ENTREGADO" | null;
+  usuario?: string | null;
 };
 
 export type Cliente = {

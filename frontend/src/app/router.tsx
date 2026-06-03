@@ -17,6 +17,11 @@ import { GastosPage } from "../pages/GastosPage";
 import { HistorialVentasPage } from "../pages/HistorialVentasPage";
 import { CategoriasPage } from "../pages/CategoriasPage";
 import { ClientesPage } from "../pages/ClientesPage";
+import { MeseroVentasPage } from "../pages/MeseroVentasPage";
+function VentasPageSwitch() {
+  const role = useAuthStore((s) => s.role);
+  return role === "MESERO" ? <MeseroVentasPage /> : <VentasPage />;
+}
 
 function Protected({ children, roles }: { children: JSX.Element; roles?: Role[] }) {
   const { token, role } = useAuthStore();
@@ -24,6 +29,7 @@ function Protected({ children, roles }: { children: JSX.Element; roles?: Role[] 
   if (roles && role && !roles.includes(role)) {
     if (role === "CAJA") return <Navigate to="/ventas" replace />;
     if (role === "DOMI") return <Navigate to="/ventas" replace />;
+    if (role === "MESERO") return <Navigate to="/ventas" replace />;
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -47,7 +53,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomeRedirect /> },
       { path: "dashboard", element: <Protected roles={["ADMIN"]}><DashboardPage /></Protected> },
-      { path: "ventas", element: <Protected roles={["CAJA", "DOMI"]}><VentasPage /></Protected> },
+      { path: "ventas", element: <Protected roles={["CAJA", "DOMI", "MESERO"]}><VentasPageSwitch /></Protected> },
       { path: "historial", element: <Protected roles={["CAJA"]}><HistorialVentasPage /></Protected> },
       { path: "domicilios", element: <Protected roles={["CAJA", "DOMI"]}><DomiciliosPage /></Protected> },
       { path: "turnos", element: <Protected roles={["CAJA"]}><TurnosPage /></Protected> },

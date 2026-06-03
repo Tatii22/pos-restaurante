@@ -96,6 +96,18 @@ class TurnoCatalogoInventarioIntegrationTest {
                 .build()).getId();
     }
 
+    private TurnoCaja crearTurnoAbierto(Usuario cajero) {
+        return turnoCajaRepository.save(TurnoCaja.builder()
+                .fechaApertura(LocalDateTime.now())
+                .montoInicial(new BigDecimal("100000.00"))
+                .totalVentas(BigDecimal.ZERO)
+                .totalGastos(BigDecimal.ZERO)
+                .estado(EstadoTurno.ABIERTO)
+                .usuario(cajero)
+                .numeroTurno(1)
+                .build());
+    }
+
     @Test
     void abrirTurnoNoDebeBorrarInventarioInicialNiOcultarMenuEnVentas() throws Exception {
         mockMvc.perform(post("/api/v1/menu-diario")
@@ -160,6 +172,7 @@ class TurnoCatalogoInventarioIntegrationTest {
                 .totalGastos(BigDecimal.ZERO)
                 .estado(EstadoTurno.ABIERTO)
                 .usuario(caja)
+                .numeroTurno(1)
                 .build());
 
         mockMvc.perform(get("/api/v1/inventario-diario")

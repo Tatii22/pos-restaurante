@@ -72,6 +72,7 @@ export function normalizeRole(roles: string[]): Role {
   const normalized = roles.map((r) => r.replace("ROLE_", ""));
   if (normalized.includes("ADMIN")) return "ADMIN";
   if (normalized.includes("CAJA")) return "CAJA";
+  if (normalized.includes("MESERO")) return "MESERO";
   return "DOMI";
 }
 

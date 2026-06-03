@@ -59,16 +59,5 @@ public class MenuDiarioService {
                         .usuario(usuario)
                         .activo(true)
                         .build()));
-
-        inventarioDiarioRepository.deleteByMenuDiario(menu);
-        auditService.record(
-                "MENU_TURNO_REINICIADO",
-                "MenuDiario",
-                menu.getId(),
-                usuario,
-                null,
-                "Apertura de turno — inventario limpiado",
-                auditService.change("activo", null, menu.getActivo())
-        );
     }
 }

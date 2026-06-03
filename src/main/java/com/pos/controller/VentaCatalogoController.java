@@ -17,7 +17,7 @@ public class VentaCatalogoController {
     private final ProductoService productoService;
 
     @GetMapping("/catalogo-hoy")
-    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','MESERO')")
     public ResponseEntity<ProductosVentaHoyDTO> catalogoHoy() {
         return ResponseEntity.ok(
                 productoService.productosVentaHoy()

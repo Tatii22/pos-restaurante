@@ -186,11 +186,13 @@ export function DomiciliosPage() {
     mutationFn: (id: number) => posApi.imprimirFactura(id)
   });
   const marcarFiadoM = useMutation({
-    mutationFn: (payload: { id: number; clienteId?: number; clienteNombre: string; clienteTelefono: string }) =>
+    mutationFn: (payload: { id: number; clienteId?: number; clienteNombre: string; clienteTelefono: string; pagoEfectivo?: number; pagoTransferencia?: number }) =>
       posApi.marcarVentaComoFiado(payload.id, {
         clienteId: payload.clienteId,
         clienteNombre: payload.clienteNombre,
-        clienteTelefono: payload.clienteTelefono
+        clienteTelefono: payload.clienteTelefono,
+        pagoEfectivo: payload.pagoEfectivo,
+        pagoTransferencia: payload.pagoTransferencia
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["domicilios-list"] });
@@ -342,7 +344,7 @@ export function DomiciliosPage() {
                          fiadoTransferencia.setValue("0");
                          setConfirmFiado({
                            ventaId: selected.id,
-                           clienteId: selected.clienteId,
+                            clienteId: selected.clienteId ?? undefined,
                            clienteNombre: selected.clienteNombre || '',
                            clienteTelefono: selected.telefono || ''
                          });
@@ -584,7 +586,7 @@ export function DomiciliosPage() {
                         fiadoTransferencia.setValue("0");
                         setConfirmFiado({
                           ventaId: selected.id,
-                          clienteId: selected.clienteId,
+                          clienteId: selected.clienteId ?? undefined,
                           clienteNombre: selected.clienteNombre || '',
                           clienteTelefono: selected.telefono || ''
                         });
