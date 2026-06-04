@@ -1,6 +1,7 @@
 import {
   Bell,
   Boxes,
+  ClipboardList,
   HandCoins,
   History,
   LayoutDashboard,
@@ -35,7 +36,9 @@ type MenuItem = {
 const items: MenuItem[] = [
   { to: "/dashboard", label: "Dashboard", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },
   { to: "/ventas", label: "Ventas", roles: ["CAJA", "DOMI", "MESERO"], icon: <ShoppingCart size={16} /> },
+  { to: "/mis-pedidos", label: "Mis Pedidos", roles: ["MESERO"], icon: <ClipboardList size={16} /> },
   { to: "/historial", label: "Historial", roles: ["CAJA"], icon: <History size={16} /> },
+  { to: "/pendientes-meseros", label: "Pendientes Meseros", roles: ["CAJA"], icon: <HandCoins size={16} /> },
   { to: "/domicilios", label: "Domicilios", roles: ["CAJA", "DOMI"], icon: <Truck size={16} /> },
   { to: "/gastos", label: "Gastos", roles: ["CAJA", "ADMIN"], icon: <Wallet size={16} /> },
   { to: "/reportes", label: "Reportes", roles: ["ADMIN"], icon: <LayoutDashboard size={16} /> },

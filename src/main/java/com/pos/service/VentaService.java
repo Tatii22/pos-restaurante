@@ -8,6 +8,7 @@ import com.pos.dto.venta.VentaFiadoDTO;
 import com.pos.dto.venta.VentaDetalleCreateDTO;
 import com.pos.dto.venta.VentaItemResponseDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
+import com.pos.entity.CanalVenta;
 import com.pos.entity.*;
 import com.pos.exception.BadRequestException;
 import com.pos.repository.AbonoFiadoRepository;
@@ -143,7 +144,8 @@ public class VentaService {
             String clienteNombre,
             String telefono,
             int page,
-            int size) {
+            int size,
+            Usuario usuario) {
         Specification<Venta> spec = Specification.unrestricted();
 
         if (estado != null) {
@@ -172,6 +174,10 @@ public class VentaService {
         if (telefono != null && !telefono.isBlank()) {
             String pattern = "%" + telefono.toLowerCase() + "%";
             spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("telefono")), pattern));
+        }
+
+        if (usuario != null && "MESERO".equals(usuario.getRol().getNombre())) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("canalVenta"), CanalVenta.MESERO));
         }
 
         return ventaRepository.findAll(
@@ -254,18 +260,11 @@ public class VentaService {
         venta.setCanalVenta(esMesero ? CanalVenta.MESERO : CanalVenta.CAJA);
         if (esMesero) {
             venta.setEstado(EstadoVenta.EN_PROCESO);
-            boolean pagoEfectivoUsado = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0;
-            boolean pagoTransferenciaUsado = pagoTransferencia.compareTo(BigDecimal.ZERO) > 0;
-            if (pagoEfectivoUsado && !pagoTransferenciaUsado) {
-                venta.setEstadoEntregaCaja(EstadoEntregaCaja.PENDIENTE);
-            } else {
-            if (pagoEfectivoUsado) {
-                venta.setEstadoEntregaCaja(EstadoEntregaCaja.PENDIENTE);
-            } else {
-                venta.setEstadoEntregaCaja(EstadoEntregaCaja.ENTREGADO);
-            }
-        }
-    } else {
+            boolean tieneEfectivo = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0;
+            venta.setEstadoEntregaCaja(tieneEfectivo
+                    ? EstadoEntregaCaja.PENDIENTE
+                    : EstadoEntregaCaja.ENTREGADO);
+        } else {
             venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
         }
         venta.setCliente(cliente);
@@ -452,8 +451,9 @@ public class VentaService {
     }
 
     public void imprimirTicketCocinaPreview(VentaCocinaPreviewDTO dto, Usuario usuario) {
-        if (usuario == null || usuario.getRol() == null || !"CAJA".equals(usuario.getRol().getNombre())) {
-            throw new BadRequestException("Solo CAJA puede imprimir ticket de cocina previo");
+        String rol = usuario != null && usuario.getRol() != null ? usuario.getRol().getNombre() : null;
+        if (!"CAJA".equals(rol) && !"MESERO".equals(rol)) {
+            throw new BadRequestException("Solo CAJA o MESERO pueden imprimir ticket de cocina previo");
         }
 
         if (!isCocinaAutoEnabled()) {
@@ -688,14 +688,20 @@ public class VentaService {
             throw new BadRequestException("Solo se pueden cancelar ventas en proceso");
         }
 
-        if (venta.getTipoVenta() == TipoVenta.LOCAL
-                && !"CAJA".equals(usuario.getRol().getNombre())) {
+        String rol = usuario.getRol().getNombre();
+
+        if ("MESERO".equals(rol)) {
+            if (venta.getCanalVenta() != CanalVenta.MESERO || venta.getUsuario().getId() != usuario.getId()) {
+                throw new BadRequestException("Solo puedes cancelar tus propias ventas");
+            }
+        } else if (venta.getTipoVenta() == TipoVenta.LOCAL
+                && !"CAJA".equals(rol)) {
             throw new BadRequestException("Solo CAJA puede cancelar ventas locales");
         }
 
         if (venta.getTipoVenta() == TipoVenta.DOMICILIO
-                && !"CAJA".equals(usuario.getRol().getNombre())
-                && !"DOMI".equals(usuario.getRol().getNombre())) {
+                && !"CAJA".equals(rol)
+                && !"DOMI".equals(rol)) {
             throw new BadRequestException("No autorizado para cancelar este pedido");
         }
 
@@ -829,7 +835,7 @@ public class VentaService {
     @Transactional
     public List<VentaResponseDTO> listarPendientesMeseros(Usuario usuario) {
         TurnoCaja turno = turnoCajaRepository
-                .findByEstado(EstadoTurno.ABIERTO)
+                .findByEstadoIn(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
         return ventaRepository.findByTurnoAndCanalVentaAndEstadoEntregaCaja(

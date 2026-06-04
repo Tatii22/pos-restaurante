@@ -18,6 +18,8 @@ import { HistorialVentasPage } from "../pages/HistorialVentasPage";
 import { CategoriasPage } from "../pages/CategoriasPage";
 import { ClientesPage } from "../pages/ClientesPage";
 import { MeseroVentasPage } from "../pages/MeseroVentasPage";
+import { MisPedidosPage } from "../pages/MisPedidosPage";
+import { PendientesMeserosPage } from "../pages/PendientesMeserosPage";
 function VentasPageSwitch() {
   const role = useAuthStore((s) => s.role);
   return role === "MESERO" ? <MeseroVentasPage /> : <VentasPage />;
@@ -54,7 +56,9 @@ export const router = createBrowserRouter([
       { index: true, element: <HomeRedirect /> },
       { path: "dashboard", element: <Protected roles={["ADMIN"]}><DashboardPage /></Protected> },
       { path: "ventas", element: <Protected roles={["CAJA", "DOMI", "MESERO"]}><VentasPageSwitch /></Protected> },
+      { path: "mis-pedidos", element: <Protected roles={["MESERO"]}><MisPedidosPage /></Protected> },
       { path: "historial", element: <Protected roles={["CAJA"]}><HistorialVentasPage /></Protected> },
+      { path: "pendientes-meseros", element: <Protected roles={["CAJA"]}><PendientesMeserosPage /></Protected> },
       { path: "domicilios", element: <Protected roles={["CAJA", "DOMI"]}><DomiciliosPage /></Protected> },
       { path: "turnos", element: <Protected roles={["CAJA"]}><TurnosPage /></Protected> },
       { path: "reportes", element: <Protected roles={["ADMIN"]}><ReportesPage /></Protected> },

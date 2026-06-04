@@ -4,7 +4,7 @@ import { BsCake2, BsCupHot, BsCupStraw, BsGrid, BsTrash, BsXLg } from "react-ico
 import { posApi } from "../shared/api/posApi";
 import { formatCurrencyInput, getErrorMessage, money, normalizeCurrencyInput, parseCurrencyInput } from "../shared/utils";
 import { useAuthStore } from "../shared/store/authStore";
-import { useClienteAutocomplete } from "../shared/ClienteSearch";
+
 import type { Turno } from "../types";
 
 type CartItem = { id: number; nombre: string; precio: number; cantidad: number; observacion: string };
@@ -74,7 +74,8 @@ export function MeseroVentasPage() {
   const turnoActivoQ = useQuery({
     queryKey: ["turno-activo-mesero"],
     queryFn: () => posApi.getTurnoActivo(),
-    retry: false
+    retry: false,
+    refetchInterval: 30000
   });
 
   const bloqueado = !turnoActivoQ.data;
@@ -83,11 +84,12 @@ export function MeseroVentasPage() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPayModal, setShowPayModal] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<"SALON" | "LLEVAR">("SALON");
   const [transferAmount, setTransferAmount] = useState("0");
   const [cashAmount, setCashAmount] = useState("0");
   const [activeCalcField, setActiveCalcField] = useState<"TRANSFERENCIA" | "EFECTIVO">("EFECTIVO");
   const [clienteNombre, setClienteNombre] = useState("");
-  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [stockWarn, setStockWarn] = useState<string | null>(null);
   const [validationWarns, setValidationWarns] = useState<string[]>([]);
@@ -115,9 +117,6 @@ export function MeseroVentasPage() {
     retry: false
   });
 
-  const { results: nameSuggestionsRaw } = useClienteAutocomplete(clienteNombre);
-  const nameSuggestions = nameSuggestionsRaw.slice(0, 5);
-
   const createSale = useMutation({
     mutationFn: (payload: unknown) => posApi.crearVenta(payload),
     onSuccess: () => {
@@ -125,6 +124,7 @@ export function MeseroVentasPage() {
       setClienteNombre("");
       setOrderCode(String(Math.floor(Math.random() * 9000) + 1000));
       setShowPayModal(false);
+      setCheckoutMode("SALON");
       setTransferAmount("0");
       setCashAmount("0");
       if (successToastTimerRef.current) clearTimeout(successToastTimerRef.current);
@@ -134,7 +134,17 @@ export function MeseroVentasPage() {
       }, 2200);
       qc.invalidateQueries({ queryKey: ["catalogo-hoy"] });
       qc.invalidateQueries({ queryKey: ["inventario-ventas"] });
+      qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
+      qc.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
     }
+  });
+
+  const printKitchenPreviewM = useMutation({
+    mutationFn: (payload: {
+      clienteNombre?: string;
+      paraLlevar?: boolean;
+      detalles: Array<{ productoId: number; cantidad: number; observacion?: string }>;
+    }) => posApi.imprimirCocinaPreview(payload)
   });
 
   const products = useMemo(() => {
@@ -234,6 +244,7 @@ export function MeseroVentasPage() {
       formaPago,
       pagoEfectivo: cashValue,
       pagoTransferencia: transferValue,
+      paraLlevar: checkoutMode === "LLEVAR",
       descuentoPorcentaje: 0,
       clienteNombre: clienteNombre.trim() || undefined,
       detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
@@ -273,17 +284,38 @@ export function MeseroVentasPage() {
       }
     }
 
-    await createSale.mutateAsync(buildSalePayload(transferFinal, cashFinal));
+    try {
+      await createSale.mutateAsync(buildSalePayload(transferFinal, cashFinal));
+    } catch (err: any) {
+      setValidationWarns([getErrorMessage(err)]);
+    }
   }
 
   async function registerSale() {
     if (bloqueado || cart.length === 0) return;
-    if (remaining > 0) return;
-    await createSale.mutateAsync(buildSalePayload(transfer, cash));
+    if (remaining > 0) {
+      setValidationWarns(["El pago es insuficiente para completar la venta"]);
+      return;
+    }
+    try {
+      await createSale.mutateAsync(buildSalePayload(transfer, cash));
+    } catch (err: any) {
+      setValidationWarns([getErrorMessage(err)]);
+    }
   }
 
-  async function startCheckout() {
+  async function startCheckout(mode: "SALON" | "LLEVAR") {
     if (bloqueado || cart.length === 0) return;
+    setCheckoutMode(mode);
+    try {
+      await printKitchenPreviewM.mutateAsync({
+        clienteNombre: clienteNombre.trim() || undefined,
+        paraLlevar: mode === "LLEVAR",
+        detalles: cart.map((i) => ({ productoId: i.id, cantidad: i.cantidad, observacion: i.observacion }))
+      });
+    } catch {
+      // Si falla la impresión, igual permitimos continuar
+    }
     setShowPayModal(true);
     setActiveCalcField("EFECTIVO");
   }
@@ -418,26 +450,10 @@ export function MeseroVentasPage() {
                 className="input mt-1"
                 value={clienteNombre}
                 onChange={(e) => setClienteNombre(cleanText(e.target.value, 60))}
-                onFocus={() => setShowNameSuggestions(true)}
-                onBlur={() => setTimeout(() => { if (mountedRef.current) setShowNameSuggestions(false); }, 180)}
                 placeholder="Ej: Juan Perez"
                 maxLength={60}
               />
             </label>
-            {showNameSuggestions && nameSuggestions.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-44 overflow-auto text-sm">
-                {nameSuggestions.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onMouseDown={() => { setClienteNombre(c.nombre); setShowNameSuggestions(false); }}
-                    className="w-full px-3 py-1.5 text-left hover:bg-blue-50 focus:bg-blue-50"
-                  >
-                    <div className="font-medium text-gray-900">{c.nombre}</div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -486,10 +502,17 @@ export function MeseroVentasPage() {
         <div className="mt-4 grid gap-2">
           <button
             className="btn-primary bg-green-600 hover:bg-green-700"
-            disabled={createSale.isPending}
-            onClick={startCheckout}
+            disabled={createSale.isPending || printKitchenPreviewM.isPending}
+            onClick={() => startCheckout("SALON")}
           >
             COBRAR
+          </button>
+          <button
+            className="btn-soft border border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+            disabled={createSale.isPending || printKitchenPreviewM.isPending}
+            onClick={() => startCheckout("LLEVAR")}
+          >
+            COBRAR PARA LLEVAR
           </button>
         </div>
 

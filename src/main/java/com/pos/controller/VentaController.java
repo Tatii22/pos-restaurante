@@ -67,7 +67,7 @@ public class VentaController {
 
     /* ===================== CANCELAR ===================== */
     // ❌ No entra dinero, devuelve inventario
-    @PreAuthorize("hasAnyRole('CAJA','DOMI')")
+    @PreAuthorize("hasAnyRole('CAJA','DOMI','MESERO')")
     @PostMapping("/{id}/cancelar")
     @Operation(summary = "Cancelar venta en proceso")
     public ResponseEntity<VentaResponseDTO> cancelar(
@@ -130,10 +130,14 @@ public class VentaController {
             @Parameter(description = "Página (base 0)")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Tamaño de página")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
+        Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
         Page<VentaResponseDTO> ventas = ventaService
-                .listarOperativas(estado, tipoVenta, turnoId, fechaInicio, fechaFin, clienteNombre, telefono, page, size);
+                .listarOperativas(estado, tipoVenta, turnoId, fechaInicio, fechaFin, clienteNombre, telefono, page, size, usuario);
         return ResponseEntity.ok(ventas);
     }
 
@@ -249,7 +253,7 @@ public class VentaController {
         Usuario usuario = usuarioRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        List<Venta> ventas = ventaService.listarPendientesMeseros(usuario);
+        List<VentaResponseDTO> ventas = ventaService.listarPendientesMeseros(usuario);
         return ResponseEntity.ok(ventas);
     }
 
