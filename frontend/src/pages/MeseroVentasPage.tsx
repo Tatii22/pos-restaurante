@@ -136,6 +136,8 @@ export function MeseroVentasPage() {
       qc.invalidateQueries({ queryKey: ["inventario-ventas"] });
       qc.invalidateQueries({ queryKey: ["turno-activo-layout"] });
       qc.invalidateQueries({ queryKey: ["historial-turno-ventas"] });
+      qc.invalidateQueries({ queryKey: ["mis-pedidos-pendientes"] });
+      qc.invalidateQueries({ queryKey: ["pendientes-meseros"] });
     }
   });
 

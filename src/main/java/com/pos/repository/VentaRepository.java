@@ -19,6 +19,7 @@ import java.util.List;
 
 import com.pos.entity.CanalVenta;
 import com.pos.entity.EstadoEntregaCaja;
+import com.pos.entity.Usuario;
 
 public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
@@ -86,6 +87,24 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             TurnoCaja turno,
             CanalVenta canalVenta,
             EstadoEntregaCaja estadoEntregaCaja
+    );
+
+    List<Venta> findByTurnoAndCanalVentaAndEstadoEntregaCajaAndUsuario(
+            TurnoCaja turno,
+            CanalVenta canalVenta,
+            EstadoEntregaCaja estadoEntregaCaja,
+            Usuario usuario
+    );
+
+    List<Venta> findByTurnoAndCanalVentaAndUsuario(
+            TurnoCaja turno,
+            CanalVenta canalVenta,
+            Usuario usuario
+    );
+
+    List<Venta> findByTurnoAndCanalVenta(
+            TurnoCaja turno,
+            CanalVenta canalVenta
     );
 
     List<Venta> findByClienteAndEstadoAndSaldoPendienteGreaterThanOrderByFechaAsc(

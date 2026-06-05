@@ -41,6 +41,9 @@ export function CocinaPage() {
               </div>
               <p className="text-sm text-pos-muted">Cliente: {v.clienteNombre || "N/A"}</p>
               {v.direccion && <p className="text-sm text-pos-muted">Dirección: {v.direccion}</p>}
+              {origen === "MESERO" && v.usuario && (
+                <p className="text-sm font-semibold text-purple-700">Mesero: {v.usuario}</p>
+              )}
               <p className="mt-3 text-sm">Observaciones por producto: disponibles en detalle de venta.</p>
               <div className="mt-4 flex gap-2">
                 <button className="btn-ghost" onClick={() => setStateMap((prev) => ({ ...prev, [v.id]: "preparando" }))}>

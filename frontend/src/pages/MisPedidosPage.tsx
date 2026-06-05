@@ -1,16 +1,32 @@
 import { useQuery } from "@tanstack/react-query";
 import { posApi } from "../shared/api/posApi";
 import { getErrorMessage, money } from "../shared/utils";
+import { useAuthStore } from "../shared/store/authStore";
 import type { Venta } from "../types";
 
 function estadoEntregaCajaLabel(venta: Venta): { text: string; className: string } {
   if (venta.estadoEntregaCaja === "PENDIENTE") {
-    return { text: "PENDIENTE ENTREGA", className: "bg-yellow-100 text-yellow-800" };
+    return { text: "PENDIENTE", className: "bg-yellow-100 text-yellow-800" };
   }
   if (venta.estadoEntregaCaja === "ENTREGADO") {
-    return { text: "ENTREGADO A CAJA", className: "bg-green-100 text-green-800" };
+    return { text: "ENTREGADO", className: "bg-green-100 text-green-800" };
   }
   return { text: "SIN ESTADO", className: "bg-gray-100 text-gray-700" };
+}
+
+function estadoVentaLabel(estado: Venta["estado"]): { text: string; className: string } {
+  switch (estado) {
+    case "EN_PROCESO":
+      return { text: "EN PROCESO", className: "bg-blue-100 text-blue-800" };
+    case "DESPACHADA":
+      return { text: "DESPACHADA", className: "bg-green-100 text-green-800" };
+    case "CANCELADA":
+      return { text: "CANCELADA", className: "bg-gray-100 text-gray-700" };
+    case "ANULADA":
+      return { text: "ANULADA", className: "bg-red-100 text-red-800" };
+    default:
+      return { text: estado || "SIN ESTADO", className: "bg-gray-100 text-gray-700" };
+  }
 }
 
 function fechaHora(value?: string | null): string {
@@ -27,6 +43,8 @@ function fechaHora(value?: string | null): string {
 }
 
 export function MisPedidosPage() {
+  const usernameActual = useAuthStore((s) => s.username);
+
   const pendientesQ = useQuery({
     queryKey: ["mis-pedidos-pendientes"],
     queryFn: () => posApi.getPendientesMeseros(),
@@ -49,26 +67,30 @@ export function MisPedidosPage() {
     );
   }
 
-  const ventas = pendientesQ.data || [];
+  const ventas = (pendientesQ.data || []).filter((venta) => {
+    if (!usernameActual) return true;
+    return venta.usuario === usernameActual;
+  });
 
   return (
     <div className="grid gap-4">
       <section className="card p-4">
         <h1 className="text-xl font-semibold">Mis Pedidos</h1>
         <p className="mt-1 text-sm text-pos-muted">
-          {ventas.length} pedido{ventas.length !== 1 ? "s" : ""} pendiente{ventas.length !== 1 ? "s" : ""} de entrega a caja
+          {ventas.length} pedido{ventas.length !== 1 ? "s" : ""} creado{ventas.length !== 1 ? "s" : ""} en el turno actual
         </p>
       </section>
 
       {ventas.length === 0 && (
         <section className="card p-4">
-          <p className="text-sm text-pos-muted">No tienes pedidos pendientes de entrega a caja.</p>
+          <p className="text-sm text-pos-muted">Aun no tienes pedidos en el turno actual.</p>
         </section>
       )}
 
       <section className="grid gap-3 md:hidden">
         {ventas.map((venta) => {
-          const etiqueta = estadoEntregaCajaLabel(venta);
+          const etiquetaEntrega = estadoEntregaCajaLabel(venta);
+          const etiquetaVenta = estadoVentaLabel(venta.estado);
           return (
             <div key={venta.id} className="card p-3">
               <div className="flex items-start justify-between gap-2">
@@ -76,7 +98,10 @@ export function MisPedidosPage() {
                   <p className="font-semibold">Venta #{venta.id}</p>
                   <p className="text-xs text-pos-muted">{fechaHora(venta.fecha)}</p>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiqueta.className}`}>{etiqueta.text}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiquetaVenta.className}`}>{etiquetaVenta.text}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiquetaEntrega.className}`}>{etiquetaEntrega.text}</span>
+                </div>
               </div>
               {venta.clienteNombre && (
                 <p className="mt-2 text-sm">Cliente: {venta.clienteNombre}</p>
@@ -93,9 +118,9 @@ export function MisPedidosPage() {
 
       <section className="card hidden overflow-x-auto md:block">
         {ventas.length === 0 ? (
-          <p className="p-4 text-sm text-pos-muted">No tienes pedidos pendientes de entrega a caja.</p>
+          <p className="p-4 text-sm text-pos-muted">Aun no tienes pedidos en el turno actual.</p>
         ) : (
-          <table className="w-full min-w-[600px] table-fixed text-sm">
+          <table className="w-full min-w-[700px] table-fixed text-sm">
             <thead>
               <tr className="border-b border-pos-border">
                 <th className="w-16 p-3 text-left">#</th>
@@ -104,12 +129,14 @@ export function MisPedidosPage() {
                 <th className="w-24 p-3 text-left">Total</th>
                 <th className="w-28 p-3 text-left">Pago</th>
                 <th className="w-20 p-3 text-left">LLev.</th>
-                <th className="w-40 p-3 text-left">Estado Entrega</th>
+                <th className="w-32 p-3 text-left">Estado</th>
+                <th className="w-32 p-3 text-left">Entrega Caja</th>
               </tr>
             </thead>
             <tbody>
               {ventas.map((venta) => {
-                const etiqueta = estadoEntregaCajaLabel(venta);
+                const etiquetaEntrega = estadoEntregaCajaLabel(venta);
+                const etiquetaVenta = estadoVentaLabel(venta.estado);
                 return (
                   <tr key={venta.id} className="border-b border-pos-border hover:bg-gray-50">
                     <td className="p-3 font-semibold">{venta.id}</td>
@@ -119,7 +146,10 @@ export function MisPedidosPage() {
                     <td className="p-3">{venta.formaPago}</td>
                     <td className="p-3">{venta.paraLlevar ? "Si" : "No"}</td>
                     <td className="p-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiqueta.className}`}>{etiqueta.text}</span>
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiquetaVenta.className}`}>{etiquetaVenta.text}</span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${etiquetaEntrega.className}`}>{etiquetaEntrega.text}</span>
                     </td>
                   </tr>
                 );

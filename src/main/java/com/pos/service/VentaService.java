@@ -260,10 +260,10 @@ public class VentaService {
         venta.setCanalVenta(esMesero ? CanalVenta.MESERO : CanalVenta.CAJA);
         if (esMesero) {
             venta.setEstado(EstadoVenta.EN_PROCESO);
-            boolean tieneEfectivo = pagoEfectivo.compareTo(BigDecimal.ZERO) > 0;
-            venta.setEstadoEntregaCaja(tieneEfectivo
-                    ? EstadoEntregaCaja.PENDIENTE
-                    : EstadoEntregaCaja.ENTREGADO);
+            // Toda venta creada por mesero nace como PENDIENTE.
+            // Solo CAJA puede pasarla a ENTREGADO mediante confirmarEntregaCaja,
+            // sin importar la forma de pago (efectivo, transferencia o mixto).
+            venta.setEstadoEntregaCaja(EstadoEntregaCaja.PENDIENTE);
         } else {
             venta.setEstado(dto.tipoVenta() == TipoVenta.LOCAL ? EstadoVenta.DESPACHADA : EstadoVenta.EN_PROCESO);
         }
@@ -469,6 +469,13 @@ public class VentaService {
         ventaPreview.setFecha(LocalDateTime.now());
         ventaPreview.setClienteNombre(dto.clienteNombre());
         ventaPreview.setParaLlevar(Boolean.TRUE.equals(dto.paraLlevar()));
+        if ("MESERO".equals(rol)) {
+            ventaPreview.setCanalVenta(CanalVenta.MESERO);
+            ventaPreview.setUsuario(usuario);
+        } else {
+            ventaPreview.setCanalVenta(CanalVenta.CAJA);
+            ventaPreview.setUsuario(usuario);
+        }
 
         List<VentaDetalle> detalles = new ArrayList<>();
         for (VentaDetalleCreateDTO d : dto.detalles()) {
@@ -838,8 +845,18 @@ public class VentaService {
                 .findByEstadoIn(List.of(EstadoTurno.ABIERTO))
                 .orElseThrow(() -> new BadRequestException("No hay turno activo"));
 
-        return ventaRepository.findByTurnoAndCanalVentaAndEstadoEntregaCaja(
-                turno, CanalVenta.MESERO, EstadoEntregaCaja.PENDIENTE)
+        String rol = usuario != null && usuario.getRol() != null ? usuario.getRol().getNombre() : null;
+
+        if ("MESERO".equals(rol)) {
+            return ventaRepository.findByTurnoAndCanalVentaAndUsuario(
+                    turno, CanalVenta.MESERO, usuario)
+                    .stream()
+                    .map(this::construirRespuesta)
+                    .toList();
+        }
+
+        return ventaRepository.findByTurnoAndCanalVenta(
+                turno, CanalVenta.MESERO)
                 .stream()
                 .map(this::construirRespuesta)
                 .toList();

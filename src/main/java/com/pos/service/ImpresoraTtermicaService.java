@@ -3,6 +3,7 @@ package com.pos.service;
 import com.pos.dto.configuracion.AdminConfigDTO;
 import com.pos.dto.venta.VentaPagoDetalleDTO;
 import com.pos.dto.venta.VentaResponseDTO;
+import com.pos.entity.CanalVenta;
 import com.pos.entity.TipoVenta;
 import com.pos.entity.TurnoCaja;
 import com.pos.entity.Venta;
@@ -170,6 +171,12 @@ public class ImpresoraTtermicaService {
         appendKv(sb, "Pedido", String.valueOf(venta.getId()));
         appendKv(sb, "Fecha",  formatFecha(venta.getFecha()));
         appendKvLabel(sb, "Cliente", valueOrDash(venta.getClienteNombre()));
+        if (venta.getCanalVenta() == CanalVenta.MESERO) {
+            String nombreMesero = venta.getUsuario() != null
+                    ? venta.getUsuario().getUsername()
+                    : "-";
+            appendKvLabel(sb, "Mesero", nombreMesero);
+        }
         sb.append(LINE).append("\n");
 
         if (venta.getDetalles() != null && !venta.getDetalles().isEmpty()) {
